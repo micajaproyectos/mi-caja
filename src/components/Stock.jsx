@@ -87,30 +87,30 @@ export default function Stock() {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Botón de regreso */}
-          <div className="mb-6">
+          <div className="mb-4 md:mb-6">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium"
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
               style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
             >
-              <span className="text-xl">←</span>
+              <span className="text-lg md:text-xl">←</span>
               <span>Volver al Inicio</span>
             </button>
           </div>
 
-          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             📊 Sistema de Stock
           </h1>
 
           {/* Botón de recarga */}
-          <div className="mb-6 text-center">
+          <div className="mb-4 md:mb-6 text-center">
             <button
               onClick={recargarDatos}
               disabled={loading}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center mx-auto"
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
             >
               <span className="mr-2">🔄</span>
               {loading ? 'Cargando...' : 'Recargar Datos'}
@@ -118,24 +118,24 @@ export default function Stock() {
           </div>
 
           {/* Contenido principal */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             {/* Indicador de carga */}
             {loading && (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
-                <p className="text-white mt-4">Cargando datos del stock...</p>
+              <div className="text-center py-6 md:py-8">
+                <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-green-400"></div>
+                <p className="text-white mt-3 md:mt-4 text-sm md:text-base">Cargando datos del stock...</p>
               </div>
             )}
 
             {/* Mensaje de error */}
             {error && !loading && (
-              <div className="text-center py-8">
-                <div className="text-red-400 text-4xl mb-4">❌</div>
-                <p className="text-red-400 text-lg font-bold mb-2">Error</p>
-                <p className="text-gray-300 mb-4">{error}</p>
+              <div className="text-center py-6 md:py-8">
+                <div className="text-red-400 text-3xl md:text-4xl mb-3 md:mb-4">❌</div>
+                <p className="text-red-400 text-base md:text-lg font-bold mb-2">Error</p>
+                <p className="text-gray-300 mb-3 md:mb-4 text-sm md:text-base">{error}</p>
                 <button
                   onClick={recargarDatos}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm md:text-base"
                 >
                   Intentar de nuevo
                 </button>
@@ -146,41 +146,41 @@ export default function Stock() {
             {!loading && !error && (
               <>
                 {stockData.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="text-gray-400 text-4xl mb-4">📦</div>
-                    <p className="text-gray-300 text-lg font-bold">No hay stock disponible</p>
-                    <p className="text-gray-500 mt-2">
+                  <div className="text-center py-6 md:py-8">
+                    <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">📦</div>
+                    <p className="text-gray-300 text-base md:text-lg font-bold">No hay stock disponible</p>
+                    <p className="text-gray-500 mt-2 text-sm md:text-base">
                       No se encontraron productos en el inventario
                     </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-xs md:text-sm">
                       <thead>
                         <tr className="bg-white/10 backdrop-blur-sm">
-                          <th className="text-white font-semibold p-4 text-left">📦 Producto</th>
-                          <th className="text-white font-semibold p-4 text-left">📥 Total Ingresado</th>
-                          <th className="text-white font-semibold p-4 text-left">📤 Total Vendido</th>
-                          <th className="text-white font-semibold p-4 text-left">📊 Stock Restante</th>
-                          <th className="text-white font-semibold p-4 text-left">🏷️ Estado</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">📦 Producto</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">📥 Total Ingresado</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">📤 Total Vendido</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">📊 Stock Restante</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">🏷️ Estado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {stockData.map((item, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                            <td className="text-white p-4 font-medium">
+                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                               {item.producto || 'Sin nombre'}
                             </td>
-                            <td className="text-gray-300 p-4">
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                               {formatearNumero(item.total_ingresado || 0)}
                             </td>
-                            <td className="text-gray-300 p-4">
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                               {formatearNumero(item.total_vendido || 0)}
                             </td>
-                            <td className="text-gray-300 p-4">
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                               {formatearNumero(item.stock_restante || 0)}
                             </td>
-                            <td className="p-4">
+                            <td className="p-2 md:p-4">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerEstiloEstado(item.estado)}`}>
                                 {item.estado || 'Sin estado'}
                               </span>
@@ -197,41 +197,41 @@ export default function Stock() {
 
           {/* Estadísticas resumidas */}
           {!loading && !error && stockData.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-semibold mb-6 text-green-400 text-center">
+            <div className="mt-6 md:mt-8">
+              <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
                 📊 Resumen de Stock
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                   <div className="flex items-center">
-                    <span className="text-green-400 text-3xl mr-4">📦</span>
+                    <span className="text-green-400 text-2xl md:text-3xl mr-3 md:mr-4">📦</span>
                     <div>
-                      <p className="text-gray-300 text-sm font-medium">Total Productos</p>
-                      <p className="text-white text-2xl font-bold">
+                      <p className="text-gray-300 text-xs md:text-sm font-medium">Total Productos</p>
+                      <p className="text-white text-xl md:text-2xl font-bold">
                         {stockData.length}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20">
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                   <div className="flex items-center">
-                    <span className="text-green-400 text-3xl mr-4">✅</span>
+                    <span className="text-green-400 text-2xl md:text-3xl mr-3 md:mr-4">✅</span>
                     <div>
-                      <p className="text-gray-300 text-sm font-medium">Disponibles</p>
-                      <p className="text-white text-2xl font-bold">
+                      <p className="text-gray-300 text-xs md:text-sm font-medium">Disponibles</p>
+                      <p className="text-white text-xl md:text-2xl font-bold">
                         {stockData.filter(item => item.estado?.toLowerCase() === 'disponible').length}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20">
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                   <div className="flex items-center">
-                    <span className="text-red-400 text-3xl mr-4">⚠️</span>
+                    <span className="text-red-400 text-2xl md:text-3xl mr-3 md:mr-4">⚠️</span>
                     <div>
-                      <p className="text-gray-300 text-sm font-medium">Bajo Stock</p>
-                      <p className="text-white text-2xl font-bold">
+                      <p className="text-gray-300 text-xs md:text-sm font-medium">Bajo Stock</p>
+                      <p className="text-white text-xl md:text-2xl font-bold">
                         {stockData.filter(item => 
                           item.estado?.toLowerCase() === 'bajo' || 
                           item.estado?.toLowerCase() === 'agotado'

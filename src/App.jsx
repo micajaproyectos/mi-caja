@@ -30,25 +30,25 @@ const Gastos = () => {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
           {/* Botón de regreso */}
-          <div className="mb-6">
+          <div className="mb-4 md:mb-6">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium"
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
               style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
             >
-              <span className="text-xl">←</span>
+              <span className="text-lg md:text-xl">←</span>
               <span>Volver al Inicio</span>
             </button>
           </div>
           
-          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             💰 Control de Gastos
           </h1>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
-            <p className="text-gray-200 text-center py-8 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <p className="text-gray-200 text-center py-6 md:py-8 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Sistema de control de gastos en desarrollo...
             </p>
           </div>
@@ -91,25 +91,25 @@ const Proveedores = () => {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
           {/* Botón de regreso */}
-          <div className="mb-6">
+          <div className="mb-4 md:mb-6">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium"
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
               style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
             >
-              <span className="text-xl">←</span>
+              <span className="text-lg md:text-xl">←</span>
               <span>Volver al Inicio</span>
             </button>
-            </div>
+          </div>
           
-          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             🚚 Gestión de Proveedores
           </h1>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
-            <p className="text-gray-200 text-center py-8 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <p className="text-gray-200 text-center py-6 md:py-8 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Sistema de gestión de proveedores en desarrollo...
             </p>
           </div>

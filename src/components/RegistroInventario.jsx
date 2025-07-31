@@ -195,32 +195,32 @@ const RegistroInventario = () => {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Botón de regreso */}
-          <div className="mb-6">
+          <div className="mb-4 md:mb-6">
             <button
               onClick={() => window.history.back()}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium"
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
               style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
             >
-              <span className="text-xl">←</span>
+              <span className="text-lg md:text-xl">←</span>
               <span>Volver al Inicio</span>
             </button>
           </div>
 
-          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             📦 Gestión de Inventario
           </h1>
 
           {/* Formulario de Registro */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 mb-8">
-            <h2 className="text-2xl font-semibold mb-6 text-green-400 text-center">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
               ✨ Agregar Producto al Inventario
             </h2>
             
-            <form onSubmit={registrarInventario} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <form onSubmit={registrarInventario} className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {/* Fecha de Ingreso */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
@@ -231,7 +231,7 @@ const RegistroInventario = () => {
                     name="fecha_ingreso"
                     value={inventario.fecha_ingreso}
                     onChange={handleChange}
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -247,7 +247,7 @@ const RegistroInventario = () => {
                     value={inventario.producto}
                     onChange={handleChange}
                     placeholder="Nombre del producto"
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -265,7 +265,7 @@ const RegistroInventario = () => {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -279,7 +279,7 @@ const RegistroInventario = () => {
                     name="unidad"
                     value={inventario.unidad}
                     onChange={handleChange}
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     style={{ colorScheme: 'dark' }}
                     required
                   >
@@ -305,7 +305,7 @@ const RegistroInventario = () => {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -323,31 +323,31 @@ const RegistroInventario = () => {
                     placeholder="0.30 (30%)"
                     step="0.01"
                     min="0"
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
               </div>
 
               {/* Cálculos Automáticos */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 mt-6 border border-white/10">
-                <h3 className="text-xl font-semibold mb-4 text-yellow-400 text-center">
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 mt-4 md:mt-6 border border-white/10">
+                <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-yellow-400 text-center">
                   🧮 Cálculos Automáticos
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                  <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       💵 Precio Unitario (con IVA 19%)
                     </label>
-                    <p className="text-2xl font-bold text-green-400">
+                    <p className="text-xl md:text-2xl font-bold text-green-400">
                       ${preciosCalculados.precio_unitario}
                     </p>
                   </div>
-                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       🎯 Precio de Venta (redondeado a $10)
                     </label>
-                    <p className="text-2xl font-bold text-blue-400">
+                    <p className="text-xl md:text-2xl font-bold text-blue-400">
                       ${preciosCalculados.precio_venta}
                     </p>
                   </div>
@@ -355,20 +355,20 @@ const RegistroInventario = () => {
               </div>
 
               {/* Botón de Registro */}
-              <div className="flex justify-center mt-8">
+              <div className="flex justify-center mt-6 md:mt-8">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-12 rounded-xl transition-all duration-200 flex items-center space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 md:py-4 px-8 md:px-12 rounded-xl transition-all duration-200 flex items-center space-x-2 md:space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
                 >
                   {loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
                       <span>Registrando...</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-xl">📦</span>
+                      <span className="text-lg md:text-xl">📦</span>
                       <span>Registrar Producto</span>
                     </>
                   )}
@@ -378,15 +378,15 @@ const RegistroInventario = () => {
           </div>
 
           {/* Tabla de Inventario */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
-            <h2 className="text-2xl font-semibold mb-6 text-green-400 text-center">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
               📋 Inventario Registrado
             </h2>
             
             {inventarioRegistrado.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📦</div>
-                <p className="text-gray-300 text-lg">
+              <div className="text-center py-8 md:py-12">
+                <div className="text-4xl md:text-6xl mb-3 md:mb-4">📦</div>
+                <p className="text-gray-300 text-base md:text-lg">
                   No hay productos registrados en el inventario
                 </p>
                 <p className="text-gray-400 text-sm mt-2">
@@ -395,47 +395,47 @@ const RegistroInventario = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs md:text-sm">
                   <thead>
                     <tr className="bg-white/10 backdrop-blur-sm">
-                      <th className="text-white font-semibold p-4 text-left">📅 Fecha</th>
-                      <th className="text-white font-semibold p-4 text-left">📦 Producto</th>
-                      <th className="text-white font-semibold p-4 text-left">⚖️ Cantidad</th>
-                      <th className="text-white font-semibold p-4 text-left">🏷️ Unidad</th>
-                      <th className="text-white font-semibold p-4 text-left">💰 Costo Total</th>
-                      <th className="text-white font-semibold p-4 text-left">💵 Precio Unitario</th>
-                      <th className="text-white font-semibold p-4 text-left">🎯 Precio Venta</th>
-                      <th className="text-white font-semibold p-4 text-left">⚡ Acciones</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">📅 Fecha</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">📦 Producto</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">⚖️ Cantidad</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">🏷️ Unidad</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">💰 Costo Total</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">💵 Precio Unitario</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">🎯 Precio Venta</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">⚡ Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {inventarioRegistrado.map((item, index) => (
                       <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                        <td className="text-gray-300 p-4">
+                        <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                           {new Date(item.fecha_ingreso).toLocaleDateString('es-ES')}
                         </td>
-                        <td className="text-white p-4 font-medium">
+                        <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                           {item.producto}
                         </td>
-                        <td className="text-gray-300 p-4">
+                        <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                           {item.cantidad}
                         </td>
-                        <td className="text-gray-300 p-4">
+                        <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                           {item.unidad}
                         </td>
-                        <td className="text-green-300 p-4 font-bold">
+                        <td className="text-green-300 p-2 md:p-4 font-bold text-xs md:text-sm">
                           ${parseFloat(item.costo_total).toLocaleString()}
                         </td>
-                        <td className="text-blue-300 p-4 font-bold">
+                        <td className="text-blue-300 p-2 md:p-4 font-bold text-xs md:text-sm">
                           ${parseFloat(item.precio_unitario).toLocaleString()}
                         </td>
-                        <td className="text-yellow-300 p-4 font-bold">
+                        <td className="text-yellow-300 p-2 md:p-4 font-bold text-xs md:text-sm">
                           ${parseFloat(item.precio_venta).toLocaleString()}
                         </td>
-                        <td className="p-4">
+                        <td className="p-2 md:p-4">
                           <button
                             onClick={() => eliminarInventario(item.id)}
-                            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                           >
                             🗑️ Eliminar
                           </button>

@@ -847,71 +847,71 @@ export default function RegistroVenta() {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-2xl mx-auto">
           {/* Botón de regreso */}
-          <div className="mb-6">
+          <div className="mb-4 md:mb-6">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium"
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
               style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
             >
-              <span className="text-xl">←</span>
+              <span className="text-lg md:text-xl">←</span>
               <span>Volver al Inicio</span>
             </button>
           </div>
           
-          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             Registro de Venta
           </h1>
           
           {/* Nuevo diseño del formulario de venta */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 mb-8">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             {/* Sección de búsqueda de productos */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <span className="text-blue-400 text-xl mr-3">🔍</span>
-                <h3 className="text-green-400 text-xl font-bold">Buscar Producto</h3>
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center mb-3 md:mb-4">
+                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">🔍</span>
+                <h3 className="text-green-400 text-lg md:text-xl font-bold">Buscar Producto</h3>
               </div>
               <input
                 ref={searchInputRef}
                 type="text"
                 value={busquedaProducto}
                 onChange={handleBusquedaProducto}
-                className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
                 placeholder="Escribe el nombre del producto..."
               />
             </div>
 
             {/* Sección de agregar producto */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <span className="text-blue-400 text-xl mr-3">➕</span>
-                <h3 className="text-green-400 text-xl font-bold">Agregar Producto</h3>
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center mb-3 md:mb-4">
+                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">➕</span>
+                <h3 className="text-green-400 text-lg md:text-xl font-bold">Agregar Producto</h3>
               </div>
               
               {/* Campos del producto */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                 <div>
-                  <label className="block text-white font-medium mb-2">Cantidad</label>
+                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Cantidad</label>
                   <input
                     type="number"
                     step="0.01"
                     name="cantidad"
                     value={productoActual.cantidad}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white font-medium mb-2">Unidad</label>
+                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Unidad</label>
                   <select
                     name="unidad"
                     value={productoActual.unidad}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
                   >
                     <option value="">Seleccione unidad</option>
                     {opcionesUnidad.map(opcion => (
@@ -922,15 +922,15 @@ export default function RegistroVenta() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-white font-medium mb-2">Precio Unitario</label>
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Precio Unitario</label>
                   <input
                     type="number"
                     step="0.01"
                     name="precio_unitario"
                     value={productoActual.precio_unitario}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
                     placeholder="0.00"
                   />
                 </div>
@@ -941,7 +941,7 @@ export default function RegistroVenta() {
                 <button
                   type="button"
                   onClick={agregarProducto}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-all duration-300 text-sm md:text-base"
                 >
                   Agregar Producto
                 </button>
@@ -949,27 +949,27 @@ export default function RegistroVenta() {
             </div>
 
             {/* Sección de productos en la venta */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <span className="text-blue-400 text-xl mr-3">🛒</span>
-                <h3 className="text-green-400 text-xl font-bold">Productos en la Venta</h3>
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center mb-3 md:mb-4">
+                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">🛒</span>
+                <h3 className="text-green-400 text-lg md:text-xl font-bold">Productos en la Venta</h3>
               </div>
-              <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10">
                 {productosVenta.length === 0 ? (
-                  <p className="text-gray-400 text-center">No hay productos agregados</p>
+                  <p className="text-gray-400 text-center text-sm md:text-base">No hay productos agregados</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 md:space-y-3">
                     {productosVenta.map((producto, index) => (
-                      <div key={producto.id} className="flex items-center justify-between bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10">
-                        <div>
-                          <p className="text-white font-medium">{producto.producto}</p>
-                          <p className="text-gray-300 text-sm">
+                      <div key={producto.id} className="flex items-center justify-between bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium text-sm md:text-base truncate">{producto.producto}</p>
+                          <p className="text-gray-300 text-xs md:text-sm">
                             {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
                           </p>
                         </div>
                         <button
                           onClick={() => eliminarProducto(producto.id)}
-                          className="text-red-400 hover:text-red-300 text-xl font-bold"
+                          className="text-red-400 hover:text-red-300 text-lg md:text-xl font-bold ml-2 flex-shrink-0"
                         >
                           ×
                         </button>
@@ -1057,76 +1057,76 @@ export default function RegistroVenta() {
             )}
 
             {/* Sección de total */}
-            <div className="mb-8">
+            <div className="mb-6 md:mb-8">
               <div className="bg-green-600 rounded-lg p-6 text-center">
                 <p className="text-white font-bold text-2xl">Total: ${calcularTotalVenta().toLocaleString()}</p>
               </div>
             </div>
 
             {/* Sección de tipo de pago */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <span className="text-blue-400 text-xl mr-3">💳</span>
-                <h3 className="text-green-400 text-xl font-bold">Tipo de Pago</h3>
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center mb-3 md:mb-4">
+                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">💳</span>
+                <h3 className="text-green-400 text-lg md:text-xl font-bold">Tipo de Pago</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'efectivo'})}
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'efectivo' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-green-400 text-2xl mb-2">💵</div>
-                    <p className="font-medium">Efectivo</p>
+                    <div className="text-green-400 text-xl md:text-2xl mb-1 md:mb-2">💵</div>
+                    <p className="font-medium text-xs md:text-sm">Efectivo</p>
                   </div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'debito'})}
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'debito' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-blue-400 text-2xl mb-2">💳</div>
-                    <p className="font-medium">Débito</p>
+                    <div className="text-blue-400 text-xl md:text-2xl mb-1 md:mb-2">💳</div>
+                    <p className="font-medium text-xs md:text-sm">Débito</p>
                   </div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'credito'})}
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'credito' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-orange-400 text-2xl mb-2">💳</div>
-                    <p className="font-medium">Crédito</p>
+                    <div className="text-orange-400 text-xl md:text-2xl mb-1 md:mb-2">💳</div>
+                    <p className="font-medium text-xs md:text-sm">Crédito</p>
                   </div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'transferencia'})}
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'transferencia' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-purple-400 text-2xl mb-2">📱</div>
-                    <p className="font-medium">Transferencia</p>
+                    <div className="text-purple-400 text-xl md:text-2xl mb-1 md:mb-2">📱</div>
+                    <p className="font-medium text-xs md:text-sm">Transferencia</p>
                   </div>
                 </button>
               </div>
@@ -1137,7 +1137,7 @@ export default function RegistroVenta() {
               <button
                 type="button"
                 onClick={registrarVenta}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-xl"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-lg md:text-xl"
               >
                 <span className="text-yellow-400 mr-2">💰</span>
                 Procesar Venta
@@ -1150,40 +1150,40 @@ export default function RegistroVenta() {
 
 
           {/* Sección de Ventas Registradas */}
-          <div className="mt-12">
-            <h2 className="text-3xl font-bold text-white text-center drop-shadow-lg mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <div className="mt-8 md:mt-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white text-center drop-shadow-lg mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Ventas Registradas
             </h2>
             
             {/* Filtros de fecha */}
-            <div className="mb-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
-              <h3 className="text-xl font-semibold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div className="mb-4 md:mb-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+              <h3 className="text-lg md:text-xl font-semibold text-white mb-3 md:mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Filtros de Fecha
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 {/* Filtro por día específico */}
                 <div>
-                  <label className="block text-gray-200 font-medium mb-2 text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-gray-200 font-medium mb-1 md:mb-2 text-xs md:text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     Día específico:
                   </label>
                   <input
                     type="date"
                     value={filtroDia}
                     onChange={(e) => setFiltroDia(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                   />
                 </div>
 
                 {/* Filtro por mes */}
                 <div>
-                  <label className="block text-gray-200 font-medium mb-2 text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-gray-200 font-medium mb-1 md:mb-2 text-xs md:text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     Mes:
                   </label>
                   <select
                     value={filtroMes}
                     onChange={(e) => setFiltroMes(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     style={{
                       colorScheme: 'dark'
                     }}
@@ -1199,13 +1199,13 @@ export default function RegistroVenta() {
 
                 {/* Filtro por año */}
                 <div>
-                  <label className="block text-gray-200 font-medium mb-2 text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-gray-200 font-medium mb-1 md:mb-2 text-xs md:text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     Año:
                   </label>
                   <select
                     value={filtroAnio}
                     onChange={(e) => setFiltroAnio(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     style={{
                       colorScheme: 'dark'
                     }}
@@ -1221,13 +1221,13 @@ export default function RegistroVenta() {
 
                 {/* Filtro por tipo de pago */}
                 <div>
-                  <label className="block text-gray-200 font-medium mb-2 text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-gray-200 font-medium mb-1 md:mb-2 text-xs md:text-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     Tipo de Pago:
                   </label>
                   <select
                     value={filtroTipoPago}
                     onChange={(e) => setFiltroTipoPago(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     style={{
                       colorScheme: 'dark'
                     }}
@@ -1243,10 +1243,10 @@ export default function RegistroVenta() {
               </div>
 
               {/* Botón limpiar filtros */}
-              <div className="mt-4 flex justify-center">
+              <div className="mt-3 md:mt-4 flex justify-center">
                 <button
                   onClick={limpiarFiltros}
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 md:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Limpiar Filtros
@@ -1254,8 +1254,8 @@ export default function RegistroVenta() {
               </div>
 
               {/* Información de filtros activos */}
-              <div className="mt-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
-                <p className="text-blue-200 text-sm text-center">
+              <div className="mt-3 md:mt-4 p-3 md:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+                <p className="text-blue-200 text-xs md:text-sm text-center">
                   {!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago ? (
                     <strong>Mostrando ventas del día actual</strong>
                   ) : (
@@ -1273,8 +1273,8 @@ export default function RegistroVenta() {
             </div>
             
             {/* Debug Info */}
-            <div className="mb-4 p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
-              <p className="text-yellow-200 text-sm">
+            <div className="mb-3 md:mb-4 p-3 md:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+              <p className="text-yellow-200 text-xs md:text-sm">
                 <strong>Debug:</strong> Loading: {loading.toString()} | Ventas: {ventasRegistradas.length} registros | Filtradas: {ventasFiltradas.length}
                 {!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago ? (
                   <span> | Modo: Día actual (por defecto)</span>
@@ -1284,15 +1284,15 @@ export default function RegistroVenta() {
               </p>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                  <p className="text-gray-200 mt-2">Cargando ventas...</p>
+                <div className="text-center py-6 md:py-8">
+                  <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-white"></div>
+                  <p className="text-gray-200 mt-2 text-sm md:text-base">Cargando ventas...</p>
                 </div>
               ) : ventasFiltradas.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-200 text-lg">
+                <div className="text-center py-6 md:py-8">
+                  <p className="text-gray-200 text-base md:text-lg">
                     {ventasRegistradas.length === 0 
                       ? 'No hay ventas registradas aún' 
                       : !filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago
@@ -1306,36 +1306,36 @@ export default function RegistroVenta() {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-white/20">
-                        <th className="text-gray-200 font-semibold p-3">Fecha</th>
-                        <th className="text-gray-200 font-semibold p-3">Producto</th>
-                        <th className="text-gray-200 font-semibold p-3">Cantidad</th>
-                        <th className="text-gray-200 font-semibold p-3">Precio</th>
-                        <th className="text-gray-200 font-semibold p-3">Total</th>
-                        <th className="text-gray-200 font-semibold p-3">Total Final</th>
-                        <th className="text-gray-200 font-semibold p-3">Pago</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Cantidad</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Precio</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
+                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ventasFiltradas.map((venta, index) => (
                         <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                          <td className="text-gray-200 p-3">
+                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
                             {venta.fecha ? new Date(venta.fecha).toLocaleDateString('es-ES') : 'Fecha inválida'}
                           </td>
-                          <td className="text-gray-200 p-3 font-medium">{venta.producto || 'Sin producto'}</td>
-                          <td className="text-gray-200 p-3">
+                          <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
+                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
                             {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon} {obtenerInfoUnidad(venta.unidad).label}
                           </td>
-                          <td className="text-gray-200 p-3">
+                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
                             ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
                           </td>
-                          <td className="text-green-300 p-3 font-bold">
+                          <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
                             ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
                           </td>
-                          <td className="text-blue-300 p-3 font-bold">
+                          <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
                             {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
                           </td>
-                          <td className="text-gray-200 p-3">
-                            <span className="px-2 py-1 bg-green-600/20 rounded-full text-sm">
+                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                            <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
                               {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
                             </span>
                           </td>
@@ -1345,46 +1345,46 @@ export default function RegistroVenta() {
                   </table>
                   
                   {/* Estadísticas diarias siempre visibles */}
-                  <div className="mt-6 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                    <h4 className="text-blue-300 font-bold text-lg mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-center">
+                  <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4 text-center">
                       {/* Total Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                        <p className="text-blue-200 text-sm font-medium">Total Diario</p>
-                        <p className="text-blue-300 font-bold text-lg">{calcularEstadisticasDiarias().total.cantidad}</p>
-                        <p className="text-blue-300 font-bold text-sm">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-4 border border-white/10">
+                        <p className="text-blue-200 text-xs md:text-sm font-medium">Total Diario</p>
+                        <p className="text-blue-300 font-bold text-sm md:text-lg">{calcularEstadisticasDiarias().total.cantidad}</p>
+                        <p className="text-blue-300 font-bold text-xs md:text-sm">
                           ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Efectivo Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                        <p className="text-green-200 text-sm font-medium">Efectivo</p>
-                        <p className="text-green-300 font-bold text-lg">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-4 border border-white/10">
+                        <p className="text-green-200 text-xs md:text-sm font-medium">Efectivo</p>
+                        <p className="text-green-300 font-bold text-sm md:text-lg">
                           ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Débito Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                        <p className="text-purple-200 text-sm font-medium">Débito</p>
-                        <p className="text-purple-300 font-bold text-lg">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-4 border border-white/10">
+                        <p className="text-purple-200 text-xs md:text-sm font-medium">Débito</p>
+                        <p className="text-purple-300 font-bold text-sm md:text-lg">
                           ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Crédito Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                        <p className="text-orange-200 text-sm font-medium">Crédito</p>
-                        <p className="text-orange-300 font-bold text-lg">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-4 border border-white/10">
+                        <p className="text-orange-200 text-xs md:text-sm font-medium">Crédito</p>
+                        <p className="text-orange-300 font-bold text-sm md:text-lg">
                           ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Transferencia Diaria */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                        <p className="text-indigo-200 text-sm font-medium">Transferencia</p>
-                        <p className="text-indigo-300 font-bold text-lg">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-4 border border-white/10">
+                        <p className="text-indigo-200 text-xs md:text-sm font-medium">Transferencia</p>
+                        <p className="text-indigo-300 font-bold text-sm md:text-lg">
                           ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
                         </p>
                       </div>
@@ -1394,45 +1394,45 @@ export default function RegistroVenta() {
               )}
               
               {/* Botones de control */}
-              <div className="mt-6 text-center space-x-4">
+              <div className="mt-4 md:mt-6 text-center space-y-2 md:space-y-0 md:space-x-2 lg:space-x-4">
                 <button
                   onClick={cargarVentas}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Actualizar Lista
                 </button>
                 <button
                   onClick={probarConexion}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Probar Conexión
                 </button>
                 <button
                   onClick={verificarTabla}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Verificar Permisos
                 </button>
                 <button
                   onClick={verificarEstructuraTabla}
-                  className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Verificar Estructura
                 </button>
                 <button
                   onClick={consultaDirecta}
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Consultar Datos
                 </button>
                 <button
                   onClick={exportarDatosFiltrados}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Exportar CSV
