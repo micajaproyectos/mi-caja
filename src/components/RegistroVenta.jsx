@@ -96,6 +96,9 @@ export default function RegistroVenta() {
   const [filtroAnio, setFiltroAnio] = useState('');
   const [filtroTipoPago, setFiltroTipoPago] = useState('');
   const [ventasFiltradas, setVentasFiltradas] = useState([]);
+  
+  // Estado para controlar la cantidad de ventas mostradas
+  const [ventasMostradas, setVentasMostradas] = useState(10);
 
   // Estados para búsqueda de productos del inventario
   const [productosInventario, setProductosInventario] = useState([]);
@@ -304,6 +307,11 @@ export default function RegistroVenta() {
     filtrarVentas();
   }, [filtrarVentas]);
 
+  // Resetear contador de ventas mostradas cuando cambien los filtros
+  useEffect(() => {
+    setVentasMostradas(10);
+  }, [filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
+
   // Función para limpiar todos los filtros
   const limpiarFiltros = () => {
     setFiltroDia('');
@@ -318,6 +326,21 @@ export default function RegistroVenta() {
       new Date(venta.fecha).getFullYear()
     ))].sort((a, b) => b - a); // Orden descendente
     return anios;
+  };
+
+  // Función para obtener las ventas que se deben mostrar
+  const obtenerVentasAMostrar = () => {
+    return ventasFiltradas.slice(0, ventasMostradas);
+  };
+
+  // Función para cargar más ventas
+  const cargarMasVentas = () => {
+    setVentasMostradas(prev => prev + 10);
+  };
+
+  // Función para mostrar todas las ventas
+  const mostrarTodasLasVentas = () => {
+    setVentasMostradas(ventasFiltradas.length);
   };
 
   // Función para obtener meses únicos de las ventas
@@ -1361,131 +1384,168 @@ export default function RegistroVenta() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-white/20">
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Cantidad</th>
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Precio</th>
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
-                        <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ventasFiltradas.map((venta, index) => (
-                        <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                            {formatearFecha(venta.fecha)}
-                          </td>
-                          <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
-                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                            {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon} {obtenerInfoUnidad(venta.unidad).label}
-                          </td>
-                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                            ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
-                          </td>
-                          <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
-                            ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
-                          </td>
-                          <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
-                            {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
-                          </td>
-                          <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                            <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
-                              {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
-                            </span>
-                          </td>
+                  {/* Contenedor con altura máxima y scroll vertical */}
+                  <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
+                    <table className="w-full text-left">
+                      <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                        <tr className="border-b border-white/20">
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Cantidad</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Precio</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {obtenerVentasAMostrar().map((venta, index) => (
+                          <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              {formatearFecha(venta.fecha)}
+                            </td>
+                            <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon} {obtenerInfoUnidad(venta.unidad).label}
+                            </td>
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
+                            </td>
+                            <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
+                              ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
+                            </td>
+                            <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
+                              {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
+                            </td>
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
+                                {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                   
-                  {/* Estadísticas diarias siempre visibles */}
-                  <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
+                  {/* Controles para cargar más ventas */}
+                  {ventasFiltradas.length > ventasMostradas && (
+                    <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p className="text-blue-200 text-sm">
+                          Mostrando {ventasMostradas} de {ventasFiltradas.length} ventas
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={cargarMasVentas}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm"
+                          >
+                            Cargar 10 más
+                          </button>
+                          <button
+                            onClick={mostrarTodasLasVentas}
+                            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm"
+                          >
+                            Mostrar todas
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Información cuando se muestran todas las ventas */}
+                  {ventasFiltradas.length > 0 && ventasMostradas >= ventasFiltradas.length && (
+                    <div className="mt-4 p-3 bg-green-600/20 backdrop-blur-sm rounded-lg border border-green-500/30">
+                      <p className="text-green-200 text-sm text-center">
+                        ✅ Mostrando todas las {ventasFiltradas.length} ventas
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Estadísticas diarias siempre visibles */}
+                <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                  <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
+                  
+                  {/* Listado de estadísticas */}
+                  <div className="space-y-2 md:space-y-3">
+                    {/* Total Diario */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
+                        <div>
+                          <p className="text-blue-200 text-sm md:text-base font-medium">Total Diario</p>
+                          <p className="text-blue-300 text-xs md:text-sm">{calcularEstadisticasDiarias().total.cantidad} ventas</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-blue-300 font-bold text-lg md:text-xl">
+                          ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
                     
-                    {/* Listado de estadísticas */}
-                    <div className="space-y-2 md:space-y-3">
-                      {/* Total Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
-                          <div>
-                            <p className="text-blue-200 text-sm md:text-base font-medium">Total Diario</p>
-                            <p className="text-blue-300 text-xs md:text-sm">{calcularEstadisticasDiarias().total.cantidad} ventas</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-blue-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
-                          </p>
+                    {/* Efectivo Diario */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
+                        <div>
+                          <p className="text-green-200 text-sm md:text-base font-medium">Efectivo</p>
+                          <p className="text-green-300 text-xs md:text-sm">{calcularEstadisticasDiarias().efectivo.cantidad} ventas</p>
                         </div>
                       </div>
-                      
-                      {/* Efectivo Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
-                          <div>
-                            <p className="text-green-200 text-sm md:text-base font-medium">Efectivo</p>
-                            <p className="text-green-300 text-xs md:text-sm">{calcularEstadisticasDiarias().efectivo.cantidad} ventas</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-green-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
-                          </p>
+                      <div className="text-right">
+                        <p className="text-green-300 font-bold text-lg md:text-xl">
+                          ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Débito Diario */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
+                        <div>
+                          <p className="text-purple-200 text-sm md:text-base font-medium">Débito</p>
+                          <p className="text-purple-300 text-xs md:text-sm">{calcularEstadisticasDiarias().debito.cantidad} ventas</p>
                         </div>
                       </div>
-                      
-                      {/* Débito Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
-                          <div>
-                            <p className="text-purple-200 text-sm md:text-base font-medium">Débito</p>
-                            <p className="text-purple-300 text-xs md:text-sm">{calcularEstadisticasDiarias().debito.cantidad} ventas</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-purple-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
-                          </p>
+                      <div className="text-right">
+                        <p className="text-purple-300 font-bold text-lg md:text-xl">
+                          ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Crédito Diario */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
+                        <div>
+                          <p className="text-orange-200 text-sm md:text-base font-medium">Crédito</p>
+                          <p className="text-orange-300 text-xs md:text-sm">{calcularEstadisticasDiarias().credito.cantidad} ventas</p>
                         </div>
                       </div>
-                      
-                      {/* Crédito Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
-                          <div>
-                            <p className="text-orange-200 text-sm md:text-base font-medium">Crédito</p>
-                            <p className="text-orange-300 text-xs md:text-sm">{calcularEstadisticasDiarias().credito.cantidad} ventas</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-orange-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
-                          </p>
+                      <div className="text-right">
+                        <p className="text-orange-300 font-bold text-lg md:text-xl">
+                          ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Transferencia Diaria */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
+                        <div>
+                          <p className="text-indigo-200 text-sm md:text-base font-medium">Transferencia</p>
+                          <p className="text-indigo-300 text-xs md:text-sm">{calcularEstadisticasDiarias().transferencia.cantidad} ventas</p>
                         </div>
                       </div>
-                      
-                      {/* Transferencia Diaria */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
-                          <div>
-                            <p className="text-indigo-200 text-sm md:text-base font-medium">Transferencia</p>
-                            <p className="text-indigo-300 text-xs md:text-sm">{calcularEstadisticasDiarias().transferencia.cantidad} ventas</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-indigo-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
-                          </p>
-                        </div>
+                      <div className="text-right">
+                        <p className="text-indigo-300 font-bold text-lg md:text-xl">
+                          ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   </div>
