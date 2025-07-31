@@ -54,6 +54,8 @@ export default function Stock() {
       setLoadingMasVendido(true);
       setErrorMasVendido(null);
 
+      console.log('🔄 Cargando producto más vendido...');
+
       const { data, error } = await supabase
         .from('productos_mas_vendidos')
         .select('*')
@@ -61,15 +63,27 @@ export default function Stock() {
         .limit(1);
 
       if (error) {
-        console.error('Error al cargar producto más vendido:', error);
+        console.error('❌ Error al cargar producto más vendido:', error);
         setErrorMasVendido('Error al cargar el producto más vendido');
         return;
       }
 
-      setProductoMasVendido(data && data.length > 0 ? data[0] : null);
-      console.log('✅ Producto más vendido cargado:', data && data.length > 0 ? data[0] : null);
+      console.log('📊 Datos obtenidos de productos_mas_vendidos:', data);
+
+      if (data && data.length > 0) {
+        const producto = data[0];
+        console.log('🏆 Producto más vendido encontrado:', {
+          producto: producto.producto,
+          cantidad: producto.cantidad_vendida,
+          ultima_venta: producto.ultima_venta
+        });
+        setProductoMasVendido(producto);
+      } else {
+        console.log('📭 No se encontraron productos en productos_mas_vendidos');
+        setProductoMasVendido(null);
+      }
     } catch (error) {
-      console.error('Error inesperado al cargar producto más vendido:', error);
+      console.error('❌ Error inesperado al cargar producto más vendido:', error);
       setErrorMasVendido('Error inesperado al cargar el producto más vendido');
     } finally {
       setLoadingMasVendido(false);
@@ -113,8 +127,31 @@ export default function Stock() {
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'productos_mas_vendidos'
+        },
+        (payload) => {
+          console.log('🔄 Cambio detectado en productos_mas_vendidos:', payload);
+          // Actualizar solo el producto más vendido cuando cambia esta tabla
+          setActualizandoAutomaticamente(true);
+          cargarProductoMasVendido();
+          setTimeout(() => setActualizandoAutomaticamente(false), 2000);
+        }
+      )
       .subscribe((status) => {
         console.log('📡 Estado de suscripción:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error en suscripción en tiempo real');
+          // Reintentar suscripción después de 5 segundos
+          setTimeout(() => {
+            console.log('🔄 Reintentando suscripción...');
+            configurarSuscripcionTiempoReal();
+          }, 5000);
+        }
       });
   };
 
@@ -174,15 +211,64 @@ export default function Stock() {
     cargarProductoMasVendido();
   };
 
+  // Función para debug de productos_mas_vendidos
+  const debugProductosMasVendidos = async () => {
+    try {
+      console.log('🔍 Debug: Verificando estado de productos_mas_vendidos...');
+      
+      // Verificar tabla productos_mas_vendidos
+      const { data: productosData, error: productosError } = await supabase
+        .from('productos_mas_vendidos')
+        .select('*')
+        .order('cantidad_vendida', { ascending: false });
+      
+      if (productosError) {
+        console.error('❌ Error al consultar productos_mas_vendidos:', productosError);
+        return;
+      }
+      
+      console.log('📊 Productos en productos_mas_vendidos:', productosData);
+      
+      // Verificar tabla ventas
+      const { data: ventasData, error: ventasError } = await supabase
+        .from('ventas')
+        .select('producto, cantidad, fecha')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (ventasError) {
+        console.error('❌ Error al consultar ventas:', ventasError);
+        return;
+      }
+      
+      console.log('📊 Últimas 10 ventas:', ventasData);
+      
+      // Mostrar resumen
+      const mensaje = `
+🔍 Debug de Productos Más Vendidos:
+• Productos en tabla: ${productosData?.length || 0}
+• Últimas ventas: ${ventasData?.length || 0}
+• Producto más vendido: ${productosData?.[0]?.producto || 'Ninguno'}
+• Cantidad: ${productosData?.[0]?.cantidad_vendida || 0}
+      `;
+      
+      console.log(mensaje);
+      alert(mensaje);
+      
+    } catch (error) {
+      console.error('❌ Error en debug:', error);
+    }
+  };
+
   // Función para actualizar manualmente productos_mas_vendidos desde ventas
   const actualizarProductosMasVendidosManual = async () => {
     try {
       console.log('🔄 Actualizando productos_mas_vendidos manualmente...');
       
-      // Obtener datos agregados de ventas
+      // Obtener datos agregados de ventas con fecha de última venta
       const { data: ventasAgregadas, error: ventasError } = await supabase
         .from('ventas')
-        .select('producto, cantidad')
+        .select('producto, cantidad, fecha, created_at')
         .order('producto');
       
       if (ventasError) {
@@ -192,17 +278,29 @@ export default function Stock() {
 
       console.log('📊 Datos de ventas obtenidos:', ventasAgregadas);
 
-      // Agregar cantidades por producto
+      // Agregar cantidades por producto y obtener última fecha
       const productosAgregados = {};
+      const ultimasFechas = {};
+      
       ventasAgregadas.forEach(venta => {
-        if (productosAgregados[venta.producto]) {
-          productosAgregados[venta.producto] += parseFloat(venta.cantidad);
+        const producto = venta.producto;
+        const cantidad = parseFloat(venta.cantidad) || 0;
+        const fechaVenta = venta.fecha || venta.created_at;
+        
+        if (productosAgregados[producto]) {
+          productosAgregados[producto] += cantidad;
         } else {
-          productosAgregados[venta.producto] = parseFloat(venta.cantidad);
+          productosAgregados[producto] = cantidad;
+        }
+        
+        // Actualizar última fecha si es más reciente
+        if (!ultimasFechas[producto] || new Date(fechaVenta) > new Date(ultimasFechas[producto])) {
+          ultimasFechas[producto] = fechaVenta;
         }
       });
 
       console.log('📦 Productos agregados:', productosAgregados);
+      console.log('📅 Últimas fechas:', ultimasFechas);
 
       // Limpiar tabla productos_mas_vendidos
       const { error: deleteError } = await supabase
@@ -222,13 +320,13 @@ export default function Stock() {
           .insert({
             producto: producto,
             cantidad_vendida: cantidad,
-            ultima_venta: new Date().toISOString()
+            ultima_venta: ultimasFechas[producto] || new Date().toISOString()
           });
 
         if (insertError) {
           console.error(`Error al insertar ${producto}:`, insertError);
         } else {
-          console.log(`✅ ${producto} insertado correctamente`);
+          console.log(`✅ ${producto} insertado correctamente con cantidad ${cantidad}`);
         }
       }
 
@@ -307,6 +405,15 @@ export default function Stock() {
             >
               <span className="mr-2">🔧</span>
               Actualizar Productos Más Vendidos
+            </button>
+            
+            <button
+              onClick={debugProductosMasVendidos}
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
+            >
+              <span className="mr-2">🔍</span>
+              Debug Productos Más Vendidos
             </button>
           </div>
 
