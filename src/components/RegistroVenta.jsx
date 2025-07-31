@@ -1347,44 +1347,92 @@ export default function RegistroVenta() {
                   {/* Estadísticas diarias siempre visibles */}
                   <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                     <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 text-center">
+                    
+                    {/* Versión compacta para móviles muy pequeños */}
+                    <div className="block lg:hidden">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-center">
+                        {/* Total Diario */}
+                        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 border border-white/10 min-h-[60px] flex flex-col justify-center">
+                          <p className="text-blue-200 text-xs font-medium mb-1">Total Diario</p>
+                          <p className="text-blue-300 font-bold text-xs mb-1">{calcularEstadisticasDiarias().total.cantidad}</p>
+                          <p className="text-blue-300 font-bold text-xs truncate px-1">
+                            ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        {/* Efectivo Diario */}
+                        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 border border-white/10 min-h-[60px] flex flex-col justify-center">
+                          <p className="text-green-200 text-xs font-medium mb-1">Efectivo</p>
+                          <p className="text-green-300 font-bold text-xs truncate px-1">
+                            ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        {/* Débito Diario */}
+                        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 border border-white/10 min-h-[60px] flex flex-col justify-center">
+                          <p className="text-purple-200 text-xs font-medium mb-1">Débito</p>
+                          <p className="text-purple-300 font-bold text-xs truncate px-1">
+                            ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        {/* Crédito Diario */}
+                        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 border border-white/10 min-h-[60px] flex flex-col justify-center">
+                          <p className="text-orange-200 text-xs font-medium mb-1">Crédito</p>
+                          <p className="text-orange-300 font-bold text-xs truncate px-1">
+                            ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        {/* Transferencia Diaria */}
+                        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 border border-white/10 min-h-[60px] flex flex-col justify-center sm:col-span-2">
+                          <p className="text-indigo-200 text-xs font-medium mb-1">Transferencia</p>
+                          <p className="text-indigo-300 font-bold text-xs truncate px-1">
+                            ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Versión desktop (5 columnas) */}
+                    <div className="hidden lg:grid lg:grid-cols-5 gap-2 md:gap-3 text-center">
                       {/* Total Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 min-h-[80px] flex flex-col justify-center">
-                        <p className="text-blue-200 text-xs md:text-sm font-medium mb-1">Total Diario</p>
-                        <p className="text-blue-300 font-bold text-lg md:text-xl mb-1">{calcularEstadisticasDiarias().total.cantidad}</p>
-                        <p className="text-blue-300 font-bold text-sm md:text-base break-words">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10 min-h-[70px] flex flex-col justify-center">
+                        <p className="text-blue-200 text-xs font-medium mb-1">Total Diario</p>
+                        <p className="text-blue-300 font-bold text-sm md:text-base mb-1">{calcularEstadisticasDiarias().total.cantidad}</p>
+                        <p className="text-blue-300 font-bold text-xs md:text-sm truncate px-1">
                           ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Efectivo Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 min-h-[80px] flex flex-col justify-center">
-                        <p className="text-green-200 text-xs md:text-sm font-medium mb-1">Efectivo</p>
-                        <p className="text-green-300 font-bold text-lg md:text-xl">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10 min-h-[70px] flex flex-col justify-center">
+                        <p className="text-green-200 text-xs font-medium mb-1">Efectivo</p>
+                        <p className="text-green-300 font-bold text-sm md:text-base truncate px-1">
                           ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Débito Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 min-h-[80px] flex flex-col justify-center">
-                        <p className="text-purple-200 text-xs md:text-sm font-medium mb-1">Débito</p>
-                        <p className="text-purple-300 font-bold text-lg md:text-xl">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10 min-h-[70px] flex flex-col justify-center">
+                        <p className="text-purple-200 text-xs font-medium mb-1">Débito</p>
+                        <p className="text-purple-300 font-bold text-sm md:text-base truncate px-1">
                           ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Crédito Diario */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 min-h-[80px] flex flex-col justify-center">
-                        <p className="text-orange-200 text-xs md:text-sm font-medium mb-1">Crédito</p>
-                        <p className="text-orange-300 font-bold text-lg md:text-xl">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10 min-h-[70px] flex flex-col justify-center">
+                        <p className="text-orange-200 text-xs font-medium mb-1">Crédito</p>
+                        <p className="text-orange-300 font-bold text-sm md:text-base truncate px-1">
                           ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
                         </p>
                       </div>
                       
                       {/* Transferencia Diaria */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 min-h-[80px] flex flex-col justify-center">
-                        <p className="text-indigo-200 text-xs md:text-sm font-medium mb-1">Transferencia</p>
-                        <p className="text-indigo-300 font-bold text-lg md:text-xl">
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10 min-h-[70px] flex flex-col justify-center">
+                        <p className="text-indigo-200 text-xs font-medium mb-1">Transferencia</p>
+                        <p className="text-indigo-300 font-bold text-sm md:text-base truncate px-1">
                           ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
                         </p>
                       </div>
