@@ -54,6 +54,29 @@ export default function Stock() {
       setLoadingMasVendido(true);
       setErrorMasVendido(null);
 
+      // Función de depuración para verificar datos
+      const debugDatos = async () => {
+        // Verificar datos en ventas
+        const { data: ventasData, error: ventasError } = await supabase
+          .from('ventas')
+          .select('*')
+          .ilike('producto', '%T1%');
+        
+        console.log('🔍 Datos de ventas con T1:', ventasData);
+        console.log('🔍 Error en ventas:', ventasError);
+
+        // Verificar todos los datos en productos_mas_vendidos
+        const { data: todosProductos, error: todosError } = await supabase
+          .from('productos_mas_vendidos')
+          .select('*');
+        
+        console.log('🔍 Todos los productos más vendidos:', todosProductos);
+        console.log('🔍 Error en productos_mas_vendidos:', todosError);
+      };
+
+      // Ejecutar depuración
+      await debugDatos();
+
       const { data, error } = await supabase
         .from('productos_mas_vendidos')
         .select('*')
@@ -174,6 +197,72 @@ export default function Stock() {
     cargarProductoMasVendido();
   };
 
+  // Función para actualizar manualmente productos_mas_vendidos desde ventas
+  const actualizarProductosMasVendidosManual = async () => {
+    try {
+      console.log('🔄 Actualizando productos_mas_vendidos manualmente...');
+      
+      // Obtener datos agregados de ventas
+      const { data: ventasAgregadas, error: ventasError } = await supabase
+        .from('ventas')
+        .select('producto, cantidad')
+        .order('producto');
+      
+      if (ventasError) {
+        console.error('Error al obtener datos de ventas:', ventasError);
+        return;
+      }
+
+      console.log('📊 Datos de ventas obtenidos:', ventasAgregadas);
+
+      // Agregar cantidades por producto
+      const productosAgregados = {};
+      ventasAgregadas.forEach(venta => {
+        if (productosAgregados[venta.producto]) {
+          productosAgregados[venta.producto] += parseFloat(venta.cantidad);
+        } else {
+          productosAgregados[venta.producto] = parseFloat(venta.cantidad);
+        }
+      });
+
+      console.log('📦 Productos agregados:', productosAgregados);
+
+      // Limpiar tabla productos_mas_vendidos
+      const { error: deleteError } = await supabase
+        .from('productos_mas_vendidos')
+        .delete()
+        .neq('id', 0); // Eliminar todos los registros
+
+      if (deleteError) {
+        console.error('Error al limpiar tabla:', deleteError);
+        return;
+      }
+
+      // Insertar datos actualizados
+      for (const [producto, cantidad] of Object.entries(productosAgregados)) {
+        const { error: insertError } = await supabase
+          .from('productos_mas_vendidos')
+          .insert({
+            producto: producto,
+            cantidad_vendida: cantidad,
+            fecha_ultima_venta: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error(`Error al insertar ${producto}:`, insertError);
+        }
+      }
+
+      console.log('✅ Productos_mas_vendidos actualizado manualmente');
+      
+      // Recargar datos
+      cargarProductoMasVendido();
+      
+    } catch (error) {
+      console.error('Error en actualización manual:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
@@ -221,8 +310,8 @@ export default function Stock() {
             </div>
           )}
 
-          {/* Botón de recarga */}
-          <div className="mb-4 md:mb-6 text-center">
+          {/* Botones de recarga */}
+          <div className="mb-4 md:mb-6 text-center space-y-2">
             <button
               onClick={recargarDatos}
               disabled={loading}
@@ -230,6 +319,15 @@ export default function Stock() {
             >
               <span className="mr-2">🔄</span>
               {loading ? 'Cargando...' : 'Recargar Datos'}
+            </button>
+            
+            <button
+              onClick={actualizarProductosMasVendidosManual}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
+            >
+              <span className="mr-2">🔧</span>
+              Actualizar Productos Más Vendidos
             </button>
           </div>
 
