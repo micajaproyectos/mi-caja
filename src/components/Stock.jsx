@@ -234,22 +234,41 @@ export default function Stock() {
         .from('ventas')
         .select('producto, cantidad, fecha')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
       
       if (ventasError) {
         console.error('❌ Error al consultar ventas:', ventasError);
         return;
       }
       
-      console.log('📊 Últimas 10 ventas:', ventasData);
+      console.log('📊 Últimas 20 ventas:', ventasData);
+      
+      // Calcular productos únicos en ventas
+      const productosEnVentas = [...new Set(ventasData.map(v => v.producto))];
+      const productosEnTabla = productosData.map(p => p.producto);
+      
+      // Encontrar productos que están en la tabla pero no en ventas
+      const productosOrfanos = productosEnTabla.filter(p => !productosEnVentas.includes(p));
+      
+      // Encontrar productos que están en ventas pero no en la tabla
+      const productosFaltantes = productosEnVentas.filter(p => !productosEnTabla.includes(p));
+      
+      console.log('🔍 Análisis de discrepancias:');
+      console.log('• Productos únicos en ventas:', productosEnVentas);
+      console.log('• Productos en tabla:', productosEnTabla);
+      console.log('• Productos huérfanos (en tabla pero no en ventas):', productosOrfanos);
+      console.log('• Productos faltantes (en ventas pero no en tabla):', productosFaltantes);
       
       // Mostrar resumen
       const mensaje = `
 🔍 Debug de Productos Más Vendidos:
 • Productos en tabla: ${productosData?.length || 0}
 • Últimas ventas: ${ventasData?.length || 0}
+• Productos únicos en ventas: ${productosEnVentas.length}
 • Producto más vendido: ${productosData?.[0]?.producto || 'Ninguno'}
 • Cantidad: ${productosData?.[0]?.cantidad_vendida || 0}
+• Productos huérfanos: ${productosOrfanos.length > 0 ? productosOrfanos.join(', ') : 'Ninguno'}
+• Productos faltantes: ${productosFaltantes.length > 0 ? productosFaltantes.join(', ') : 'Ninguno'}
       `;
       
       console.log(mensaje);
@@ -257,6 +276,75 @@ export default function Stock() {
       
     } catch (error) {
       console.error('❌ Error en debug:', error);
+    }
+  };
+
+  // Función para limpiar productos huérfanos
+  const limpiarProductosHuerfanos = async () => {
+    try {
+      console.log('🧹 Limpiando productos huérfanos...');
+      
+      // Obtener productos únicos de ventas
+      const { data: ventasData, error: ventasError } = await supabase
+        .from('ventas')
+        .select('producto');
+      
+      if (ventasError) {
+        console.error('❌ Error al obtener ventas:', ventasError);
+        return;
+      }
+      
+      const productosEnVentas = [...new Set(ventasData.map(v => v.producto))];
+      console.log('📊 Productos únicos en ventas:', productosEnVentas);
+      
+      // Obtener productos en la tabla
+      const { data: productosData, error: productosError } = await supabase
+        .from('productos_mas_vendidos')
+        .select('producto');
+      
+      if (productosError) {
+        console.error('❌ Error al obtener productos de tabla:', productosError);
+        return;
+      }
+      
+      const productosEnTabla = productosData.map(p => p.producto);
+      console.log('📊 Productos en tabla:', productosEnTabla);
+      
+      // Encontrar productos huérfanos
+      const productosOrfanos = productosEnTabla.filter(p => !productosEnVentas.includes(p));
+      
+      if (productosOrfanos.length === 0) {
+        console.log('✅ No hay productos huérfanos para limpiar');
+        alert('✅ No hay productos huérfanos para limpiar');
+        return;
+      }
+      
+      console.log('🧹 Productos huérfanos encontrados:', productosOrfanos);
+      
+      // Eliminar productos huérfanos
+      for (const producto of productosOrfanos) {
+        const { error: deleteError } = await supabase
+          .from('productos_mas_vendidos')
+          .delete()
+          .eq('producto', producto);
+        
+        if (deleteError) {
+          console.error(`❌ Error al eliminar ${producto}:`, deleteError);
+        } else {
+          console.log(`✅ ${producto} eliminado correctamente`);
+        }
+      }
+      
+      console.log('✅ Limpieza de productos huérfanos completada');
+      
+      // Recargar datos
+      cargarProductoMasVendido();
+      
+      alert(`✅ Limpieza completada. Se eliminaron ${productosOrfanos.length} productos huérfanos: ${productosOrfanos.join(', ')}`);
+      
+    } catch (error) {
+      console.error('❌ Error en limpieza:', error);
+      alert('❌ Error durante la limpieza: ' + error.message);
     }
   };
 
@@ -277,6 +365,27 @@ export default function Stock() {
       }
 
       console.log('📊 Datos de ventas obtenidos:', ventasAgregadas);
+
+      // Verificar si hay ventas
+      if (!ventasAgregadas || ventasAgregadas.length === 0) {
+        console.log('📭 No hay ventas registradas, limpiando tabla productos_mas_vendidos');
+        
+        // Limpiar tabla productos_mas_vendidos si no hay ventas
+        const { error: deleteError } = await supabase
+          .from('productos_mas_vendidos')
+          .delete()
+          .neq('id', 0);
+        
+        if (deleteError) {
+          console.error('Error al limpiar tabla:', deleteError);
+        } else {
+          console.log('✅ Tabla productos_mas_vendidos limpiada (no hay ventas)');
+        }
+        
+        // Recargar datos
+        cargarProductoMasVendido();
+        return;
+      }
 
       // Agregar cantidades por producto y obtener última fecha
       const productosAgregados = {};
@@ -302,6 +411,17 @@ export default function Stock() {
       console.log('📦 Productos agregados:', productosAgregados);
       console.log('📅 Últimas fechas:', ultimasFechas);
 
+      // Obtener productos actuales en productos_mas_vendidos para comparar
+      const { data: productosActuales, error: productosError } = await supabase
+        .from('productos_mas_vendidos')
+        .select('producto');
+      
+      if (productosError) {
+        console.error('Error al obtener productos actuales:', productosError);
+      } else {
+        console.log('📊 Productos actuales en tabla:', productosActuales?.map(p => p.producto) || []);
+      }
+
       // Limpiar tabla productos_mas_vendidos
       const { error: deleteError } = await supabase
         .from('productos_mas_vendidos')
@@ -313,7 +433,10 @@ export default function Stock() {
         return;
       }
 
+      console.log('✅ Tabla productos_mas_vendidos limpiada');
+
       // Insertar datos actualizados
+      const productosInsertados = [];
       for (const [producto, cantidad] of Object.entries(productosAgregados)) {
         const { error: insertError } = await supabase
           .from('productos_mas_vendidos')
@@ -327,10 +450,12 @@ export default function Stock() {
           console.error(`Error al insertar ${producto}:`, insertError);
         } else {
           console.log(`✅ ${producto} insertado correctamente con cantidad ${cantidad}`);
+          productosInsertados.push(producto);
         }
       }
 
       console.log('✅ Productos_mas_vendidos actualizado manualmente');
+      console.log('📋 Productos insertados:', productosInsertados);
       
       // Recargar datos
       cargarProductoMasVendido();
@@ -405,6 +530,15 @@ export default function Stock() {
             >
               <span className="mr-2">🔧</span>
               Actualizar Productos Más Vendidos
+            </button>
+            
+            <button
+              onClick={limpiarProductosHuerfanos}
+              disabled={loading}
+              className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
+            >
+              <span className="mr-2">🧹</span>
+              Limpiar Productos Huérfanos
             </button>
             
             <button
