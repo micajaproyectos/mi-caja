@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import Footer from './Footer';
@@ -13,6 +13,13 @@ export default function Stock() {
   const [productoMasVendido, setProductoMasVendido] = useState(null);
   const [loadingMasVendido, setLoadingMasVendido] = useState(true);
   const [errorMasVendido, setErrorMasVendido] = useState(null);
+  
+  // Estado para indicar actualización automática
+  const [actualizandoAutomaticamente, setActualizandoAutomaticamente] = useState(false);
+
+  // Referencias para limpiar intervalos y suscripciones
+  const intervalRef = useRef(null);
+  const subscriptionRef = useRef(null);
 
   // Función para cargar datos del stock desde la vista stock_view
   const cargarStock = async () => {
@@ -69,6 +76,48 @@ export default function Stock() {
     }
   };
 
+  // Función para configurar suscripción en tiempo real
+  const configurarSuscripcionTiempoReal = () => {
+    // Suscripción a cambios en la tabla de ventas
+    subscriptionRef.current = supabase
+      .channel('ventas_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ventas'
+        },
+        (payload) => {
+          console.log('🔄 Cambio detectado en ventas:', payload);
+          // Actualizar datos cuando hay cambios en ventas
+          setActualizandoAutomaticamente(true);
+          cargarStock();
+          cargarProductoMasVendido();
+          setTimeout(() => setActualizandoAutomaticamente(false), 2000);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventario'
+        },
+        (payload) => {
+          console.log('🔄 Cambio detectado en inventario:', payload);
+          // Actualizar datos cuando hay cambios en inventario
+          setActualizandoAutomaticamente(true);
+          cargarStock();
+          cargarProductoMasVendido();
+          setTimeout(() => setActualizandoAutomaticamente(false), 2000);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Estado de suscripción:', status);
+      });
+  };
+
   // Función para obtener el estilo del estado
   const obtenerEstiloEstado = (estado) => {
     switch (estado?.toLowerCase()) {
@@ -95,6 +144,28 @@ export default function Stock() {
   useEffect(() => {
     cargarStock();
     cargarProductoMasVendido();
+    
+    // Configurar suscripción en tiempo real
+    configurarSuscripcionTiempoReal();
+    
+    // Configurar actualización periódica cada 30 segundos
+    intervalRef.current = setInterval(() => {
+      console.log('🔄 Actualización periódica automática...');
+      setActualizandoAutomaticamente(true);
+      cargarStock();
+      cargarProductoMasVendido();
+      setTimeout(() => setActualizandoAutomaticamente(false), 2000);
+    }, 30000); // 30 segundos
+
+    // Limpiar al desmontar el componente
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
   }, []);
 
   // Función para recargar datos
@@ -139,6 +210,16 @@ export default function Stock() {
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             📊 Sistema de Stock
           </h1>
+          
+          {/* Indicador de actualización automática */}
+          {actualizandoAutomaticamente && (
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-2 bg-green-500/20 backdrop-blur-sm text-green-300 px-4 py-2 rounded-full border border-green-400/30 animate-pulse">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                <span className="text-sm font-medium">Actualizando automáticamente...</span>
+              </div>
+            </div>
+          )}
 
           {/* Botón de recarga */}
           <div className="mb-4 md:mb-6 text-center">
@@ -281,9 +362,15 @@ export default function Stock() {
 
           {/* Sección del Producto Más Vendido */}
           <div className="mt-6 md:mt-8">
-            <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-yellow-400 text-center">
-              🏆 Producto Más Vendido
-            </h2>
+            <div className="flex items-center justify-center gap-3 mb-4 md:mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold text-yellow-400 text-center">
+                🏆 Producto Más Vendido
+              </h2>
+              <div className="flex items-center gap-1 text-xs text-gray-400">
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                <span>Actualización automática</span>
+              </div>
+            </div>
             
             <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-yellow-400/30">
               {loadingMasVendido ? (
