@@ -1461,91 +1461,91 @@ export default function RegistroVenta() {
                       </p>
                     </div>
                   )}
-                </div>
-                
-                {/* Estadísticas diarias siempre visibles */}
-                <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                  <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
                   
-                  {/* Listado de estadísticas */}
-                  <div className="space-y-2 md:space-y-3">
-                    {/* Total Diario */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
-                        <div>
-                          <p className="text-blue-200 text-sm md:text-base font-medium">Total Diario</p>
-                          <p className="text-blue-300 text-xs md:text-sm">{calcularEstadisticasDiarias().total.cantidad} ventas</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-blue-300 font-bold text-lg md:text-xl">
-                          ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
+                  {/* Estadísticas diarias siempre visibles */}
+                  <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
                     
-                    {/* Efectivo Diario */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
-                        <div>
-                          <p className="text-green-200 text-sm md:text-base font-medium">Efectivo</p>
-                          <p className="text-green-300 text-xs md:text-sm">{calcularEstadisticasDiarias().efectivo.cantidad} ventas</p>
+                    {/* Listado de estadísticas */}
+                    <div className="space-y-2 md:space-y-3">
+                      {/* Total Diario */}
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
+                          <div>
+                            <p className="text-blue-200 text-sm md:text-base font-medium">Total Diario</p>
+                            <p className="text-blue-300 text-xs md:text-sm">{calcularEstadisticasDiarias().total.cantidad} ventas</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-blue-300 font-bold text-lg md:text-xl">
+                            ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-green-300 font-bold text-lg md:text-xl">
-                          ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Débito Diario */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
-                        <div>
-                          <p className="text-purple-200 text-sm md:text-base font-medium">Débito</p>
-                          <p className="text-purple-300 text-xs md:text-sm">{calcularEstadisticasDiarias().debito.cantidad} ventas</p>
+                      
+                      {/* Efectivo Diario */}
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
+                          <div>
+                            <p className="text-green-200 text-sm md:text-base font-medium">Efectivo</p>
+                            <p className="text-green-300 text-xs md:text-sm">{calcularEstadisticasDiarias().efectivo.cantidad} ventas</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-green-300 font-bold text-lg md:text-xl">
+                            ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-purple-300 font-bold text-lg md:text-xl">
-                          ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Crédito Diario */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
-                        <div>
-                          <p className="text-orange-200 text-sm md:text-base font-medium">Crédito</p>
-                          <p className="text-orange-300 text-xs md:text-sm">{calcularEstadisticasDiarias().credito.cantidad} ventas</p>
+                      
+                      {/* Débito Diario */}
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
+                          <div>
+                            <p className="text-purple-200 text-sm md:text-base font-medium">Débito</p>
+                            <p className="text-purple-300 text-xs md:text-sm">{calcularEstadisticasDiarias().debito.cantidad} ventas</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-purple-300 font-bold text-lg md:text-xl">
+                            ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-orange-300 font-bold text-lg md:text-xl">
-                          ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Transferencia Diaria */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
-                        <div>
-                          <p className="text-indigo-200 text-sm md:text-base font-medium">Transferencia</p>
-                          <p className="text-indigo-300 text-xs md:text-sm">{calcularEstadisticasDiarias().transferencia.cantidad} ventas</p>
+                      
+                      {/* Crédito Diario */}
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
+                          <div>
+                            <p className="text-orange-200 text-sm md:text-base font-medium">Crédito</p>
+                            <p className="text-orange-300 text-xs md:text-sm">{calcularEstadisticasDiarias().credito.cantidad} ventas</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-orange-300 font-bold text-lg md:text-xl">
+                            ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-indigo-300 font-bold text-lg md:text-xl">
-                          ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
-                        </p>
+                      
+                      {/* Transferencia Diaria */}
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
+                          <div>
+                            <p className="text-indigo-200 text-sm md:text-base font-medium">Transferencia</p>
+                            <p className="text-indigo-300 text-xs md:text-sm">{calcularEstadisticasDiarias().transferencia.cantidad} ventas</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-indigo-300 font-bold text-lg md:text-xl">
+                            ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
