@@ -8,6 +8,11 @@ export default function Stock() {
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Nuevos estados para el producto más vendido
+  const [productoMasVendido, setProductoMasVendido] = useState(null);
+  const [loadingMasVendido, setLoadingMasVendido] = useState(true);
+  const [errorMasVendido, setErrorMasVendido] = useState(null);
 
   // Función para cargar datos del stock desde la vista stock_view
   const cargarStock = async () => {
@@ -36,6 +41,34 @@ export default function Stock() {
     }
   };
 
+  // Nueva función para cargar el producto más vendido
+  const cargarProductoMasVendido = async () => {
+    try {
+      setLoadingMasVendido(true);
+      setErrorMasVendido(null);
+
+      const { data, error } = await supabase
+        .from('productos_mas_vendidos')
+        .select('*')
+        .order('cantidad_vendida', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error al cargar producto más vendido:', error);
+        setErrorMasVendido('Error al cargar el producto más vendido');
+        return;
+      }
+
+      setProductoMasVendido(data && data.length > 0 ? data[0] : null);
+      console.log('✅ Producto más vendido cargado:', data && data.length > 0 ? data[0] : null);
+    } catch (error) {
+      console.error('Error inesperado al cargar producto más vendido:', error);
+      setErrorMasVendido('Error inesperado al cargar el producto más vendido');
+    } finally {
+      setLoadingMasVendido(false);
+    }
+  };
+
   // Función para obtener el estilo del estado
   const obtenerEstiloEstado = (estado) => {
     switch (estado?.toLowerCase()) {
@@ -61,11 +94,13 @@ export default function Stock() {
   // Cargar datos al montar el componente
   useEffect(() => {
     cargarStock();
+    cargarProductoMasVendido();
   }, []);
 
   // Función para recargar datos
   const recargarDatos = () => {
     cargarStock();
+    cargarProductoMasVendido();
   };
 
   return (
@@ -243,6 +278,81 @@ export default function Stock() {
               </div>
             </div>
           )}
+
+          {/* Sección del Producto Más Vendido */}
+          <div className="mt-6 md:mt-8">
+            <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-yellow-400 text-center">
+              🏆 Producto Más Vendido
+            </h2>
+            
+            <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-yellow-400/30">
+              {loadingMasVendido ? (
+                <div className="text-center py-6 md:py-8">
+                  <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-yellow-400"></div>
+                  <p className="text-white mt-3 md:mt-4 text-sm md:text-base">Cargando producto más vendido...</p>
+                </div>
+              ) : errorMasVendido ? (
+                <div className="text-center py-6 md:py-8">
+                  <div className="text-red-400 text-3xl md:text-4xl mb-3 md:mb-4">❌</div>
+                  <p className="text-red-400 text-base md:text-lg font-bold mb-2">Error</p>
+                  <p className="text-gray-300 mb-3 md:mb-4 text-sm md:text-base">{errorMasVendido}</p>
+                  <button
+                    onClick={cargarProductoMasVendido}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm md:text-base"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              ) : productoMasVendido ? (
+                <div className="text-center">
+                  <div className="mb-6 md:mb-8">
+                    <div className="text-yellow-400 text-5xl md:text-7xl mb-4 md:mb-6 animate-pulse">🏆</div>
+                    <h3 className="text-white text-2xl md:text-3xl font-bold mb-3 md:mb-4">
+                      {productoMasVendido.producto || 'Producto sin nombre'}
+                    </h3>
+                    <p className="text-gray-300 text-base md:text-lg mb-6">
+                      El producto con mayor cantidad vendida
+                    </p>
+                  </div>
+                  
+                  <div className="max-w-md mx-auto">
+                    <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-yellow-400/40 shadow-xl">
+                      <div className="text-center">
+                        <div className="text-yellow-400 text-4xl md:text-5xl mb-4">📦</div>
+                        <p className="text-gray-300 text-sm md:text-base font-medium mb-2">Cantidad Vendida</p>
+                        <p className="text-yellow-300 text-3xl md:text-4xl font-bold">
+                          {formatearNumero(productoMasVendido.cantidad_vendida || 0)}
+                        </p>
+                        <p className="text-gray-400 text-xs md:text-sm mt-2">unidades</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {productoMasVendido.fecha_ultima_venta && (
+                    <div className="mt-6 md:mt-8 p-4 md:p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                      <p className="text-gray-300 text-sm md:text-base text-center">
+                        <span className="text-yellow-400 font-medium">Última venta:</span> {' '}
+                        {new Date(productoMasVendido.fecha_ultima_venta).toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 md:py-12">
+                  <div className="text-gray-400 text-4xl md:text-6xl mb-4 md:mb-6">📊</div>
+                  <p className="text-gray-300 text-lg md:text-xl font-bold mb-3">No hay productos vendidos</p>
+                  <p className="text-gray-500 text-sm md:text-base">
+                    Aún no se han registrado ventas de productos
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
       
