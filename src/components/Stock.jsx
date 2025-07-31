@@ -54,29 +54,6 @@ export default function Stock() {
       setLoadingMasVendido(true);
       setErrorMasVendido(null);
 
-      // Función de depuración para verificar datos
-      const debugDatos = async () => {
-        // Verificar datos en ventas
-        const { data: ventasData, error: ventasError } = await supabase
-          .from('ventas')
-          .select('*')
-          .ilike('producto', '%T1%');
-        
-        console.log('🔍 Datos de ventas con T1:', ventasData);
-        console.log('🔍 Error en ventas:', ventasError);
-
-        // Verificar todos los datos en productos_mas_vendidos
-        const { data: todosProductos, error: todosError } = await supabase
-          .from('productos_mas_vendidos')
-          .select('*');
-        
-        console.log('🔍 Todos los productos más vendidos:', todosProductos);
-        console.log('🔍 Error en productos_mas_vendidos:', todosError);
-      };
-
-      // Ejecutar depuración
-      await debugDatos();
-
       const { data, error } = await supabase
         .from('productos_mas_vendidos')
         .select('*')
@@ -202,15 +179,6 @@ export default function Stock() {
     try {
       console.log('🔄 Actualizando productos_mas_vendidos manualmente...');
       
-      // Primero verificar la estructura de la tabla
-      const { data: schemaData, error: schemaError } = await supabase
-        .from('productos_mas_vendidos')
-        .select('*')
-        .limit(1);
-      
-      console.log('🔍 Estructura de la tabla:', schemaData);
-      console.log('🔍 Error de esquema:', schemaError);
-      
       // Obtener datos agregados de ventas
       const { data: ventasAgregadas, error: ventasError } = await supabase
         .from('ventas')
@@ -247,21 +215,15 @@ export default function Stock() {
         return;
       }
 
-      // Insertar datos actualizados - usando el nombre correcto de la columna
+      // Insertar datos actualizados
       for (const [producto, cantidad] of Object.entries(productosAgregados)) {
-        const insertData = {
-          producto: producto,
-          cantidad_vendida: cantidad
-        };
-        
-        // Solo agregar ultima_venta si la columna existe
-        if (schemaData && schemaData.length > 0 && schemaData[0].hasOwnProperty('ultima_venta')) {
-          insertData.ultima_venta = new Date().toISOString();
-        }
-        
         const { error: insertError } = await supabase
           .from('productos_mas_vendidos')
-          .insert(insertData);
+          .insert({
+            producto: producto,
+            cantidad_vendida: cantidad,
+            ultima_venta: new Date().toISOString()
+          });
 
         if (insertError) {
           console.error(`Error al insertar ${producto}:`, insertError);
