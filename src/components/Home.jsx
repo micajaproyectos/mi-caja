@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import Footer from './Footer';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -75,22 +76,20 @@ export default function Home() {
           
           {/* Título genérico con glassmorphism */}
           <div className="text-white">
-            <h1 className="text-xl font-bold text-gray-100 drop-shadow-sm">Sistema de Gestión</h1>
-            <p className="text-sm text-gray-300">Control y administración de ventas e inventario</p>
+            <h1 className="text-xl font-bold text-gray-100 drop-shadow-sm">Bienvenido a Mi Caja</h1>
+            <p className="text-sm text-gray-300 italic">Tu negocio en un solo lugar</p>
           </div>
         </div>
       </div>
 
-
-
       {/* Título principal centrado */}
-      <div className="relative z-10 flex items-center justify-center" style={{ height: '35vh' }}>
+      <div className="relative z-10 flex items-center justify-center" style={{ height: '25vh' }}>
         <div className="text-center animate-fade-in">
           <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-4 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             Inicio
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto animate-fade-in-delayed italic" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            Bienvenido a Mi Caja - Tu negocio en un solo lugar
+            Tu negocio en un solo lugar
           </p>
         </div>
       </div>
@@ -103,30 +102,23 @@ export default function Home() {
               <button
                 key={item.id}
                 onClick={() => navigate(item.route)}
-                className="group relative flex flex-col items-center p-6 rounded-2xl transition-all duration-300 transform hover:scale-105"
+                className="group relative flex flex-col items-center p-6 rounded-2xl transition-all duration-200 transform hover:scale-105 active:scale-95 active:translate-y-1 select-none"
                 style={{
                   backgroundColor: '#1f4a1f',
                   borderRadius: '1rem',
                   boxShadow: '8px 8px 16px rgba(0, 0, 0, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-8px) scale(1.05)';
-                  e.target.style.boxShadow = '12px 12px 24px rgba(0, 0, 0, 0.4), -12px -12px 24px rgba(255, 255, 255, 0.08)';
-                  e.target.style.backgroundColor = '#2d5a27';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0) scale(1)';
-                  e.target.style.boxShadow = '8px 8px 16px rgba(0, 0, 0, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.05)';
-                  e.target.style.backgroundColor = '#1f4a1f';
-                }}
               >
-                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300 drop-shadow-sm">
+                <div className="text-5xl mb-4 transition-transform duration-200 group-hover:scale-110 group-active:scale-95 drop-shadow-sm">
                   {item.icon}
                 </div>
-                <span className="text-white text-sm font-medium text-center drop-shadow-sm" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                <span className="text-white text-sm font-medium text-center drop-shadow-sm transition-colors duration-200 group-hover:text-green-200" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   {item.label}
                 </span>
+                
+                {/* Efecto de sombra al presionar */}
+                <div className="absolute inset-0 rounded-2xl bg-black/20 opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
                 
                 {/* Efecto de brillo en hover */}
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -135,6 +127,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+             {/* Footer */}
+       <Footer />
     </div>
   );
-} 
+}  

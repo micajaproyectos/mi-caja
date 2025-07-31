@@ -4,6 +4,7 @@ import RegistroVenta from './components/RegistroVenta';
 import RegistroInventario from './components/RegistroInventario';
 import Stock from './components/Stock';
 import RegistroAsistencia from './components/RegistroAsistencia';
+import Footer from './components/Footer';
 
 // Componentes placeholder para las otras secciones
 
@@ -43,7 +44,7 @@ const Gastos = () => {
             </button>
           </div>
           
-          <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             💰 Control de Gastos
           </h1>
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
@@ -53,6 +54,9 @@ const Gastos = () => {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
@@ -101,7 +105,7 @@ const Proveedores = () => {
             </button>
             </div>
           
-          <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             🚚 Gestión de Proveedores
           </h1>
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
@@ -111,6 +115,9 @@ const Proveedores = () => {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

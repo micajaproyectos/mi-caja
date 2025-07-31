@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import Footer from './Footer';
 
 const RegistroInventario = () => {
   const [inventario, setInventario] = useState({
@@ -208,7 +209,7 @@ const RegistroInventario = () => {
             </button>
           </div>
 
-          <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             📦 Gestión de Inventario
           </h1>
 
@@ -448,8 +449,11 @@ const RegistroInventario = () => {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
 
-export default RegistroInventario; 
+export default RegistroInventario;

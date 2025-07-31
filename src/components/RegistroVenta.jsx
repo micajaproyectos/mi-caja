@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
+import Footer from './Footer';
 
 export default function RegistroVenta() {
   const navigate = useNavigate();
@@ -860,7 +861,7 @@ export default function RegistroVenta() {
             </button>
           </div>
           
-          <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             Registro de Venta
           </h1>
           
@@ -1441,6 +1442,9 @@ export default function RegistroVenta() {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 } 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import Footer from './Footer';
 
 export default function RegistroAsistencia() {
   // ⚠️ IMPORTANTE: Este componente NO ejecuta escritura automática en localStorage
@@ -511,7 +512,7 @@ export default function RegistroAsistencia() {
           </div>
 
           {/* Título principal */}
-          <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             📋 Registro de Asistencia
           </h1>
 
@@ -780,6 +781,9 @@ export default function RegistroAsistencia() {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 } 
