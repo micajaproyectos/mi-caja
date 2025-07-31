@@ -247,16 +247,16 @@ export default function Stock() {
         return;
       }
 
-      // Insertar datos actualizados - versión simplificada sin fecha_ultima_venta
+      // Insertar datos actualizados - usando el nombre correcto de la columna
       for (const [producto, cantidad] of Object.entries(productosAgregados)) {
         const insertData = {
           producto: producto,
           cantidad_vendida: cantidad
         };
         
-        // Solo agregar fecha_ultima_venta si la columna existe
-        if (schemaData && schemaData.length > 0 && schemaData[0].hasOwnProperty('fecha_ultima_venta')) {
-          insertData.fecha_ultima_venta = new Date().toISOString();
+        // Solo agregar ultima_venta si la columna existe
+        if (schemaData && schemaData.length > 0 && schemaData[0].hasOwnProperty('ultima_venta')) {
+          insertData.ultima_venta = new Date().toISOString();
         }
         
         const { error: insertError } = await supabase
@@ -530,11 +530,11 @@ export default function Stock() {
                     </div>
                   </div>
                   
-                  {productoMasVendido.fecha_ultima_venta && (
+                  {productoMasVendido.ultima_venta && (
                     <div className="mt-6 md:mt-8 p-4 md:p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
                       <p className="text-gray-300 text-sm md:text-base text-center">
                         <span className="text-yellow-400 font-medium">Última venta:</span> {' '}
-                        {new Date(productoMasVendido.fecha_ultima_venta).toLocaleDateString('es-ES', {
+                        {new Date(productoMasVendido.ultima_venta).toLocaleDateString('es-ES', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
