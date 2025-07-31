@@ -81,46 +81,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Barra de navegación superior - Sticky */}
-      <nav className="sticky top-0 z-50 px-6 py-3" style={{ backgroundColor: '#0a1e0a' }}>
-        <div className="flex flex-wrap gap-8 text-white text-xs font-medium">
-          <a href="/" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>🏠</span>
-            <span>Inicio</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-          <a href="/ventas" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>🤝</span>
-            <span>Ventas</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-          <a href="/asistencia" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>📋</span>
-            <span>Asistencia</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-          <a href="/gastos" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>💰</span>
-            <span>Gastos</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-          <a href="/inventario" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>📦</span>
-            <span>Inventario</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-          <a href="/stock" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>✅</span>
-            <span>Stock</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-          <a href="/proveedores" className="flex items-center gap-2 hover:text-green-300 transition-colors duration-200 relative group">
-            <span>🚚</span>
-            <span>Proveedores</span>
-            <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-green-300 transition-all duration-300 group-hover:w-full"></div>
-          </a>
-        </div>
-      </nav>
+
 
       {/* Título principal centrado */}
       <div className="relative z-10 flex items-center justify-center" style={{ height: '35vh' }}>

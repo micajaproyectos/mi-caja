@@ -1,8 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
 export default function RegistroAsistencia() {
+  // ⚠️ IMPORTANTE: Este componente NO ejecuta escritura automática en localStorage
+  // Solo se escriben datos cuando el usuario hace clic explícitamente en "Registrar Entrada"
+  // Las funciones de lectura (obtenerEntradasPendientes, obtenerUltimaEntradaHoy, etc.)
+  // solo leen datos existentes, no crean nuevos registros
+  // 
+  // ✅ OPTIMIZACIONES IMPLEMENTADAS:
+  // - useMemo para estadisticas: evita recálculos innecesarios
+  // - useMemo para ultimaEntradaHoy: evita llamadas a localStorage en cada render
+  // - useMemo para entradasPendientesVisual: listado visual de entradas pendientes
+  // - Validaciones robustas: todas las funciones validan parámetros antes de operar
+  // - Validación de empleado: requiere al menos 2 caracteres para activar funciones de localStorage
+  
   const navigate = useNavigate();
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,22 +22,38 @@ export default function RegistroAsistencia() {
   const [fechaActual, setFechaActual] = useState('');
   const [horaActual, setHoraActual] = useState('');
   const [empleado, setEmpleado] = useState('');
-  const [horaEntrada, setHoraEntrada] = useState('');
-  const [horaSalida, setHoraSalida] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
 
-  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  // Función para obtener la fecha actual en formato YYYY-MM-DD en Santiago, Chile
   const obtenerFechaActual = () => {
-    return new Date().toISOString().split('T')[0];
+    const fecha = new Date();
+    const fechaSantiago = fecha.toLocaleDateString('en-CA', {
+      timeZone: 'America/Santiago'
+    });
+    return fechaSantiago; // Formato YYYY-MM-DD
   };
 
-  // Función para obtener la hora actual
+  // Función para obtener la hora actual en Santiago, Chile
   const obtenerHoraActual = () => {
-    return new Date().toLocaleTimeString('es-ES', {
+    return new Date().toLocaleTimeString('es-CL', {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
+      timeZone: 'America/Santiago'
     });
+  };
+
+  // Función para obtener la hora actual en formato HH:MM para registros
+  const obtenerHoraActualFormato = () => {
+    const fecha = new Date();
+    // Convertir a hora de Santiago, Chile
+    const horaSantiago = fecha.toLocaleString('en-US', {
+      timeZone: 'America/Santiago',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return horaSantiago;
   };
 
   // Actualizar fecha y hora cada segundo
@@ -41,12 +69,12 @@ export default function RegistroAsistencia() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Cargar asistencias desde la vista vista_asistencia
+  // Cargar asistencias desde la tabla asistencia
   const cargarAsistencias = async () => {
     try {
       setLoading(true);
       let query = supabase
-        .from('vista_asistencia')
+        .from('asistencia')
         .select('*')
         .order('fecha', { ascending: false })
         .order('hora_entrada', { ascending: false });
@@ -73,108 +101,268 @@ export default function RegistroAsistencia() {
     cargarAsistencias();
   }, [filtroFecha]);
 
-  // Registrar asistencia
-  const registrarAsistencia = async (e) => {
-    e.preventDefault();
+  // Función para calcular horas trabajadas entre dos horarios (formato HH:MM para mostrar)
+  const calcularTotalHoras = (horaEntrada, horaSalida) => {
+    if (!horaEntrada || !horaSalida) return null;
     
-    if (!empleado) {
-      alert('Por favor ingresa el nombre del empleado');
+    const [horaEnt, minEnt] = horaEntrada.split(':').map(Number);
+    const [horaSal, minSal] = horaSalida.split(':').map(Number);
+    
+    let horas = horaSal - horaEnt;
+    let minutos = minSal - minEnt;
+    
+    if (minutos < 0) {
+      horas -= 1;
+      minutos += 60;
+    }
+    
+    if (horas < 0) {
+      horas += 24; // Asumimos que es el mismo día
+    }
+    
+    return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+  };
+
+  // Función para calcular horas trabajadas en formato decimal para Supabase
+  const calcularTotalHorasDecimal = (horaEntrada, horaSalida) => {
+    if (!horaEntrada || !horaSalida) return null;
+    
+    const [horaEnt, minEnt] = horaEntrada.split(':').map(Number);
+    const [horaSal, minSal] = horaSalida.split(':').map(Number);
+    
+    let horas = horaSal - horaEnt;
+    let minutos = minSal - minEnt;
+    
+    if (minutos < 0) {
+      horas -= 1;
+      minutos += 60;
+    }
+    
+    if (horas < 0) {
+      horas += 24; // Asumimos que es el mismo día
+    }
+    
+    // Convertir a decimal (ej: 1:30 = 1.5 horas)
+    const horasDecimal = horas + (minutos / 60);
+    return parseFloat(horasDecimal.toFixed(2));
+  };
+
+  // Función para obtener la clave de localStorage
+  const obtenerClaveLocalStorage = (empleado, fecha) => {
+    // Validar que existan empleado y fecha, y que empleado tenga al menos 2 caracteres
+    if (!empleado || !fecha || empleado.trim().length < 2) {
+      console.warn('⚠️ Intento de obtener clave de localStorage sin empleado válido o fecha');
+      return null;
+    }
+    return `asistencia_${empleado}_${fecha}`;
+  };
+
+  // Función para guardar entrada en localStorage
+  const guardarEntradaLocal = (empleado, fecha, hora) => {
+    const clave = obtenerClaveLocalStorage(empleado, fecha);
+    
+    // Validar que la clave sea válida
+    if (!clave) {
+      console.error('❌ No se puede guardar entrada: clave de localStorage inválida');
+      throw new Error('Clave de localStorage inválida');
+    }
+    
+    const entradasExistentes = JSON.parse(localStorage.getItem(clave) || '[]');
+    
+    const nuevaEntrada = {
+      hora_entrada: hora,
+      sincronizado: false
+    };
+    
+    entradasExistentes.push(nuevaEntrada);
+    localStorage.setItem(clave, JSON.stringify(entradasExistentes));
+    
+    console.log('💾 Entrada guardada en localStorage:', nuevaEntrada);
+    return nuevaEntrada;
+  };
+
+  // Función para obtener entradas pendientes
+  const obtenerEntradasPendientes = (empleado, fecha) => {
+    // Validar que existan empleado y fecha antes de proceder
+    if (!empleado || !fecha || empleado.trim().length < 2) {
+      console.log('🔍 No se pueden obtener entradas pendientes: empleado inválido o fecha faltante');
+      return [];
+    }
+    
+    const clave = obtenerClaveLocalStorage(empleado, fecha);
+    if (!clave) {
+      console.log('🔍 No se pueden obtener entradas pendientes: clave inválida');
+      return [];
+    }
+    
+    const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
+    
+    // Filtrar entradas que tienen hora_entrada pero no hora_salida
+    const pendientes = entradas.filter(entrada => 
+      entrada.hora_entrada && !entrada.hora_salida && !entrada.sincronizado
+    );
+    
+    console.log('🔍 Entradas pendientes encontradas:', pendientes);
+    return pendientes;
+  };
+
+  // Función para eliminar entrada pendiente del localStorage
+  const eliminarEntradaPendiente = (empleado, fecha, horaEntrada) => {
+    if (!empleado || !fecha || empleado.trim().length < 2) {
+      console.warn('⚠️ No se puede eliminar entrada pendiente: empleado inválido');
       return;
     }
+    
+    const clave = obtenerClaveLocalStorage(empleado, fecha);
+    if (!clave) {
+      console.warn('⚠️ No se puede eliminar entrada pendiente: clave inválida');
+      return;
+    }
+    
+    const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
+    
+    // Encontrar y marcar como sincronizada la entrada específica
+    const entradasActualizadas = entradas.map(entrada => {
+      if (entrada.hora_entrada === horaEntrada && !entrada.sincronizado) {
+        return { ...entrada, sincronizado: true };
+      }
+      return entrada;
+    });
+    
+    localStorage.setItem(clave, JSON.stringify(entradasActualizadas));
+    console.log('🗑️ Entrada marcada como sincronizada en localStorage');
+  };
 
-    if (!horaEntrada && !horaSalida) {
-      alert('Por favor ingresa al menos una hora (entrada o salida)');
+  // Función para obtener todas las entradas de localStorage (para mostrar en la interfaz)
+  const obtenerTodasLasEntradas = (empleado, fecha) => {
+    // Validar que existan empleado y fecha antes de proceder
+    if (!empleado || !fecha || empleado.trim().length < 2) {
+      return [];
+    }
+    
+    const clave = obtenerClaveLocalStorage(empleado, fecha);
+    if (!clave) {
+      return [];
+    }
+    
+    return JSON.parse(localStorage.getItem(clave) || '[]');
+  };
+
+  // Función para obtener la última hora de entrada registrada hoy
+  const obtenerUltimaEntradaHoy = (empleado, fecha) => {
+    if (!empleado || !fecha || empleado.trim().length < 2) return null;
+    
+    const clave = obtenerClaveLocalStorage(empleado, fecha);
+    if (!clave) return null;
+    
+    const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
+    
+    // Filtrar entradas que tienen hora_entrada (sin importar si están sincronizadas)
+    const entradasConHora = entradas.filter(entrada => entrada.hora_entrada);
+    
+    if (entradasConHora.length === 0) return null;
+    
+    // Retornar la última entrada registrada
+    const ultimaEntrada = entradasConHora[entradasConHora.length - 1];
+    return ultimaEntrada.hora_entrada;
+  };
+
+  // Registrar hora de entrada
+  const registrarEntrada = async () => {
+    if (!empleado) {
+      alert('❌ Por favor ingresa el nombre del empleado');
       return;
     }
 
     try {
       setLoading(true);
+      const horaActual = obtenerHoraActualFormato();
       
-      // Buscar si ya existe un registro para este empleado en la fecha actual
-      const { data: registroExistente, error: errorBusqueda } = await supabase
-        .from('asistencia')
-        .select('*')
-        .eq('empleado', empleado)
-        .eq('fecha', fechaActual)
-        .single();
-
-      if (errorBusqueda && errorBusqueda.code !== 'PGRST116') {
-        throw errorBusqueda;
-      }
-
-      let resultado;
-
-      if (registroExistente) {
-        // Actualizar registro existente
-        const datosActualizar = {};
-        
-        if (horaEntrada) {
-          if (registroExistente.hora_entrada) {
-            alert('❌ Este empleado ya tiene registrada una hora de entrada para hoy');
-            return;
-          }
-          datosActualizar.hora_entrada = horaEntrada;
-        }
-        
-        if (horaSalida) {
-          if (!registroExistente.hora_entrada && !horaEntrada) {
-            alert('❌ No se puede registrar salida sin entrada previa');
-            return;
-          }
-          if (registroExistente.hora_salida) {
-            alert('❌ Este empleado ya tiene registrada una hora de salida para hoy');
-            return;
-          }
-          datosActualizar.hora_salida = horaSalida;
-        }
-
-        const { data, error } = await supabase
-          .from('asistencia')
-          .update(datosActualizar)
-          .eq('id', registroExistente.id)
-          .select();
-
-        if (error) throw error;
-        resultado = data;
-      } else {
-        // Crear nuevo registro
-        if (horaSalida && !horaEntrada) {
-          alert('❌ No se puede registrar salida sin entrada previa');
-          return;
-        }
-
-        const nuevaAsistencia = {
-          empleado: empleado,
-          fecha: fechaActual,
-          hora_entrada: horaEntrada || null,
-          hora_salida: horaSalida || null,
-          total_horas: null // Se calcula automáticamente por el trigger
-        };
-
-        const { data, error } = await supabase
-          .from('asistencia')
-          .insert([nuevaAsistencia])
-          .select();
-
-        if (error) throw error;
-        resultado = data;
-      }
-
-      console.log('✅ Asistencia registrada exitosamente:', resultado);
+      console.log('📝 Registrando entrada para:', empleado, 'fecha:', fechaActual, 'hora:', horaActual);
       
-      // Limpiar formulario
-      setEmpleado('');
-      setHoraEntrada('');
-      setHoraSalida('');
+      // Guardar entrada en localStorage
+      const entradaGuardada = guardarEntradaLocal(empleado, fechaActual, horaActual);
       
-      // Recargar asistencias
-      cargarAsistencias();
-      
-      alert('✅ Asistencia registrada exitosamente');
+             console.log('✅ Hora de entrada registrada localmente:', entradaGuardada);
+       alert(`✅ Hora de entrada registrada localmente: ${horaActual}\n\nLa entrada se sincronizará con el servidor cuando registres la salida.`);
+       
+       // Forzar re-render para mostrar la nueva entrada
+       setEmpleado(empleado);
       
     } catch (error) {
-      console.error('Error al registrar asistencia:', error);
-      alert('❌ Error al registrar la asistencia');
+      console.error('Error al registrar entrada:', error);
+      alert('❌ Error al registrar la hora de entrada');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Registrar hora de salida
+  const registrarSalida = async () => {
+    if (!empleado) {
+      alert('❌ Por favor ingresa el nombre del empleado');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const horaActual = obtenerHoraActualFormato();
+      
+      console.log('🔍 Buscando entradas pendientes para:', empleado, 'fecha:', fechaActual);
+      
+      // Buscar entradas pendientes en localStorage
+      const entradasPendientes = obtenerEntradasPendientes(empleado, fechaActual);
+
+      if (!entradasPendientes || entradasPendientes.length === 0) {
+        alert('❌ No hay registros de entrada pendientes para este empleado en la fecha actual');
+        return;
+      }
+
+      // Tomar la última entrada pendiente
+      const entradaPendiente = entradasPendientes[entradasPendientes.length - 1];
+      console.log('📝 Entrada pendiente a completar:', entradaPendiente);
+      
+             const totalHorasFormato = calcularTotalHoras(entradaPendiente.hora_entrada, horaActual);
+       const totalHorasDecimal = calcularTotalHorasDecimal(entradaPendiente.hora_entrada, horaActual);
+       console.log('⏰ Total horas calculadas (formato):', totalHorasFormato);
+       console.log('⏰ Total horas calculadas (decimal):', totalHorasDecimal);
+
+       // Crear registro completo para enviar a Supabase
+       const registroCompleto = {
+         empleado: empleado,
+         fecha: fechaActual,
+         hora_entrada: entradaPendiente.hora_entrada,
+         hora_salida: horaActual,
+         total_horas: totalHorasDecimal
+       };
+      
+      console.log('📋 Registro completo a enviar:', registroCompleto);
+
+      // Enviar a Supabase
+      const { data, error } = await supabase
+        .from('asistencia')
+        .insert([registroCompleto])
+        .select('*');
+
+      if (error) {
+        console.error('Error en inserción a Supabase:', error);
+        throw error;
+      }
+
+             // Marcar entrada como sincronizada en localStorage
+       eliminarEntradaPendiente(empleado, fechaActual, entradaPendiente.hora_entrada);
+
+              console.log('✅ Hora de salida registrada exitosamente:', data);
+        cargarAsistencias();
+        
+        // Forzar re-render para actualizar el listado visual
+        setEmpleado(empleado);
+        
+        alert(`✅ Hora de salida registrada: ${horaActual}\nTotal horas trabajadas: ${totalHorasFormato}\n\nRegistro sincronizado con el servidor.`);
+      
+    } catch (error) {
+      console.error('Error al registrar salida:', error);
+      alert('❌ Error al registrar la hora de salida');
     } finally {
       setLoading(false);
     }
@@ -183,6 +371,52 @@ export default function RegistroAsistencia() {
   // Limpiar filtros
   const limpiarFiltros = () => {
     setFiltroFecha('');
+  };
+
+  // Función para limpiar entradas pendientes del localStorage
+  const limpiarEntradasPendientes = () => {
+    if (empleado && fechaActual && empleado.trim().length >= 2) {
+      const clave = obtenerClaveLocalStorage(empleado, fechaActual);
+      if (clave) {
+        localStorage.removeItem(clave);
+        console.log('🧹 Entradas pendientes eliminadas del localStorage');
+        alert('✅ Entradas pendientes eliminadas del localStorage');
+      } else {
+        console.warn('⚠️ No se pueden limpiar entradas pendientes: clave inválida');
+        alert('❌ No se pueden limpiar entradas pendientes');
+      }
+    } else {
+      console.warn('⚠️ No se pueden limpiar entradas pendientes: empleado inválido');
+      alert('❌ No se pueden limpiar entradas pendientes: empleado inválido');
+    }
+  };
+
+  // Función para mostrar información de debug
+  const mostrarInfoDebug = () => {
+    if (empleado && fechaActual && empleado.trim().length >= 2) {
+      const entradas = obtenerTodasLasEntradas(empleado, fechaActual);
+      const pendientes = obtenerEntradasPendientes(empleado, fechaActual);
+      
+      console.log('🔍 Información de debug:');
+      console.log('Empleado:', empleado);
+      console.log('Fecha:', fechaActual);
+      console.log('Todas las entradas:', entradas);
+      console.log('Entradas pendientes:', pendientes);
+      
+      alert(`🔍 Información de Debug:\n\nEmpleado: ${empleado}\nFecha: ${fechaActual}\n\nTodas las entradas: ${JSON.stringify(entradas, null, 2)}\n\nEntradas pendientes: ${JSON.stringify(pendientes, null, 2)}`);
+    } else {
+      alert('❌ No se puede mostrar debug: empleado inválido o fecha faltante');
+    }
+  };
+
+  // Función para convertir horas decimales a formato HH:MM
+  const convertirHorasDecimalesAFormato = (horasDecimales) => {
+    if (!horasDecimales || horasDecimales === 0) return '';
+    
+    const horas = Math.floor(horasDecimales);
+    const minutos = Math.round((horasDecimales - horas) * 60);
+    
+    return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
   };
 
   // Exportar datos a CSV
@@ -195,7 +429,7 @@ export default function RegistroAsistencia() {
         asistencia.fecha,
         asistencia.hora_entrada || '',
         asistencia.hora_salida || '',
-        asistencia.total_horas || '',
+        convertirHorasDecimalesAFormato(asistencia.total_horas) || '',
         asistencia.estado || ''
       ].join(','))
     ].join('\n');
@@ -212,15 +446,36 @@ export default function RegistroAsistencia() {
   };
 
   // Calcular estadísticas del día
-  const calcularEstadisticasDia = () => {
+  const estadisticas = useMemo(() => {
     const asistenciasHoy = asistencias.filter(a => a.fecha === fechaActual);
-    const entradas = asistenciasHoy.filter(a => a.hora_entrada).length;
-    const salidas = asistenciasHoy.filter(a => a.hora_salida).length;
+    const entradasServidor = asistenciasHoy.filter(a => a.hora_entrada).length;
+    const salidasServidor = asistenciasHoy.filter(a => a.hora_salida).length;
     
-    return { entradas, salidas, total: asistenciasHoy.length };
-  };
+    // Obtener entradas pendientes del localStorage solo si hay empleado válido
+    let entradasPendientesCount = 0;
+    if (empleado && fechaActual && empleado.trim().length >= 2) {
+      const entradasPendientes = obtenerEntradasPendientes(empleado, fechaActual);
+      entradasPendientesCount = entradasPendientes.length;
+    }
+    
+    const entradas = entradasServidor + entradasPendientesCount;
+    const salidas = salidasServidor;
+    const total = asistenciasHoy.length + entradasPendientesCount;
+    
+    return { entradas, salidas, total, entradasPendientes: entradasPendientesCount };
+  }, [asistencias, empleado, fechaActual]);
 
-  const estadisticas = calcularEstadisticasDia();
+  // Memoizar la última entrada para evitar llamadas innecesarias
+  const ultimaEntradaHoy = useMemo(() => {
+    if (!empleado || !fechaActual || empleado.trim().length < 2) return null;
+    return obtenerUltimaEntradaHoy(empleado, fechaActual);
+  }, [empleado, fechaActual]);
+
+  // Memoizar todas las entradas pendientes para el listado visual
+  const entradasPendientesVisual = useMemo(() => {
+    if (!empleado || !fechaActual || empleado.trim().length < 2) return [];
+    return obtenerEntradasPendientes(empleado, fechaActual);
+  }, [empleado, fechaActual]);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -309,58 +564,106 @@ export default function RegistroAsistencia() {
                 📝 Registrar Asistencia
               </h2>
               
-              <form onSubmit={registrarAsistencia} className="space-y-6">
-                {/* Nombre del empleado */}
-                <div>
-                  <label className="block text-white font-medium mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    👤 Nombre del Empleado
-                  </label>
-                  <input
-                    type="text"
-                    value={empleado}
-                    onChange={(e) => setEmpleado(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
-                    placeholder="Ingresa el nombre del empleado"
-                    required
-                  />
+              <div className="space-y-6">
+                                 {/* Nombre del empleado */}
+                 <div>
+                   <label className="block text-white font-medium mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                     👤 Nombre del Empleado
+                   </label>
+                   <input
+                     type="text"
+                     value={empleado}
+                     onChange={(e) => setEmpleado(e.target.value)}
+                     className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
+                     placeholder="Ingresa el nombre del empleado"
+                     required
+                   />
+                   
+                   
+                 </div>
+
+                {/* Botones de entrada y salida */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Botón de entrada */}
+                  <button
+                    onClick={registrarEntrada}
+                    disabled={loading || !empleado}
+                    className="px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    {loading ? '⏳ Registrando...' : '📥 Registrar Entrada'}
+                  </button>
+
+                  {/* Botón de salida */}
+                  <button
+                    onClick={registrarSalida}
+                    disabled={loading || !empleado}
+                    className="px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    {loading ? '⏳ Registrando...' : '📤 Registrar Salida'}
+                  </button>
                 </div>
 
-                {/* Hora de entrada */}
-                <div>
-                  <label className="block text-white font-medium mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    📥 Hora de Entrada
-                  </label>
-                  <input
-                    type="time"
-                    value={horaEntrada}
-                    onChange={(e) => setHoraEntrada(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                                 
 
-                {/* Hora de salida */}
-                <div>
-                  <label className="block text-white font-medium mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    📤 Hora de Salida
-                  </label>
-                  <input
-                    type="time"
-                    value={horaSalida}
-                    onChange={(e) => setHoraSalida(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                                   
 
-                {/* Botón de registro */}
-                <button
-                  type="submit"
-                  disabled={loading || !empleado}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                  {loading ? '⏳ Registrando...' : '✅ Registrar Asistencia'}
-                </button>
-              </form>
+                  {/* Listado visual de entradas pendientes */}
+                  {empleado && entradasPendientesVisual.length > 0 && (
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4">
+                      <div className="mb-3">
+                        <h3 className="text-lg font-semibold text-white text-center">
+                          📋 Entradas Pendientes de Sincronización
+                        </h3>
+                        <p className="text-xs text-gray-400 text-center">
+                          Estas entradas se sincronizarán automáticamente al registrar la salida
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {entradasPendientesVisual.map((entrada, index) => (
+                          <div
+                            key={`${entrada.hora_entrada}_${index}`}
+                            className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-white text-sm">
+                                  👤 {empleado}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  🕒 Entrada: {entrada.hora_entrada}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  📅 Fecha: {new Date(fechaActual).toLocaleDateString('es-ES', {
+                                    weekday: 'short',
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="px-2 py-1 bg-yellow-500/30 border border-yellow-500/50 rounded-full">
+                                  <span className="text-xs text-yellow-300 font-medium">
+                                    ⏳ Pendiente
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t border-white/20">
+                        <div className="text-xs text-gray-400 text-center">
+                          💡 Registra la salida para sincronizar automáticamente con el servidor
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
             </div>
 
             {/* Lista de asistencias */}
@@ -377,22 +680,45 @@ export default function RegistroAsistencia() {
                 </button>
               </div>
 
-              {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <input
-                  type="date"
-                  value={filtroFecha}
-                  onChange={(e) => setFiltroFecha(e.target.value)}
-                  className="px-3 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                  placeholder="Filtrar por fecha"
-                />
-                <button
-                  onClick={limpiarFiltros}
-                  className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
-                >
-                  🔄 Limpiar Filtros
-                </button>
-              </div>
+                             {/* Filtros y controles */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                 <input
+                   type="date"
+                   value={filtroFecha}
+                   onChange={(e) => setFiltroFecha(e.target.value)}
+                   className="px-3 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                   placeholder="Filtrar por fecha"
+                 />
+                 <button
+                   onClick={limpiarFiltros}
+                   className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+                 >
+                   🔄 Limpiar Filtros
+                 </button>
+               </div>
+
+               {/* Botones adicionales */}
+               {empleado && (
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                   <button
+                     onClick={mostrarInfoDebug}
+                     className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                   >
+                     🔍 Debug Info
+                   </button>
+                   <button
+                     onClick={limpiarEntradasPendientes}
+                     className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                   >
+                     🧹 Limpiar Pendientes
+                   </button>
+                   <div className="px-3 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
+                     <div className="text-yellow-300 text-sm">
+                       📊 Pendientes: {estadisticas.entradasPendientes}
+                     </div>
+                   </div>
+                 </div>
+               )}
 
               {/* Lista de asistencias */}
               <div className="max-h-96 overflow-y-auto">
@@ -427,11 +753,11 @@ export default function RegistroAsistencia() {
                               Entrada: {asistencia.hora_entrada || 'No registrada'} | 
                               Salida: {asistencia.hora_salida || 'No registrada'}
                             </div>
-                            {asistencia.total_horas && (
-                              <div className="text-sm text-green-400 font-medium">
-                                Total: {asistencia.total_horas} horas
-                              </div>
-                            )}
+                                                         {asistencia.total_horas && (
+                               <div className="text-sm text-green-400 font-medium">
+                                 Total: {convertirHorasDecimalesAFormato(asistencia.total_horas)} horas
+                               </div>
+                             )}
                           </div>
                           <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                             asistencia.estado === 'Completo'
