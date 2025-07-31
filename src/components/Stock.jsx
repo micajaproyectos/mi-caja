@@ -202,6 +202,15 @@ export default function Stock() {
     try {
       console.log('🔄 Actualizando productos_mas_vendidos manualmente...');
       
+      // Primero verificar la estructura de la tabla
+      const { data: schemaData, error: schemaError } = await supabase
+        .from('productos_mas_vendidos')
+        .select('*')
+        .limit(1);
+      
+      console.log('🔍 Estructura de la tabla:', schemaData);
+      console.log('🔍 Error de esquema:', schemaError);
+      
       // Obtener datos agregados de ventas
       const { data: ventasAgregadas, error: ventasError } = await supabase
         .from('ventas')
@@ -238,18 +247,26 @@ export default function Stock() {
         return;
       }
 
-      // Insertar datos actualizados
+      // Insertar datos actualizados - versión simplificada sin fecha_ultima_venta
       for (const [producto, cantidad] of Object.entries(productosAgregados)) {
+        const insertData = {
+          producto: producto,
+          cantidad_vendida: cantidad
+        };
+        
+        // Solo agregar fecha_ultima_venta si la columna existe
+        if (schemaData && schemaData.length > 0 && schemaData[0].hasOwnProperty('fecha_ultima_venta')) {
+          insertData.fecha_ultima_venta = new Date().toISOString();
+        }
+        
         const { error: insertError } = await supabase
           .from('productos_mas_vendidos')
-          .insert({
-            producto: producto,
-            cantidad_vendida: cantidad,
-            fecha_ultima_venta: new Date().toISOString()
-          });
+          .insert(insertData);
 
         if (insertError) {
           console.error(`Error al insertar ${producto}:`, insertError);
+        } else {
+          console.log(`✅ ${producto} insertado correctamente`);
         }
       }
 
