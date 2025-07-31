@@ -12,6 +12,64 @@ export default function RegistroVenta() {
     return new Date().toISOString().split('T')[0];
   };
   
+  // Función para formatear fechas correctamente sin problemas de zona horaria
+  const formatearFecha = (fechaString) => {
+    if (!fechaString) return 'Fecha inválida';
+    
+    try {
+      // Si la fecha ya está en formato YYYY-MM-DD, usarla directamente
+      if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+        const [year, month, day] = fechaString.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      
+      // Si es una fecha con timestamp, convertirla correctamente
+      const fecha = new Date(fechaString);
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha inválida';
+      }
+      
+      // Usar toLocaleDateString con opciones específicas para evitar problemas de zona horaria
+      return fecha.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: 'UTC' // Forzar UTC para evitar desfases
+      });
+    } catch (error) {
+      console.error('Error al formatear fecha:', error);
+      return 'Fecha inválida';
+    }
+  };
+  
+  // Función para obtener fecha en formato YYYY-MM-DD sin problemas de zona horaria
+  const obtenerFechaFormatoISO = (fechaString) => {
+    if (!fechaString) return null;
+    
+    try {
+      // Si ya está en formato YYYY-MM-DD, retornarla directamente
+      if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+        return fechaString;
+      }
+      
+      // Si es una fecha con timestamp, convertirla a YYYY-MM-DD
+      const fecha = new Date(fechaString);
+      if (isNaN(fecha.getTime())) {
+        return null;
+      }
+      
+      // Usar UTC para evitar problemas de zona horaria
+      const year = fecha.getUTCFullYear();
+      const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(fecha.getUTCDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error al obtener fecha ISO:', error);
+      return null;
+    }
+  };
+  
   const [venta, setVenta] = useState({
     fecha: obtenerFechaActual(), // Inicializar con la fecha actual
     tipo_pago: '',
@@ -189,18 +247,18 @@ export default function RegistroVenta() {
 
     // Si no hay filtros activos, mostrar solo las ventas del día actual
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
-      const fechaActual = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const fechaActual = obtenerFechaActual(); // Usar la función consistente
       
       ventasFiltradas = ventasFiltradas.filter(venta => {
-        const fechaVenta = new Date(venta.fecha).toISOString().split('T')[0];
+        const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
         return fechaVenta === fechaActual;
       });
     } else {
       // Filtrar por día específico (si se selecciona)
       if (filtroDia) {
-        const fechaSeleccionada = new Date(filtroDia).toISOString().split('T')[0];
+        const fechaSeleccionada = obtenerFechaFormatoISO(filtroDia);
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha).toISOString().split('T')[0];
+          const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
           return fechaVenta === fechaSeleccionada;
         });
       }
@@ -308,7 +366,7 @@ export default function RegistroVenta() {
     
     // Filtrar ventas del día actual
     const ventasHoy = ventasRegistradas.filter(venta => {
-      const fechaVenta = new Date(venta.fecha).toISOString().split('T')[0];
+      const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
       return fechaVenta === hoy;
     });
 
@@ -354,7 +412,7 @@ export default function RegistroVenta() {
     const csvContent = [
       headers.join(','),
       ...ventasFiltradas.map(venta => [
-        new Date(venta.fecha).toLocaleDateString('es-ES'),
+        formatearFecha(venta.fecha),
         venta.producto,
         venta.cantidad,
         venta.unidad,
@@ -370,7 +428,7 @@ export default function RegistroVenta() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `ventas_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `ventas_${obtenerFechaActual()}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -1319,7 +1377,7 @@ export default function RegistroVenta() {
                       {ventasFiltradas.map((venta, index) => (
                         <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
                           <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                            {venta.fecha ? new Date(venta.fecha).toLocaleDateString('es-ES') : 'Fecha inválida'}
+                            {formatearFecha(venta.fecha)}
                           </td>
                           <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
                           <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
