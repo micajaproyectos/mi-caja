@@ -410,6 +410,60 @@ export default function RegistroAsistencia() {
     }
   };
 
+  // Función para registrar salida desde el listado
+  const registrarSalidaDesdeListado = async (empleadoEntrada, horaEntrada) => {
+    try {
+      setLoading(true);
+      const horaActual = obtenerHoraActualFormato();
+      
+      console.log('🔍 Registrando salida desde listado para:', empleadoEntrada, 'entrada:', horaEntrada);
+      
+      // Si la entrada es del localStorage, usar la lógica existente
+      if (empleadoEntrada === empleado) {
+        // Buscar la entrada específica en localStorage
+        const entradasPendientes = obtenerEntradasPendientes(empleadoEntrada, fechaActual);
+        const entradaPendiente = entradasPendientes.find(e => e.hora_entrada === horaEntrada);
+        
+        if (entradaPendiente) {
+          // Usar la lógica existente de registrarSalida
+          const totalHorasFormato = calcularTotalHoras(horaEntrada, horaActual);
+          const totalHorasDecimal = calcularTotalHorasDecimal(horaEntrada, horaActual);
+          
+          const registroCompleto = {
+            empleado: empleadoEntrada,
+            fecha: fechaActual,
+            hora_entrada: horaEntrada,
+            hora_salida: horaActual,
+            total_horas: totalHorasDecimal
+          };
+          
+          const { data, error } = await supabase
+            .from('asistencia')
+            .insert([registroCompleto])
+            .select('*');
+          
+          if (error) throw error;
+          
+          // Marcar entrada como sincronizada
+          eliminarEntradaPendiente(empleadoEntrada, fechaActual, horaEntrada);
+          
+          cargarAsistencias();
+          alert(`✅ Salida registrada para ${empleadoEntrada}\nHora de salida: ${horaActual}\nTotal horas: ${totalHorasFormato}`);
+          return;
+        }
+      }
+      
+      // Si no se encuentra en localStorage o es de otro empleado, mostrar error
+      alert('❌ No se puede registrar la salida: entrada no encontrada o no válida');
+      
+    } catch (error) {
+      console.error('Error al registrar salida desde listado:', error);
+      alert('❌ Error al registrar la hora de salida');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Función para convertir horas decimales a formato HH:MM
   const convertirHorasDecimalesAFormato = (horasDecimales) => {
     if (!horasDecimales || horasDecimales === 0) return '';
@@ -507,6 +561,51 @@ export default function RegistroAsistencia() {
     if (!empleado || !fechaActual || empleado.trim().length < 2) return [];
     return obtenerEntradasPendientes(empleado, fechaActual);
   }, [empleado, fechaActual]);
+
+  // Obtener todas las entradas registradas hoy (desde localStorage y servidor)
+  const entradasRegistradasHoy = useMemo(() => {
+    const entradasServidor = asistencias.filter(a => a.fecha === fechaActual);
+    const entradasLocal = [];
+    
+    // Obtener entradas del localStorage para todos los empleados
+    if (fechaActual) {
+      // Buscar todas las claves de localStorage que correspondan a la fecha actual
+      const clavesLocalStorage = Object.keys(localStorage).filter(clave => 
+        clave.startsWith('asistencia_') && clave.includes(fechaActual)
+      );
+      
+      clavesLocalStorage.forEach(clave => {
+        const empleadoNombre = clave.replace(`asistencia_`, '').replace(`_${fechaActual}`, '');
+        const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
+        
+        entradas.forEach(entrada => {
+          if (entrada.hora_entrada) {
+            entradasLocal.push({
+              empleado: empleadoNombre,
+              fecha: fechaActual,
+              hora_entrada: entrada.hora_entrada,
+              hora_salida: entrada.hora_salida || null,
+              sincronizado: entrada.sincronizado || false,
+              origen: 'local'
+            });
+          }
+        });
+      });
+    }
+    
+    // Combinar entradas del servidor y localStorage
+    const todasLasEntradas = [
+      ...entradasServidor.map(e => ({ ...e, origen: 'servidor' })),
+      ...entradasLocal
+    ];
+    
+    // Ordenar por hora de entrada (más reciente primero)
+    return todasLasEntradas.sort((a, b) => {
+      const horaA = a.hora_entrada || '00:00';
+      const horaB = b.hora_entrada || '00:00';
+      return horaB.localeCompare(horaA);
+    });
+  }, [asistencias, fechaActual]);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -614,9 +713,110 @@ export default function RegistroAsistencia() {
                 </div>
               </div>
             )}
-          </div>
+                     </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+           {/* Listado de entradas registradas hoy */}
+           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+               📋 Entradas Registradas Hoy
+             </h2>
+             
+             {entradasRegistradasHoy.length === 0 ? (
+               <div className="text-center py-6 md:py-8">
+                 <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas hoy</div>
+               </div>
+             ) : (
+               <div className="space-y-3 md:space-y-4">
+                 {entradasRegistradasHoy.map((entrada, index) => (
+                   <div
+                     key={`${entrada.empleado}_${entrada.hora_entrada}_${index}`}
+                     className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4"
+                   >
+                     <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2 mb-2">
+                           <div className="text-lg md:text-xl font-bold text-white truncate">
+                             👤 {entrada.empleado}
+                           </div>
+                           <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                             entrada.origen === 'servidor' 
+                               ? 'bg-green-500/30 text-green-300 border border-green-500/50'
+                               : 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                           }`}>
+                             {entrada.origen === 'servidor' ? '✅ Sincronizado' : '⏳ Pendiente'}
+                           </div>
+                         </div>
+                         
+                         <div className="text-sm md:text-base text-gray-300 mb-1">
+                           🕒 Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
+                         </div>
+                         
+                         {entrada.hora_salida && (
+                           <div className="text-sm md:text-base text-gray-300 mb-1">
+                             🚪 Hora de salida: <span className="font-semibold text-white">{entrada.hora_salida}</span>
+                           </div>
+                         )}
+                         
+                         {entrada.total_horas && (
+                           <div className="text-sm md:text-base text-green-400 font-medium">
+                             ⏰ Total: {convertirHorasDecimalesAFormato(entrada.total_horas)} horas
+                           </div>
+                         )}
+                       </div>
+                       
+                       <div className="flex-shrink-0">
+                         {!entrada.hora_salida && entrada.origen === 'local' && entrada.empleado === empleado ? (
+                           <button
+                             onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada)}
+                             disabled={loading}
+                             className="px-3 md:px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             {loading ? '⏳ Registrando...' : '📤 Registrar Salida'}
+                           </button>
+                         ) : entrada.hora_salida ? (
+                           <div className="px-3 py-2 bg-green-500/30 border border-green-500/50 rounded-lg">
+                             <span className="text-green-300 text-sm font-medium">✅ Completado</span>
+                           </div>
+                         ) : (
+                           <div className="px-3 py-2 bg-gray-500/30 border border-gray-500/50 rounded-lg">
+                             <span className="text-gray-300 text-sm">⏳ Pendiente</span>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+             
+             {/* Resumen del día */}
+             {entradasRegistradasHoy.length > 0 && (
+               <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
+                 <div className="text-center">
+                   <div className="text-lg md:text-xl font-bold text-white mb-2">
+                     📊 Resumen del Día
+                   </div>
+                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                     <div className="text-gray-300">
+                       <span className="font-semibold text-white">{entradasRegistradasHoy.length}</span> entradas registradas
+                     </div>
+                     <div className="text-gray-300">
+                       <span className="font-semibold text-white">
+                         {entradasRegistradasHoy.filter(e => e.hora_salida).length}
+                       </span> salidas registradas
+                     </div>
+                     <div className="text-gray-300">
+                       <span className="font-semibold text-white">
+                         {entradasRegistradasHoy.filter(e => !e.hora_salida).length}
+                       </span> pendientes
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+           </div>
+
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Formulario de registro */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
