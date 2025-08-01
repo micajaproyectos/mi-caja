@@ -24,6 +24,22 @@ export default function RegistroAsistencia() {
   const [horaActual, setHoraActual] = useState('');
   const [empleado, setEmpleado] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
+  const [localStorageVersion, setLocalStorageVersion] = useState(0); // Forzar re-render cuando localStorage cambie
+  const [empleadoActivo, setEmpleadoActivo] = useState(() => {
+    // Recuperar empleado activo desde localStorage al inicializar
+    const empleadoGuardado = localStorage.getItem('empleadoActivo');
+    return empleadoGuardado || '';
+  }); // Controla cuándo mostrar entradas del empleado
+
+  // Función para actualizar empleado activo y persistirlo en localStorage
+  const actualizarEmpleadoActivo = (nuevoEmpleado) => {
+    setEmpleadoActivo(nuevoEmpleado);
+    if (nuevoEmpleado) {
+      localStorage.setItem('empleadoActivo', nuevoEmpleado);
+    } else {
+      localStorage.removeItem('empleadoActivo');
+    }
+  };
 
   // Función para obtener la fecha actual en formato YYYY-MM-DD en Santiago, Chile
   const obtenerFechaActual = () => {
@@ -69,6 +85,17 @@ export default function RegistroAsistencia() {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  // Verificar si el empleado activo tiene entradas pendientes al cargar el componente
+  useEffect(() => {
+    if (empleadoActivo && fechaActual) {
+      const entradasPendientes = obtenerEntradasPendientes(empleadoActivo, fechaActual);
+      // Si no hay entradas pendientes, limpiar el empleado activo
+      if (!entradasPendientes || entradasPendientes.length === 0) {
+        actualizarEmpleadoActivo('');
+      }
+    }
+  }, [empleadoActivo, fechaActual]);
 
   // Cargar asistencias desde la tabla asistencia
   const cargarAsistencias = async () => {
@@ -179,6 +206,10 @@ export default function RegistroAsistencia() {
     localStorage.setItem(clave, JSON.stringify(entradasExistentes));
     
     console.log('💾 Entrada guardada en localStorage:', nuevaEntrada);
+    
+    // Forzar re-render del componente para actualizar la lista
+    setLocalStorageVersion(prev => prev + 1);
+    
     return nuevaEntrada;
   };
 
@@ -232,6 +263,9 @@ export default function RegistroAsistencia() {
     
     localStorage.setItem(clave, JSON.stringify(entradasActualizadas));
     console.log('🗑️ Entrada marcada como sincronizada en localStorage');
+    
+    // Forzar re-render del componente para actualizar la lista
+    setLocalStorageVersion(prev => prev + 1);
   };
 
   // Función para obtener todas las entradas de localStorage (para mostrar en la interfaz)
@@ -284,11 +318,11 @@ export default function RegistroAsistencia() {
       // Guardar entrada en localStorage
       const entradaGuardada = guardarEntradaLocal(empleado, fechaActual, horaActual);
       
-             console.log('✅ Hora de entrada registrada localmente:', entradaGuardada);
-       alert(`✅ Hora de entrada registrada localmente: ${horaActual}\n\nLa entrada se sincronizará con el servidor cuando registres la salida.`);
-       
-       // Forzar re-render para mostrar la nueva entrada
-       setEmpleado(empleado);
+      console.log('✅ Hora de entrada registrada localmente:', entradaGuardada);
+      alert(`✅ Hora de entrada registrada localmente: ${horaActual}\n\nLa entrada se sincronizará con el servidor cuando registres la salida.\n\n💾 La entrada se mantendrá guardada incluso si navegas a otra sección.`);
+      
+      // Activar el empleado para mostrar sus entradas (persistido en localStorage)
+      actualizarEmpleadoActivo(empleado);
       
     } catch (error) {
       console.error('Error al registrar entrada:', error);
@@ -356,10 +390,11 @@ export default function RegistroAsistencia() {
               console.log('✅ Hora de salida registrada exitosamente:', data);
         cargarAsistencias();
         
-        // Forzar re-render para actualizar el listado visual
-        setEmpleado(empleado);
+        // Limpiar el campo del empleado y desactivar para limpiar el listado
+        setEmpleado('');
+        actualizarEmpleadoActivo('');
         
-        alert(`✅ Hora de salida registrada: ${horaActual}\nTotal horas trabajadas: ${totalHorasFormato}\n\nRegistro sincronizado con el servidor.`);
+        alert(`✅ Hora de salida registrada: ${horaActual}\nTotal horas trabajadas: ${totalHorasFormato}\n\nRegistro sincronizado con el servidor.\n\nEl listado se ha limpiado automáticamente.`);
       
     } catch (error) {
       console.error('Error al registrar salida:', error);
@@ -382,6 +417,9 @@ export default function RegistroAsistencia() {
         localStorage.removeItem(clave);
         console.log('🧹 Entradas pendientes eliminadas del localStorage');
         alert('✅ Entradas pendientes eliminadas del localStorage');
+        
+        // Forzar re-render del componente para actualizar la lista
+        setLocalStorageVersion(prev => prev + 1);
       } else {
         console.warn('⚠️ No se pueden limpiar entradas pendientes: clave inválida');
         alert('❌ No se pueden limpiar entradas pendientes');
@@ -448,7 +486,12 @@ export default function RegistroAsistencia() {
           eliminarEntradaPendiente(empleadoEntrada, fechaActual, horaEntrada);
           
           cargarAsistencias();
-          alert(`✅ Salida registrada para ${empleadoEntrada}\nHora de salida: ${horaActual}\nTotal horas: ${totalHorasFormato}`);
+          
+          // Limpiar el campo del empleado y desactivar para limpiar el listado
+          setEmpleado('');
+          actualizarEmpleadoActivo('');
+          
+          alert(`✅ Salida registrada para ${empleadoEntrada}\nHora de salida: ${horaActual}\nTotal horas: ${totalHorasFormato}\n\nEl listado se ha limpiado automáticamente.`);
           return;
         }
       }
@@ -474,19 +517,52 @@ export default function RegistroAsistencia() {
     return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
   };
 
-  // Exportar datos a CSV
+  // Función para formatear fecha de manera consistente (evitar problemas de timezone)
+  const formatearFecha = (fechaString) => {
+    if (!fechaString) return '';
+    
+    // Si la fecha ya está en formato YYYY-MM-DD, usarla directamente
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+      const [year, month, day] = fechaString.split('-');
+      return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    
+    // Si es una fecha completa, formatearla considerando Santiago timezone
+    try {
+      const fecha = new Date(fechaString);
+      return fecha.toLocaleDateString('es-ES', {
+        timeZone: 'America/Santiago',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error al formatear fecha:', error);
+      return fechaString;
+    }
+  };
+
+  // Función para exportar datos a CSV
   const exportarCSV = () => {
     const headers = ['Empleado', 'Fecha', 'Hora Entrada', 'Hora Salida', 'Total Horas', 'Estado'];
     const csvContent = [
       headers.join(','),
-      ...asistencias.map(asistencia => [
-        asistencia.empleado || '',
-        asistencia.fecha,
-        asistencia.hora_entrada || '',
-        asistencia.hora_salida || '',
-        convertirHorasDecimalesAFormato(asistencia.total_horas) || '',
-        asistencia.estado || ''
-      ].join(','))
+      ...asistencias.map(asistencia => {
+        const estado = asistencia.hora_entrada && asistencia.hora_salida ? 'Completo' : 
+                      asistencia.hora_entrada ? 'Solo Entrada' : 'Sin Registro';
+        return [
+          asistencia.empleado || '',
+          asistencia.fecha,
+          asistencia.hora_entrada || '',
+          asistencia.hora_salida || '',
+          convertirHorasDecimalesAFormato(asistencia.total_horas) || '',
+          estado
+        ].join(',');
+      })
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -498,6 +574,36 @@ export default function RegistroAsistencia() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Función para eliminar una asistencia
+  const eliminarAsistencia = async (id) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este registro de asistencia? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('asistencia')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('❌ Error al eliminar asistencia:', error);
+        alert('❌ Error al eliminar el registro: ' + error.message);
+        return;
+      }
+      
+      console.log('✅ Registro de asistencia eliminado exitosamente');
+      alert('✅ Registro de asistencia eliminado exitosamente');
+      await cargarAsistencias(); // Recargar la lista
+    } catch (error) {
+      console.error('❌ Error inesperado al eliminar asistencia:', error);
+      alert('❌ Error inesperado al eliminar el registro');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calcular horas trabajadas por empleado (evitando duplicados por nombre)
@@ -562,20 +668,23 @@ export default function RegistroAsistencia() {
     return obtenerEntradasPendientes(empleado, fechaActual);
   }, [empleado, fechaActual]);
 
-  // Obtener todas las entradas registradas hoy (desde localStorage y servidor)
+  // Obtener todas las entradas registradas hoy (solo del empleado activo)
   const entradasRegistradasHoy = useMemo(() => {
-    const entradasServidor = asistencias.filter(a => a.fecha === fechaActual);
-    const entradasLocal = [];
+    // Solo mostrar entradas si hay un empleado activo (que haya registrado entrada)
+    if (!empleadoActivo || empleadoActivo.trim().length < 2) {
+      return [];
+    }
     
-    // Obtener entradas del localStorage para todos los empleados
+    // Filtrar entradas del servidor solo para el empleado activo
+    const entradasServidor = asistencias
+      .filter(a => a.fecha === fechaActual && a.empleado === empleadoActivo)
+      .map(e => ({ ...e, origen: 'servidor' }));
+    
+    // Obtener entradas del localStorage solo para el empleado activo
+    const entradasLocal = [];
     if (fechaActual) {
-      // Buscar todas las claves de localStorage que correspondan a la fecha actual
-      const clavesLocalStorage = Object.keys(localStorage).filter(clave => 
-        clave.startsWith('asistencia_') && clave.includes(fechaActual)
-      );
-      
-      clavesLocalStorage.forEach(clave => {
-        const empleadoNombre = clave.replace(`asistencia_`, '').replace(`_${fechaActual}`, '');
+      const clave = obtenerClaveLocalStorage(empleadoActivo, fechaActual);
+      if (clave) {
         const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
         
         entradas.forEach(entrada => {
@@ -583,7 +692,7 @@ export default function RegistroAsistencia() {
             // Solo incluir entradas que NO estén sincronizadas (para evitar duplicados)
             if (!entrada.sincronizado) {
               entradasLocal.push({
-                empleado: empleadoNombre,
+                empleado: empleadoActivo,
                 fecha: fechaActual,
                 hora_entrada: entrada.hora_entrada,
                 hora_salida: entrada.hora_salida || null,
@@ -593,12 +702,12 @@ export default function RegistroAsistencia() {
             }
           }
         });
-      });
+      }
     }
     
     // Combinar entradas del servidor y localStorage
     const todasLasEntradas = [
-      ...entradasServidor.map(e => ({ ...e, origen: 'servidor' })),
+      ...entradasServidor,
       ...entradasLocal
     ];
     
@@ -608,7 +717,7 @@ export default function RegistroAsistencia() {
       const horaB = b.hora_entrada || '00:00';
       return horaB.localeCompare(horaA);
     });
-  }, [asistencias, fechaActual]);
+  }, [asistencias, empleadoActivo, fechaActual, localStorageVersion]);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -721,12 +830,16 @@ export default function RegistroAsistencia() {
            {/* Listado de entradas registradas hoy */}
            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
              <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-               📋 Entradas Registradas Hoy
+               📋 Entradas del Empleado Seleccionado
              </h2>
              
-             {entradasRegistradasHoy.length === 0 ? (
+             {!empleadoActivo || empleadoActivo.trim().length < 2 ? (
                <div className="text-center py-6 md:py-8">
-                 <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas hoy</div>
+                 <div className="text-gray-300 text-sm md:text-base">👤 Presiona "Registrar Entrada" para ver las entradas del empleado</div>
+               </div>
+             ) : entradasRegistradasHoy.length === 0 ? (
+               <div className="text-center py-6 md:py-8">
+                 <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas para {empleadoActivo} hoy</div>
                </div>
              ) : (
                <div className="space-y-3 md:space-y-4">
@@ -768,7 +881,7 @@ export default function RegistroAsistencia() {
                        </div>
                        
                        <div className="flex-shrink-0">
-                         {!entrada.hora_salida && entrada.origen === 'local' && entrada.empleado === empleado ? (
+                         {!entrada.hora_salida && entrada.origen === 'local' && entrada.empleado === empleadoActivo ? (
                            <button
                              onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada)}
                              disabled={loading}
@@ -841,6 +954,25 @@ export default function RegistroAsistencia() {
                        placeholder="Ingresa el nombre completo del empleado"
                        required
                      />
+                     
+                     {/* Indicador de empleado activo con entradas pendientes */}
+                     {empleadoActivo && (
+                       <div className="mt-3 p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
+                         <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                             <span className="text-green-400 text-lg">👤</span>
+                             <span className="text-green-300 font-medium">{empleadoActivo}</span>
+                             <span className="text-green-400 text-sm">tiene entradas pendientes</span>
+                           </div>
+                           <button
+                             onClick={() => actualizarEmpleadoActivo('')}
+                             className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 text-red-300 hover:text-red-200 rounded-md text-sm transition-all duration-200"
+                           >
+                             Limpiar
+                           </button>
+                         </div>
+                       </div>
+                     )}
                    </div>
                  </div>
 
@@ -888,6 +1020,9 @@ export default function RegistroAsistencia() {
                        </p>
                        <p className="text-gray-400 text-xs md:text-sm mt-1">
                          Los datos se sincronizan automáticamente con el servidor
+                       </p>
+                       <p className="text-green-400 text-xs md:text-sm mt-1">
+                         💾 Las entradas se mantienen guardadas al navegar entre secciones
                        </p>
                      </div>
                    </div>
@@ -1050,7 +1185,7 @@ export default function RegistroAsistencia() {
                               {asistencia.empleado}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
-                              {new Date(asistencia.fecha).toLocaleDateString('es-ES')}
+                              {formatearFecha(asistencia.fecha)}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
                               Entrada: {asistencia.hora_entrada || 'No registrada'} | 
@@ -1062,16 +1197,26 @@ export default function RegistroAsistencia() {
                               </div>
                             )}
                           </div>
-                          <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                            asistencia.estado === 'Completo'
-                              ? 'bg-green-100 text-green-800'
-                              : asistencia.estado === 'Solo Entrada'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {asistencia.estado === 'Completo' ? '✅ Completo' : 
-                             asistencia.estado === 'Solo Entrada' ? '📥 Solo Entrada' : 
-                             '❌ Sin Registro'}
+                          <div className="flex items-center gap-2">
+                            <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                              asistencia.hora_entrada && asistencia.hora_salida
+                                ? 'bg-green-100 text-green-800'
+                                : asistencia.hora_entrada
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {asistencia.hora_entrada && asistencia.hora_salida ? '✅ Completo' : 
+                               asistencia.hora_entrada ? '📥 Solo Entrada' : 
+                               '❌ Sin Registro'}
+                            </div>
+                            <button
+                              onClick={() => eliminarAsistencia(asistencia.id)}
+                              disabled={loading}
+                              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                              title="Eliminar registro"
+                            >
+                              🗑️
+                            </button>
                           </div>
                         </div>
                       </div>

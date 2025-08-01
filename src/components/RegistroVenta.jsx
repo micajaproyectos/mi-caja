@@ -232,6 +232,11 @@ export default function RegistroVenta() {
       precio_unitario: '',
       subtotal: 0,
     });
+    
+    // Limpiar también el campo de búsqueda y el dropdown
+    setBusquedaProducto('');
+    setProductosFiltrados([]);
+    setMostrarDropdown(false);
   };
 
   // Función para eliminar un producto de la venta
@@ -396,27 +401,27 @@ export default function RegistroVenta() {
     // Filtrar ventas que tienen total_final (ventas completas)
     const ventasCompletas = ventasHoy.filter(venta => venta.total_final !== null && venta.total_final !== undefined);
 
-    // Calcular totales por tipo de pago
+    // Calcular totales por tipo de pago usando SOLO ventas completas
     const estadisticas = {
       total: {
         cantidad: ventasCompletas.length, // Solo contar ventas con total_final
-        monto: ventasHoy.reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0)
+        monto: ventasCompletas.reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
       },
       efectivo: {
-        cantidad: ventasHoy.filter(v => v.tipo_pago === 'efectivo').length,
-        monto: ventasHoy.filter(v => v.tipo_pago === 'efectivo').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'efectivo').length,
+        monto: ventasCompletas.filter(v => v.tipo_pago === 'efectivo').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
       },
       debito: {
-        cantidad: ventasHoy.filter(v => v.tipo_pago === 'debito').length,
-        monto: ventasHoy.filter(v => v.tipo_pago === 'debito').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'debito').length,
+        monto: ventasCompletas.filter(v => v.tipo_pago === 'debito').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
       },
       credito: {
-        cantidad: ventasHoy.filter(v => v.tipo_pago === 'credito').length,
-        monto: ventasHoy.filter(v => v.tipo_pago === 'credito').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'credito').length,
+        monto: ventasCompletas.filter(v => v.tipo_pago === 'credito').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
       },
       transferencia: {
-        cantidad: ventasHoy.filter(v => v.tipo_pago === 'transferencia').length,
-        monto: ventasHoy.filter(v => v.tipo_pago === 'transferencia').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'transferencia').length,
+        monto: ventasCompletas.filter(v => v.tipo_pago === 'transferencia').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
       }
     };
 
@@ -854,6 +859,40 @@ export default function RegistroVenta() {
     } catch (error) {
       console.error('❌ Error general al registrar venta:', error);
       alert('❌ Error al registrar venta: ' + error.message);
+    }
+  };
+
+  // Función para eliminar una venta
+  const eliminarVenta = async (id) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta venta? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('ventas')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Error al eliminar venta:', error);
+        alert('❌ Error al eliminar la venta: ' + error.message);
+        return;
+      }
+
+      console.log('✅ Venta eliminada exitosamente');
+      alert('✅ Venta eliminada exitosamente');
+      
+      // Recargar la lista de ventas
+      await cargarVentas();
+      
+    } catch (error) {
+      console.error('❌ Error inesperado al eliminar venta:', error);
+      alert('❌ Error inesperado al eliminar la venta');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1396,6 +1435,7 @@ export default function RegistroVenta() {
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1421,6 +1461,16 @@ export default function RegistroVenta() {
                               <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
                                 {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
                               </span>
+                            </td>
+                            <td className="p-2 md:p-3">
+                              <button
+                                onClick={() => eliminarVenta(venta.id)}
+                                disabled={loading}
+                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                title="Eliminar venta"
+                              >
+                                🗑️ Eliminar
+                              </button>
                             </td>
                           </tr>
                         ))}
