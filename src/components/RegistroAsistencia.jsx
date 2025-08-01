@@ -446,7 +446,37 @@ export default function RegistroAsistencia() {
     document.body.removeChild(link);
   };
 
-  // Calcular estadísticas del día
+  // Calcular horas trabajadas por empleado (evitando duplicados por nombre)
+  const horasPorEmpleado = useMemo(() => {
+    // Crear un Map para evitar duplicados por nombre (case-insensitive)
+    const empleadosMap = new Map();
+    
+    asistencias.forEach(asistencia => {
+      if (asistencia.empleado && asistencia.total_horas) {
+        const nombreNormalizado = asistencia.empleado.toLowerCase().trim();
+        
+        if (empleadosMap.has(nombreNormalizado)) {
+          // Sumar horas al empleado existente
+          const empleadoExistente = empleadosMap.get(nombreNormalizado);
+          empleadoExistente.total_horas += asistencia.total_horas;
+          empleadoExistente.registros += 1;
+        } else {
+          // Crear nuevo empleado
+          empleadosMap.set(nombreNormalizado, {
+            nombre: asistencia.empleado, // Mantener nombre original
+            total_horas: asistencia.total_horas,
+            registros: 1
+          });
+        }
+      }
+    });
+    
+    // Convertir Map a array y ordenar por total de horas (descendente)
+    return Array.from(empleadosMap.values())
+      .sort((a, b) => b.total_horas - a.total_horas);
+  }, [asistencias]);
+
+  // Calcular estadísticas del día (mantener para otras funcionalidades)
   const estadisticas = useMemo(() => {
     const asistenciasHoy = asistencias.filter(a => a.fecha === fechaActual);
     const entradasServidor = asistenciasHoy.filter(a => a.hora_entrada).length;
@@ -533,29 +563,57 @@ export default function RegistroAsistencia() {
             </div>
           </div>
 
-          {/* Estadísticas del día */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-green-400 mb-2">📥</div>
-                <div className="text-xl md:text-2xl font-bold text-white">{estadisticas.entradas}</div>
-                <div className="text-gray-300 text-sm md:text-base">Entradas</div>
+          {/* Horas trabajadas por empleado */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              ⏰ Horas Trabajadas por Empleado
+            </h2>
+            
+            {horasPorEmpleado.length === 0 ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-gray-300 text-sm md:text-base">📭 No hay registros de horas trabajadas</div>
               </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-red-400 mb-2">📤</div>
-                <div className="text-xl md:text-2xl font-bold text-white">{estadisticas.salidas}</div>
-                <div className="text-gray-300 text-sm md:text-base">Salidas</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                {horasPorEmpleado.map((empleado, index) => (
+                  <div
+                    key={`${empleado.nombre}_${index}`}
+                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4"
+                  >
+                    <div className="text-center">
+                      <div className="text-lg md:text-xl font-bold text-white mb-1 truncate" title={empleado.nombre}>
+                        👤 {empleado.nombre}
+                      </div>
+                      <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
+                        {convertirHorasDecimalesAFormato(empleado.total_horas)}
+                      </div>
+                      <div className="text-gray-300 text-xs md:text-sm">
+                        {empleado.registros} registro{empleado.registros !== 1 ? 's' : ''}
+                      </div>
+                      <div className="text-gray-400 text-xs">
+                        Total horas: {empleado.total_horas.toFixed(2)}h
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-blue-400 mb-2">📊</div>
-                <div className="text-xl md:text-2xl font-bold text-white">{estadisticas.total}</div>
-                <div className="text-gray-300 text-sm md:text-base">Total Registros</div>
+            )}
+            
+            {/* Resumen total */}
+            {horasPorEmpleado.length > 0 && (
+              <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
+                <div className="text-center">
+                  <div className="text-lg md:text-xl font-bold text-white">
+                    📊 Total General: {convertirHorasDecimalesAFormato(
+                      horasPorEmpleado.reduce((total, emp) => total + emp.total_horas, 0)
+                    )}
+                  </div>
+                  <div className="text-gray-300 text-sm">
+                    {horasPorEmpleado.length} empleado{horasPorEmpleado.length !== 1 ? 's' : ''} registrado{horasPorEmpleado.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
