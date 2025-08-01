@@ -14,6 +14,9 @@ const RegistroInventario = () => {
 
   const [inventarioRegistrado, setInventarioRegistrado] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [busquedaProducto, setBusquedaProducto] = useState('');
+  const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
 
   // Opciones para el selector de unidad
   const opcionesUnidad = [
@@ -21,6 +24,117 @@ const RegistroInventario = () => {
     { value: 'gr', label: 'Gr' },
     { value: 'unidad', label: 'Unidad' }
   ];
+
+  // Función para normalizar fecha a YYYY-MM-DD sin zona horaria
+  const normalizarFecha = (fechaString) => {
+    if (!fechaString) return '';
+    
+    console.log('🔄 Normalizando fecha:', fechaString);
+    
+    // Si la fecha ya está en formato YYYY-MM-DD, retornarla directamente
+    if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+      console.log('✅ Fecha ya en formato correcto:', fechaString);
+      return fechaString;
+    }
+    
+    // Para fechas del input type="date", ya vienen en formato YYYY-MM-DD
+    // Solo necesitamos asegurarnos de que se mantenga así
+    if (typeof fechaString === 'string' && fechaString.includes('-')) {
+      const partes = fechaString.split('-');
+      if (partes.length === 3) {
+        const [year, month, day] = partes;
+        const fechaNormalizada = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        console.log('✅ Fecha normalizada desde input:', fechaNormalizada);
+        return fechaNormalizada;
+      }
+    }
+    
+    // Fallback: usar Date pero con cuidado
+    try {
+      const fecha = new Date(fechaString);
+      if (isNaN(fecha.getTime())) {
+        console.error('❌ Fecha inválida:', fechaString);
+        return fechaString;
+      }
+      
+      // Usar métodos locales para evitar problemas de zona horaria
+      const year = fecha.getFullYear();
+      const month = String(fecha.getMonth() + 1).padStart(2, '0');
+      const day = String(fecha.getDate()).padStart(2, '0');
+      const resultado = `${year}-${month}-${day}`;
+      
+      console.log('✅ Fecha normalizada con Date:', resultado);
+      return resultado;
+    } catch (error) {
+      console.error('❌ Error al normalizar fecha:', error);
+      return fechaString;
+    }
+  };
+
+  // Función para crear fecha con zona horaria local
+  const crearFechaConZonaHoraria = (fechaString) => {
+    if (!fechaString) return '';
+    
+    // Crear fecha en zona horaria local
+    const fecha = new Date(fechaString + 'T00:00:00');
+    
+    // Obtener offset de zona horaria en minutos
+    const offset = fecha.getTimezoneOffset();
+    
+    // Crear fecha ISO con offset local
+    const fechaLocal = new Date(fecha.getTime() - (offset * 60 * 1000));
+    
+    console.log('🌍 Fecha con zona horaria local:', fechaLocal.toISOString());
+    return fechaLocal.toISOString();
+  };
+
+  // Función para obtener año y mes de una fecha sin zona horaria
+  const obtenerAnioMes = (fechaString) => {
+    if (!fechaString) return '';
+    const fecha = new Date(fechaString);
+    // Usar UTC para evitar conversión de zona horaria
+    const year = fecha.getUTCFullYear();
+    // getUTCMonth() devuelve 0-11, necesitamos 1-12 para comparar con input type="month"
+    const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+    const resultado = `${year}-${month}`;
+    console.log('🔍 Debug filtro mes:', { fechaString, resultado });
+    return resultado;
+  };
+
+  // Función para extraer fecha sin zona horaria para filtros
+  const extraerFechaSinZonaHoraria = (fechaString) => {
+    if (!fechaString) return '';
+    const fecha = new Date(fechaString);
+    const year = fecha.getUTCFullYear();
+    const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Filtrar productos por nombre, fecha y mes
+  const productosFiltrados = inventarioRegistrado.filter(item => {
+    const coincideNombre = item.producto.toLowerCase().includes(busquedaProducto.toLowerCase());
+    
+    // Filtro por fecha específica
+    const coincideFecha = !filtroFecha || extraerFechaSinZonaHoraria(item.fecha_ingreso) === filtroFecha;
+    
+    // Filtro por mes
+    const anioMesItem = obtenerAnioMes(item.fecha_ingreso);
+    const coincideMes = !filtroMes || anioMesItem === filtroMes;
+    
+    // Debug del filtro por mes
+    if (filtroMes) {
+      console.log('🔍 Debug filtro mes:', {
+        producto: item.producto,
+        fecha_ingreso: item.fecha_ingreso,
+        anioMesItem,
+        filtroMes,
+        coincideMes
+      });
+    }
+    
+    return coincideNombre && coincideFecha && coincideMes;
+  });
 
   // Establecer fecha actual al cargar el componente
   useEffect(() => {
@@ -101,8 +215,15 @@ const RegistroInventario = () => {
       // Calcular precios automáticamente
       const precios = calcularPrecios();
       
+      // Crear fecha con zona horaria local para evitar desfases
+      const fechaConZonaHoraria = crearFechaConZonaHoraria(inventario.fecha_ingreso);
+      
+      console.log('🔍 Debug de fechas:');
+      console.log('  - Fecha original del formulario:', inventario.fecha_ingreso);
+      console.log('  - Fecha con zona horaria local:', fechaConZonaHoraria);
+      
       const inventarioParaInsertar = {
-        fecha_ingreso: inventario.fecha_ingreso,
+        fecha_ingreso: fechaConZonaHoraria,
         producto: inventario.producto,
         cantidad: parseFloat(inventario.cantidad) || 0,
         unidad: inventario.unidad,
@@ -383,6 +504,148 @@ const RegistroInventario = () => {
               📋 Inventario Registrado
             </h2>
             
+            {/* Barra de búsqueda */}
+            {inventarioRegistrado.length > 0 && (
+              <div className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Filtro por nombre */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400 text-lg">🔍</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={busquedaProducto}
+                      onChange={(e) => setBusquedaProducto(e.target.value)}
+                      placeholder="Buscar producto por nombre..."
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    />
+                    {busquedaProducto && (
+                      <button
+                        onClick={() => setBusquedaProducto('')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                      >
+                        <span className="text-lg">✕</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filtro por fecha específica */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400 text-lg">📅</span>
+                    </div>
+                    <input
+                      type="date"
+                      value={filtroFecha}
+                      onChange={(e) => setFiltroFecha(e.target.value)}
+                      placeholder="Filtrar por día específico"
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    />
+                    {filtroFecha && (
+                      <button
+                        onClick={() => setFiltroFecha('')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                      >
+                        <span className="text-lg">✕</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filtro por mes */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400 text-lg">📆</span>
+                    </div>
+                    <input
+                      type="month"
+                      value={filtroMes}
+                      onChange={(e) => setFiltroMes(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    />
+                    {filtroMes && (
+                      <button
+                        onClick={() => setFiltroMes('')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                      >
+                        <span className="text-lg">✕</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Información de filtros activos */}
+                {(busquedaProducto || filtroFecha || filtroMes) && (
+                  <div className="mt-3 flex flex-wrap gap-2 items-center">
+                    <span className="text-sm text-gray-300">Filtros activos:</span>
+                    {busquedaProducto && (
+                      <span className="inline-flex items-center gap-1 bg-green-500/20 text-green-300 px-2 py-1 rounded-full text-xs">
+                        <span>📝 "{busquedaProducto}"</span>
+                        <button
+                          onClick={() => setBusquedaProducto('')}
+                          className="text-green-400 hover:text-white"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    )}
+                                         {filtroFecha && (
+                       <span className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full text-xs">
+                         <span>📅 {(() => {
+                           // Función para mostrar fecha sin desfase de zona horaria
+                           const [year, month, day] = filtroFecha.split('-');
+                           return `${day}/${month}/${year}`;
+                         })()}</span>
+                         <button
+                           onClick={() => setFiltroFecha('')}
+                           className="text-blue-400 hover:text-white"
+                         >
+                           ✕
+                         </button>
+                       </span>
+                     )}
+                                         {filtroMes && (
+                       <span className="inline-flex items-center gap-1 bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full text-xs">
+                         <span>📆 {(() => {
+                           // Función para mostrar mes sin desfase de zona horaria
+                           const [year, month] = filtroMes.split('-');
+                           const monthNames = [
+                             'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                             'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+                           ];
+                           const monthIndex = parseInt(month) - 1; // Convertir 1-12 a 0-11
+                           return `${monthNames[monthIndex]} de ${year}`;
+                         })()}</span>
+                         <button
+                           onClick={() => setFiltroMes('')}
+                           className="text-purple-400 hover:text-white"
+                         >
+                           ✕
+                         </button>
+                       </span>
+                     )}
+                    <button
+                      onClick={() => {
+                        setBusquedaProducto('');
+                        setFiltroFecha('');
+                        setFiltroMes('');
+                      }}
+                      className="text-gray-400 hover:text-white text-xs underline"
+                    >
+                      Limpiar todos
+                    </button>
+                  </div>
+                )}
+                
+                {/* Contador de resultados */}
+                {(busquedaProducto || filtroFecha || filtroMes) && (
+                  <div className="mt-2 text-sm text-gray-300">
+                    Mostrando {productosFiltrados.length} de {inventarioRegistrado.length} productos
+                  </div>
+                )}
+              </div>
+            )}
+            
             {inventarioRegistrado.length === 0 ? (
               <div className="text-center py-8 md:py-12">
                 <div className="text-4xl md:text-6xl mb-3 md:mb-4">📦</div>
@@ -409,11 +672,19 @@ const RegistroInventario = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {inventarioRegistrado.map((item, index) => (
+                    {productosFiltrados.map((item, index) => (
                       <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                        <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                          {new Date(item.fecha_ingreso).toLocaleDateString('es-ES')}
-                        </td>
+                                                 <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                           {(() => {
+                             // Función para mostrar fecha sin desfase de zona horaria
+                             const fecha = new Date(item.fecha_ingreso);
+                             // Usar UTC para evitar conversión de zona horaria
+                             const year = fecha.getUTCFullYear();
+                             const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+                             const day = String(fecha.getUTCDate()).padStart(2, '0');
+                             return `${day}/${month}/${year}`;
+                           })()}
+                         </td>
                         <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                           {item.producto}
                         </td>

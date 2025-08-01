@@ -275,7 +275,7 @@ export default function RegistroVenta() {
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
           const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getMonth() === parseInt(filtroMes);
+          return fechaVenta.getUTCMonth() === parseInt(filtroMes);
         });
       }
 
@@ -283,7 +283,7 @@ export default function RegistroVenta() {
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
           const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getFullYear() === parseInt(filtroAnio);
+          return fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
         });
       }
 
@@ -291,8 +291,8 @@ export default function RegistroVenta() {
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
           const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getMonth() === parseInt(filtroMes) && 
-                 fechaVenta.getFullYear() === parseInt(filtroAnio);
+          return fechaVenta.getUTCMonth() === parseInt(filtroMes) && 
+                 fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
         });
       }
 
@@ -327,9 +327,11 @@ export default function RegistroVenta() {
 
   // Función para obtener años únicos de las ventas
   const obtenerAniosUnicos = () => {
-    const anios = [...new Set(ventasRegistradas.map(venta => 
-      new Date(venta.fecha).getFullYear()
-    ))].sort((a, b) => b - a); // Orden descendente
+    const anios = [...new Set(ventasRegistradas.map(venta => {
+      // Usar UTC para evitar problemas de zona horaria
+      const fecha = new Date(venta.fecha);
+      return fecha.getUTCFullYear();
+    }))].sort((a, b) => b - a); // Orden descendente
     return anios;
   };
 
@@ -350,9 +352,11 @@ export default function RegistroVenta() {
 
   // Función para obtener meses únicos de las ventas
   const obtenerMesesUnicos = () => {
-    const meses = [...new Set(ventasRegistradas.map(venta => 
-      new Date(venta.fecha).getMonth()
-    ))].sort((a, b) => a - b); // Orden ascendente
+    const meses = [...new Set(ventasRegistradas.map(venta => {
+      // Usar UTC para evitar problemas de zona horaria
+      const fecha = new Date(venta.fecha);
+      return fecha.getUTCMonth(); // getUTCMonth() retorna 0-11
+    }))].sort((a, b) => a - b); // Orden ascendente
     return meses;
   };
 
@@ -1381,7 +1385,11 @@ export default function RegistroVenta() {
                   ) : (
                     <>
                       <strong>Filtros activos:</strong> 
-                      {filtroDia && ` Día: ${new Date(filtroDia).toLocaleDateString('es-ES')}`}
+                      {filtroDia && ` Día: ${(() => {
+                        // Función para mostrar fecha sin desfase de zona horaria
+                        const [year, month, day] = filtroDia.split('-');
+                        return `${day}/${month}/${year}`;
+                      })()}`}
                       {filtroMes && ` Mes: ${nombresMeses[parseInt(filtroMes)]}`}
                       {filtroAnio && ` Año: ${filtroAnio}`}
                       {filtroTipoPago && ` Pago: ${obtenerInfoTipoPago(filtroTipoPago).icon} ${obtenerInfoTipoPago(filtroTipoPago).label}`}
@@ -1514,7 +1522,14 @@ export default function RegistroVenta() {
                   
                   {/* Estadísticas diarias siempre visibles */}
                   <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {new Date().toLocaleDateString('es-ES')}</h4>
+                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {(() => {
+                      // Función para mostrar fecha actual sin desfase de zona horaria
+                      const fechaActual = new Date();
+                      const year = fechaActual.getFullYear();
+                      const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
+                      const day = String(fechaActual.getDate()).padStart(2, '0');
+                      return `${day}/${month}/${year}`;
+                    })()}</h4>
                     
                     {/* Listado de estadísticas */}
                     <div className="space-y-2 md:space-y-3">

@@ -8,6 +8,7 @@ export default function Stock() {
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [busquedaProducto, setBusquedaProducto] = useState('');
   
   // Nuevos estados para el producto más vendido
   const [productoMasVendido, setProductoMasVendido] = useState(null);
@@ -20,6 +21,11 @@ export default function Stock() {
   // Referencias para limpiar intervalos y suscripciones
   const intervalRef = useRef(null);
   const subscriptionRef = useRef(null);
+
+  // Filtrar productos por nombre
+  const productosFiltrados = stockData.filter(item =>
+    item.producto?.toLowerCase().includes(busquedaProducto.toLowerCase())
+  );
 
   // Función para cargar datos del stock desde la vista stock_view
   const cargarStock = async () => {
@@ -293,6 +299,37 @@ export default function Stock() {
             {/* Tabla de datos */}
             {!loading && !error && (
               <>
+                {/* Barra de búsqueda */}
+                {stockData.length > 0 && (
+                  <div className="mb-6">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-400 text-lg">🔍</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={busquedaProducto}
+                        onChange={(e) => setBusquedaProducto(e.target.value)}
+                        placeholder="Buscar producto por nombre..."
+                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      />
+                      {busquedaProducto && (
+                        <button
+                          onClick={() => setBusquedaProducto('')}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                        >
+                          <span className="text-lg">✕</span>
+                        </button>
+                      )}
+                    </div>
+                    {busquedaProducto && (
+                      <div className="mt-2 text-sm text-gray-300">
+                        Mostrando {productosFiltrados.length} de {stockData.length} productos
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {stockData.length === 0 ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-gray-400 text-3xl md:text-4xl mb-3 md:mb-4">📦</div>
@@ -314,7 +351,7 @@ export default function Stock() {
                         </tr>
                       </thead>
                       <tbody>
-                        {stockData.map((item, index) => (
+                        {productosFiltrados.map((item, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                             <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                               {item.producto || 'Sin nombre'}
