@@ -154,6 +154,19 @@ export default function Stock() {
       });
   };
 
+  // Función para calcular el estado basado en el stock restante
+  const calcularEstado = (stockRestante) => {
+    const cantidad = Number(stockRestante) || 0;
+    
+    if (cantidad <= 0) {
+      return 'Agotado';
+    } else if (cantidad <= 5) {
+      return 'Bajo';
+    } else {
+      return 'Disponible';
+    }
+  };
+
   // Función para obtener el estilo del estado
   const obtenerEstiloEstado = (estado) => {
     switch (estado?.toLowerCase()) {
@@ -366,8 +379,8 @@ export default function Stock() {
                               {formatearNumero(item.stock_restante || 0)}
                             </td>
                             <td className="p-2 md:p-4">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerEstiloEstado(item.estado)}`}>
-                                {item.estado || 'Sin estado'}
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerEstiloEstado(calcularEstado(item.stock_restante))}`}>
+                                {calcularEstado(item.stock_restante)}
                               </span>
                             </td>
                           </tr>
@@ -405,7 +418,7 @@ export default function Stock() {
                     <div>
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Disponibles</p>
                       <p className="text-white text-xl md:text-2xl font-bold">
-                        {stockData.filter(item => item.estado?.toLowerCase() === 'disponible').length}
+                        {stockData.filter(item => calcularEstado(item.stock_restante).toLowerCase() === 'disponible').length}
                       </p>
                     </div>
                   </div>
@@ -417,10 +430,10 @@ export default function Stock() {
                     <div>
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Bajo Stock</p>
                       <p className="text-white text-xl md:text-2xl font-bold">
-                        {stockData.filter(item => 
-                          item.estado?.toLowerCase() === 'bajo' || 
-                          item.estado?.toLowerCase() === 'agotado'
-                        ).length}
+                        {stockData.filter(item => {
+                          const estado = calcularEstado(item.stock_restante).toLowerCase();
+                          return estado === 'bajo' || estado === 'agotado';
+                        }).length}
                       </p>
                     </div>
                   </div>
