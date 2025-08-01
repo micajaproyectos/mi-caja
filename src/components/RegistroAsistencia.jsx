@@ -580,14 +580,17 @@ export default function RegistroAsistencia() {
         
         entradas.forEach(entrada => {
           if (entrada.hora_entrada) {
-            entradasLocal.push({
-              empleado: empleadoNombre,
-              fecha: fechaActual,
-              hora_entrada: entrada.hora_entrada,
-              hora_salida: entrada.hora_salida || null,
-              sincronizado: entrada.sincronizado || false,
-              origen: 'local'
-            });
+            // Solo incluir entradas que NO estén sincronizadas (para evitar duplicados)
+            if (!entrada.sincronizado) {
+              entradasLocal.push({
+                empleado: empleadoNombre,
+                fecha: fechaActual,
+                hora_entrada: entrada.hora_entrada,
+                hora_salida: entrada.hora_salida || null,
+                sincronizado: entrada.sincronizado || false,
+                origen: 'local'
+              });
+            }
           }
         });
       });
@@ -816,162 +819,209 @@ export default function RegistroAsistencia() {
              )}
            </div>
 
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-            {/* Formulario de registro */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                📝 Registrar Asistencia
-              </h2>
-              
-              <div className="space-y-4 md:space-y-6">
-                {/* Nombre del empleado */}
-                <div>
-                  <label className="block text-white font-medium mb-2 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    👤 Nombre del Empleado
-                  </label>
-                  <input
-                    type="text"
-                    value={empleado}
-                    onChange={(e) => setEmpleado(e.target.value)}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base"
-                    placeholder="Ingresa el nombre del empleado"
-                    required
-                  />
-                </div>
+                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+             {/* Formulario de registro */}
+             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                 📝 Registrar Asistencia
+               </h2>
+               
+               <div className="space-y-6 md:space-y-8">
+                 {/* Sección de entrada de empleado */}
+                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                   <div className="mb-4">
+                     <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                       👤 Nombre del Empleado
+                     </label>
+                     <input
+                       type="text"
+                       value={empleado}
+                       onChange={(e) => setEmpleado(e.target.value)}
+                       className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
+                       placeholder="Ingresa el nombre completo del empleado"
+                       required
+                     />
+                   </div>
+                 </div>
 
-                {/* Botones de entrada y salida */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                  {/* Botón de entrada */}
-                  <button
-                    onClick={registrarEntrada}
-                    disabled={loading || !empleado}
-                    className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm md:text-base"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    {loading ? '⏳ Registrando...' : '📥 Registrar Entrada'}
-                  </button>
+                 {/* Sección de botones de acción */}
+                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                   <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                     ⚡ Acciones Disponibles
+                   </h3>
+                   
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                     {/* Botón de entrada */}
+                     <button
+                       onClick={registrarEntrada}
+                       disabled={loading || !empleado}
+                       className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
+                       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                     >
+                       <div className="flex items-center justify-center gap-2">
+                         <span className="text-xl md:text-2xl">📥</span>
+                         <span>{loading ? '⏳ Registrando...' : 'Registrar Entrada'}</span>
+                       </div>
+                       <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                     </button>
 
-                  {/* Botón de salida */}
-                  <button
-                    onClick={registrarSalida}
-                    disabled={loading || !empleado}
-                    className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm md:text-base"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    {loading ? '⏳ Registrando...' : '📤 Registrar Salida'}
-                  </button>
-                </div>
+                     {/* Botón de salida */}
+                     <button
+                       onClick={registrarSalida}
+                       disabled={loading || !empleado}
+                       className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
+                       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                     >
+                       <div className="flex items-center justify-center gap-2">
+                         <span className="text-xl md:text-2xl">📤</span>
+                         <span>{loading ? '⏳ Registrando...' : 'Registrar Salida'}</span>
+                       </div>
+                       <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                     </button>
+                   </div>
+                   
+                   {/* Información de ayuda */}
+                   <div className="mt-4 pt-4 border-t border-white/10">
+                     <div className="text-center">
+                       <p className="text-gray-300 text-sm md:text-base">
+                         💡 <strong>Proceso:</strong> Registra entrada → Trabaja → Registra salida
+                       </p>
+                       <p className="text-gray-400 text-xs md:text-sm mt-1">
+                         Los datos se sincronizan automáticamente con el servidor
+                       </p>
+                     </div>
+                   </div>
+                 </div>
 
-                {/* Listado visual de entradas pendientes */}
-                {empleado && entradasPendientesVisual.length > 0 && (
-                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4">
-                    <div className="mb-3">
-                      <h3 className="text-base md:text-lg font-semibold text-white text-center">
-                        📋 Entradas Pendientes de Sincronización
-                      </h3>
-                      <p className="text-xs text-gray-400 text-center">
-                        Estas entradas se sincronizarán automáticamente al registrar la salida
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2 max-h-40 md:max-h-48 overflow-y-auto">
-                      {entradasPendientesVisual.map((entrada, index) => (
-                        <div
-                          key={`${entrada.hora_entrada}_${index}`}
-                          className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-2 md:p-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-white text-sm truncate">
-                                👤 {empleado}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                🕒 Entrada: {entrada.hora_entrada}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                📅 Fecha: {new Date(fechaActual).toLocaleDateString('es-ES', {
-                                  weekday: 'short',
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </div>
-                            </div>
-                            <div className="ml-2 md:ml-3 flex-shrink-0">
-                              <div className="px-2 py-1 bg-yellow-500/30 border border-yellow-500/50 rounded-full">
-                                <span className="text-xs text-yellow-300 font-medium">
-                                  ⏳ Pendiente
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-white/20">
-                      <div className="text-xs text-gray-400 text-center">
-                        💡 Registra la salida para sincronizar automáticamente con el servidor
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                 {/* Listado visual de entradas pendientes */}
+                 {empleado && entradasPendientesVisual.length > 0 && (
+                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                     <div className="mb-4">
+                       <h3 className="text-lg md:text-xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                         📋 Entradas Pendientes
+                       </h3>
+                       <p className="text-gray-400 text-sm text-center">
+                         Estas entradas se sincronizarán al registrar la salida
+                       </p>
+                     </div>
+                     
+                     <div className="space-y-3 max-h-48 md:max-h-56 overflow-y-auto">
+                       {entradasPendientesVisual.map((entrada, index) => (
+                         <div
+                           key={`${entrada.hora_entrada}_${index}`}
+                           className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4"
+                         >
+                           <div className="flex items-center justify-between">
+                             <div className="flex-1 min-w-0">
+                               <div className="font-semibold text-white text-sm md:text-base truncate">
+                                 👤 {empleado}
+                               </div>
+                               <div className="text-gray-300 text-sm">
+                                 🕒 Entrada: <span className="font-medium text-white">{entrada.hora_entrada}</span>
+                               </div>
+                               <div className="text-gray-400 text-xs">
+                                 📅 {new Date(fechaActual).toLocaleDateString('es-ES', {
+                                   weekday: 'long',
+                                   year: 'numeric',
+                                   month: 'long',
+                                   day: 'numeric'
+                                 })}
+                               </div>
+                             </div>
+                             <div className="ml-3 flex-shrink-0">
+                               <div className="px-3 py-2 bg-yellow-500/30 border border-yellow-500/50 rounded-full">
+                                 <span className="text-yellow-300 text-sm font-medium">
+                                   ⏳ Pendiente
+                                 </span>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                     
+                     <div className="mt-4 pt-4 border-t border-white/10">
+                       <div className="text-center">
+                         <p className="text-gray-300 text-sm">
+                           💡 Haz clic en "Registrar Salida" para completar el registro
+                         </p>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             </div>
 
-            {/* Lista de asistencias */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-              <div className="flex flex-col sm:flex-row justify-between items-center mb-4 md:mb-6 gap-3">
-                <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  📋 Registro de Asistencias
-                </h2>
-                <button
-                  onClick={exportarCSV}
-                  className="px-3 md:px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base"
-                >
-                  📊 Exportar CSV
-                </button>
-              </div>
+                         {/* Lista de asistencias */}
+             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+               {/* Header con título y exportar */}
+               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
+                 <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                   📋 Registro de Asistencias
+                 </h2>
+                 <button
+                   onClick={exportarCSV}
+                   className="group relative px-4 md:px-6 py-2 md:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                 >
+                   <div className="flex items-center gap-2">
+                     <span className="text-lg">📊</span>
+                     <span>Exportar CSV</span>
+                   </div>
+                 </button>
+               </div>
 
-              {/* Filtros y controles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
-                <input
-                  type="date"
-                  value={filtroFecha}
-                  onChange={(e) => setFiltroFecha(e.target.value)}
-                  className="px-3 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
-                  placeholder="Filtrar por fecha"
-                />
-                <button
-                  onClick={limpiarFiltros}
-                  className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base"
-                >
-                  🔄 Limpiar Filtros
-                </button>
-              </div>
+               {/* Sección de filtros */}
+               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
+                 <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                   🔍 Filtros y Controles
+                 </h3>
+                 
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                   <div>
+                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                       📅 Filtrar por Fecha
+                     </label>
+                     <input
+                       type="date"
+                       value={filtroFecha}
+                       onChange={(e) => setFiltroFecha(e.target.value)}
+                       className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                       placeholder="Seleccionar fecha"
+                     />
+                   </div>
+                   <div className="flex items-end">
+                     <button
+                       onClick={limpiarFiltros}
+                       className="w-full px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
+                     >
+                       🔄 Limpiar Filtros
+                     </button>
+                   </div>
+                 </div>
 
-              {/* Botones adicionales */}
-              {empleado && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
-                  <button
-                    onClick={mostrarInfoDebug}
-                    className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-xs md:text-sm"
-                  >
-                    🔍 Debug Info
-                  </button>
-                  <button
-                    onClick={limpiarEntradasPendientes}
-                    className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-xs md:text-sm"
-                  >
-                    🧹 Limpiar Pendientes
-                  </button>
-                  <div className="px-3 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
-                    <div className="text-yellow-300 text-xs md:text-sm">
-                      📊 Pendientes: {estadisticas.entradasPendientes}
-                    </div>
-                  </div>
-                </div>
-              )}
+                 {/* Botones adicionales */}
+                 {empleado && (
+                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                     <button
+                       onClick={mostrarInfoDebug}
+                       className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-xs md:text-sm font-medium"
+                     >
+                       🔍 Debug Info
+                     </button>
+                     <button
+                       onClick={limpiarEntradasPendientes}
+                       className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-xs md:text-sm font-medium"
+                     >
+                       🧹 Limpiar Pendientes
+                     </button>
+                     <div className="px-3 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
+                       <div className="text-yellow-300 text-xs md:text-sm font-medium">
+                         📊 Pendientes: {estadisticas.entradasPendientes}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               </div>
 
               {/* Lista de asistencias */}
               <div className="max-h-80 md:max-h-96 overflow-y-auto">
