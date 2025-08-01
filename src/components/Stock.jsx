@@ -48,18 +48,19 @@ export default function Stock() {
     }
   };
 
-  // Nueva función para cargar el producto más vendido
+  // Nueva función para cargar el producto más vendido desde stock_view
   const cargarProductoMasVendido = async () => {
     try {
       setLoadingMasVendido(true);
       setErrorMasVendido(null);
 
-      console.log('🔄 Cargando producto más vendido...');
+      console.log('🔄 Cargando producto más vendido desde stock_view...');
 
+      // Consultar la vista stock_view y ordenar por total_vendido descendente
       const { data, error } = await supabase
-        .from('productos_mas_vendidos')
-        .select('*')
-        .order('cantidad_vendida', { ascending: false })
+        .from('stock_view')
+        .select('producto, total_vendido, total_ingresado, stock_restante, estado')
+        .order('total_vendido', { ascending: false })
         .limit(1);
 
       if (error) {
@@ -68,18 +69,25 @@ export default function Stock() {
         return;
       }
 
-      console.log('📊 Datos obtenidos de productos_mas_vendidos:', data);
+      console.log('📊 Datos obtenidos de stock_view:', data);
 
       if (data && data.length > 0) {
         const producto = data[0];
         console.log('🏆 Producto más vendido encontrado:', {
           producto: producto.producto,
-          cantidad: producto.cantidad_vendida,
-          ultima_venta: producto.ultima_venta
+          total_vendido: producto.total_vendido,
+          stock_restante: producto.stock_restante,
+          estado: producto.estado
         });
-        setProductoMasVendido(producto);
+        
+        // Formatear el producto para el estado
+        setProductoMasVendido({
+          producto: producto.producto,
+          cantidad_vendida: producto.total_vendido || 0,
+          ultima_venta: null // stock_view no tiene esta información
+        });
       } else {
-        console.log('📭 No se encontraron productos en productos_mas_vendidos');
+        console.log('📭 No se encontraron productos en stock_view');
         setProductoMasVendido(null);
       }
     } catch (error) {
@@ -123,21 +131,6 @@ export default function Stock() {
           // Actualizar datos cuando hay cambios en inventario
           setActualizandoAutomaticamente(true);
           cargarStock();
-          cargarProductoMasVendido();
-          setTimeout(() => setActualizandoAutomaticamente(false), 2000);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'productos_mas_vendidos'
-        },
-        (payload) => {
-          console.log('🔄 Cambio detectado en productos_mas_vendidos:', payload);
-          // Actualizar solo el producto más vendido cuando cambia esta tabla
-          setActualizandoAutomaticamente(true);
           cargarProductoMasVendido();
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
@@ -211,259 +204,7 @@ export default function Stock() {
     cargarProductoMasVendido();
   };
 
-  // Función para debug de productos_mas_vendidos
-  const debugProductosMasVendidos = async () => {
-    try {
-      console.log('🔍 Debug: Verificando estado de productos_mas_vendidos...');
-      
-      // Verificar tabla productos_mas_vendidos
-      const { data: productosData, error: productosError } = await supabase
-        .from('productos_mas_vendidos')
-        .select('*')
-        .order('cantidad_vendida', { ascending: false });
-      
-      if (productosError) {
-        console.error('❌ Error al consultar productos_mas_vendidos:', productosError);
-        return;
-      }
-      
-      console.log('📊 Productos en productos_mas_vendidos:', productosData);
-      
-      // Verificar tabla ventas
-      const { data: ventasData, error: ventasError } = await supabase
-        .from('ventas')
-        .select('producto, cantidad, fecha')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
-      if (ventasError) {
-        console.error('❌ Error al consultar ventas:', ventasError);
-        return;
-      }
-      
-      console.log('📊 Últimas 20 ventas:', ventasData);
-      
-      // Calcular productos únicos en ventas
-      const productosEnVentas = [...new Set(ventasData.map(v => v.producto))];
-      const productosEnTabla = productosData.map(p => p.producto);
-      
-      // Encontrar productos que están en la tabla pero no en ventas
-      const productosOrfanos = productosEnTabla.filter(p => !productosEnVentas.includes(p));
-      
-      // Encontrar productos que están en ventas pero no en la tabla
-      const productosFaltantes = productosEnVentas.filter(p => !productosEnTabla.includes(p));
-      
-      console.log('🔍 Análisis de discrepancias:');
-      console.log('• Productos únicos en ventas:', productosEnVentas);
-      console.log('• Productos en tabla:', productosEnTabla);
-      console.log('• Productos huérfanos (en tabla pero no en ventas):', productosOrfanos);
-      console.log('• Productos faltantes (en ventas pero no en tabla):', productosFaltantes);
-      
-      // Mostrar resumen
-      const mensaje = `
-🔍 Debug de Productos Más Vendidos:
-• Productos en tabla: ${productosData?.length || 0}
-• Últimas ventas: ${ventasData?.length || 0}
-• Productos únicos en ventas: ${productosEnVentas.length}
-• Producto más vendido: ${productosData?.[0]?.producto || 'Ninguno'}
-• Cantidad: ${productosData?.[0]?.cantidad_vendida || 0}
-• Productos huérfanos: ${productosOrfanos.length > 0 ? productosOrfanos.join(', ') : 'Ninguno'}
-• Productos faltantes: ${productosFaltantes.length > 0 ? productosFaltantes.join(', ') : 'Ninguno'}
-      `;
-      
-      console.log(mensaje);
-      alert(mensaje);
-      
-    } catch (error) {
-      console.error('❌ Error en debug:', error);
-    }
-  };
 
-  // Función para limpiar productos huérfanos
-  const limpiarProductosHuerfanos = async () => {
-    try {
-      console.log('🧹 Limpiando productos huérfanos...');
-      
-      // Obtener productos únicos de ventas
-      const { data: ventasData, error: ventasError } = await supabase
-        .from('ventas')
-        .select('producto');
-      
-      if (ventasError) {
-        console.error('❌ Error al obtener ventas:', ventasError);
-        return;
-      }
-      
-      const productosEnVentas = [...new Set(ventasData.map(v => v.producto))];
-      console.log('📊 Productos únicos en ventas:', productosEnVentas);
-      
-      // Obtener productos en la tabla
-      const { data: productosData, error: productosError } = await supabase
-        .from('productos_mas_vendidos')
-        .select('producto');
-      
-      if (productosError) {
-        console.error('❌ Error al obtener productos de tabla:', productosError);
-        return;
-      }
-      
-      const productosEnTabla = productosData.map(p => p.producto);
-      console.log('📊 Productos en tabla:', productosEnTabla);
-      
-      // Encontrar productos huérfanos
-      const productosOrfanos = productosEnTabla.filter(p => !productosEnVentas.includes(p));
-      
-      if (productosOrfanos.length === 0) {
-        console.log('✅ No hay productos huérfanos para limpiar');
-        alert('✅ No hay productos huérfanos para limpiar');
-        return;
-      }
-      
-      console.log('🧹 Productos huérfanos encontrados:', productosOrfanos);
-      
-      // Eliminar productos huérfanos
-      for (const producto of productosOrfanos) {
-        const { error: deleteError } = await supabase
-          .from('productos_mas_vendidos')
-          .delete()
-          .eq('producto', producto);
-        
-        if (deleteError) {
-          console.error(`❌ Error al eliminar ${producto}:`, deleteError);
-        } else {
-          console.log(`✅ ${producto} eliminado correctamente`);
-        }
-      }
-      
-      console.log('✅ Limpieza de productos huérfanos completada');
-      
-      // Recargar datos
-      cargarProductoMasVendido();
-      
-      alert(`✅ Limpieza completada. Se eliminaron ${productosOrfanos.length} productos huérfanos: ${productosOrfanos.join(', ')}`);
-      
-    } catch (error) {
-      console.error('❌ Error en limpieza:', error);
-      alert('❌ Error durante la limpieza: ' + error.message);
-    }
-  };
-
-  // Función para actualizar manualmente productos_mas_vendidos desde ventas
-  const actualizarProductosMasVendidosManual = async () => {
-    try {
-      console.log('🔄 Actualizando productos_mas_vendidos manualmente...');
-      
-      // Obtener datos agregados de ventas con fecha de última venta
-      const { data: ventasAgregadas, error: ventasError } = await supabase
-        .from('ventas')
-        .select('producto, cantidad, fecha, created_at')
-        .order('producto');
-      
-      if (ventasError) {
-        console.error('Error al obtener datos de ventas:', ventasError);
-        return;
-      }
-
-      console.log('📊 Datos de ventas obtenidos:', ventasAgregadas);
-
-      // Verificar si hay ventas
-      if (!ventasAgregadas || ventasAgregadas.length === 0) {
-        console.log('📭 No hay ventas registradas, limpiando tabla productos_mas_vendidos');
-        
-        // Limpiar tabla productos_mas_vendidos si no hay ventas
-        const { error: deleteError } = await supabase
-          .from('productos_mas_vendidos')
-          .delete()
-          .neq('id', 0);
-        
-        if (deleteError) {
-          console.error('Error al limpiar tabla:', deleteError);
-        } else {
-          console.log('✅ Tabla productos_mas_vendidos limpiada (no hay ventas)');
-        }
-        
-        // Recargar datos
-        cargarProductoMasVendido();
-        return;
-      }
-
-      // Agregar cantidades por producto y obtener última fecha
-      const productosAgregados = {};
-      const ultimasFechas = {};
-      
-      ventasAgregadas.forEach(venta => {
-        const producto = venta.producto;
-        const cantidad = parseFloat(venta.cantidad) || 0;
-        const fechaVenta = venta.fecha || venta.created_at;
-        
-        if (productosAgregados[producto]) {
-          productosAgregados[producto] += cantidad;
-        } else {
-          productosAgregados[producto] = cantidad;
-        }
-        
-        // Actualizar última fecha si es más reciente
-        if (!ultimasFechas[producto] || new Date(fechaVenta) > new Date(ultimasFechas[producto])) {
-          ultimasFechas[producto] = fechaVenta;
-        }
-      });
-
-      console.log('📦 Productos agregados:', productosAgregados);
-      console.log('📅 Últimas fechas:', ultimasFechas);
-
-      // Obtener productos actuales en productos_mas_vendidos para comparar
-      const { data: productosActuales, error: productosError } = await supabase
-        .from('productos_mas_vendidos')
-        .select('producto');
-      
-      if (productosError) {
-        console.error('Error al obtener productos actuales:', productosError);
-      } else {
-        console.log('📊 Productos actuales en tabla:', productosActuales?.map(p => p.producto) || []);
-      }
-
-      // Limpiar tabla productos_mas_vendidos
-      const { error: deleteError } = await supabase
-        .from('productos_mas_vendidos')
-        .delete()
-        .neq('id', 0); // Eliminar todos los registros
-
-      if (deleteError) {
-        console.error('Error al limpiar tabla:', deleteError);
-        return;
-      }
-
-      console.log('✅ Tabla productos_mas_vendidos limpiada');
-
-      // Insertar datos actualizados
-      const productosInsertados = [];
-      for (const [producto, cantidad] of Object.entries(productosAgregados)) {
-        const { error: insertError } = await supabase
-          .from('productos_mas_vendidos')
-          .insert({
-            producto: producto,
-            cantidad_vendida: cantidad,
-            ultima_venta: ultimasFechas[producto] || new Date().toISOString()
-          });
-
-        if (insertError) {
-          console.error(`Error al insertar ${producto}:`, insertError);
-        } else {
-          console.log(`✅ ${producto} insertado correctamente con cantidad ${cantidad}`);
-          productosInsertados.push(producto);
-        }
-      }
-
-      console.log('✅ Productos_mas_vendidos actualizado manualmente');
-      console.log('📋 Productos insertados:', productosInsertados);
-      
-      // Recargar datos
-      cargarProductoMasVendido();
-      
-    } catch (error) {
-      console.error('Error en actualización manual:', error);
-    }
-  };
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -512,44 +253,17 @@ export default function Stock() {
             </div>
           )}
 
-          {/* Botones de recarga */}
-          <div className="mb-4 md:mb-6 text-center space-y-2">
-            <button
-              onClick={recargarDatos}
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
-            >
-              <span className="mr-2">🔄</span>
-              {loading ? 'Cargando...' : 'Recargar Datos'}
-            </button>
-            
-            <button
-              onClick={actualizarProductosMasVendidosManual}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
-            >
-              <span className="mr-2">🔧</span>
-              Actualizar Productos Más Vendidos
-            </button>
-            
-            <button
-              onClick={limpiarProductosHuerfanos}
-              disabled={loading}
-              className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
-            >
-              <span className="mr-2">🧹</span>
-              Limpiar Productos Huérfanos
-            </button>
-            
-            <button
-              onClick={debugProductosMasVendidos}
-              disabled={loading}
-              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
-            >
-              <span className="mr-2">🔍</span>
-              Debug Productos Más Vendidos
-            </button>
-          </div>
+                     {/* Botón de recarga */}
+           <div className="mb-4 md:mb-6 text-center">
+             <button
+               onClick={recargarDatos}
+               disabled={loading}
+               className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
+             >
+               <span className="mr-2">🔄</span>
+               {loading ? 'Cargando...' : 'Recargar Datos'}
+             </button>
+           </div>
 
           {/* Contenido principal */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
