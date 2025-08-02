@@ -1268,17 +1268,7 @@ export default function RegistroVenta() {
               </div>
             </div>
             
-            {/* Debug Info */}
-            <div className="mb-3 md:mb-4 p-3 md:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
-              <p className="text-yellow-200 text-xs md:text-sm">
-                <strong>Debug:</strong> Loading: {loading.toString()} | Ventas: {ventasRegistradas.length} registros | Filtradas: {ventasFiltradas.length}
-                {!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago ? (
-                  <span> | Modo: Día actual (por defecto)</span>
-                ) : (
-                  <span> | Filtros: {[filtroDia && 'Día', filtroMes && 'Mes', filtroAnio && 'Año', filtroTipoPago && 'Pago'].filter(Boolean).join(', ')}</span>
-                )}
-              </p>
-            </div>
+
             
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               {loading ? (

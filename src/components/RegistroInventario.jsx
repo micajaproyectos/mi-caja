@@ -137,8 +137,8 @@ const RegistroInventario = () => {
     return coincideNombre && coincideFecha && coincideMes;
   });
 
-  // Limitar productos mostrados a 15 si no se ha activado "Ver todo"
-  const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 15);
+  // Limitar productos mostrados a 30 si no se ha activado "Ver todo"
+  const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 30);
 
   // Establecer fecha actual al cargar el componente
   useEffect(() => {
@@ -660,8 +660,8 @@ const RegistroInventario = () => {
                 {!busquedaProducto && !filtroFecha && !filtroMes && (
                   <div className="mt-2 text-sm text-gray-300">
                     Mostrando {productosAMostrar.length} de {inventarioRegistrado.length} productos
-                    {!mostrarTodos && productosFiltrados.length > 15 && (
-                      <span className="text-green-300 ml-2">(limitado a 15)</span>
+                    {!mostrarTodos && productosFiltrados.length > 30 && (
+                      <span className="text-green-300 ml-2">(limitado a 30)</span>
                     )}
                   </div>
                 )}
@@ -738,8 +738,8 @@ const RegistroInventario = () => {
                   </tbody>
                 </table>
                 
-                {/* Botón "Ver todo" cuando hay más de 15 productos y no se están mostrando todos */}
-                {!mostrarTodos && productosFiltrados.length > 15 && (
+                {/* Botón "Ver todo" cuando hay más de 30 productos y no se están mostrando todos */}
+                {!mostrarTodos && productosFiltrados.length > 30 && (
                   <div className="mt-4 text-center">
                     <button
                       onClick={() => setMostrarTodos(true)}
@@ -752,14 +752,14 @@ const RegistroInventario = () => {
                 )}
                 
                 {/* Botón "Ver menos" cuando se están mostrando todos */}
-                {mostrarTodos && productosFiltrados.length > 15 && (
+                {mostrarTodos && productosFiltrados.length > 30 && (
                   <div className="mt-4 text-center">
                     <button
                       onClick={() => setMostrarTodos(false)}
                       className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center mx-auto text-sm"
                     >
                       <span className="mr-2">👁️</span>
-                      Ver solo los primeros 15
+                      Ver solo los primeros 30
                     </button>
                   </div>
                 )}

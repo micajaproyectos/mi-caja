@@ -24,6 +24,8 @@ const FormularioGastos = () => {
   // Estados para filtros
   const [busquedaDetalle, setBusquedaDetalle] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState('');
   const [filtroTipoGasto, setFiltroTipoGasto] = useState('');
   const [filtroFormaPago, setFiltroFormaPago] = useState('');
 
@@ -64,6 +66,38 @@ const FormularioGastos = () => {
     const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
     const day = String(fecha.getUTCDate()).padStart(2, '0');
     return `${day}/${month}/${year}`;
+  };
+
+  // Función para obtener meses únicos
+  const obtenerMesesUnicos = () => {
+    const meses = gastosRegistrados.map(gasto => {
+      const fecha = new Date(gasto.fecha);
+      return {
+        value: fecha.getUTCMonth() + 1,
+        label: fecha.toLocaleDateString('es-ES', { month: 'long' })
+      };
+    });
+
+    // Eliminar duplicados y ordenar
+    const mesesUnicos = [...new Set(meses.map(m => m.value))].sort((a, b) => a - b);
+    return mesesUnicos.map(mes => {
+      const fechaTemp = new Date(2024, mes - 1, 1);
+      return {
+        value: mes,
+        label: fechaTemp.toLocaleDateString('es-ES', { month: 'long' })
+      };
+    });
+  };
+
+  // Función para obtener años únicos
+  const obtenerAniosUnicos = () => {
+    const anios = gastosRegistrados.map(gasto => {
+      const fecha = new Date(gasto.fecha);
+      return fecha.getUTCFullYear();
+    });
+
+    // Eliminar duplicados y ordenar descendente
+    return [...new Set(anios)].sort((a, b) => b - a);
   };
 
   // Función para cargar gastos registrados
@@ -200,10 +234,23 @@ const FormularioGastos = () => {
   const gastosFiltrados = gastosRegistrados.filter(item => {
     const coincideDetalle = item.detalle?.toLowerCase().includes(busquedaDetalle.toLowerCase());
     const coincideFecha = !filtroFecha || item.fecha === filtroFecha;
+    
+    // Filtro por mes
+    const coincideMes = !filtroMes || (() => {
+      const fecha = new Date(item.fecha);
+      return fecha.getUTCMonth() + 1 === Number(filtroMes);
+    })();
+    
+    // Filtro por año
+    const coincideAnio = !filtroAnio || (() => {
+      const fecha = new Date(item.fecha);
+      return fecha.getUTCFullYear() === Number(filtroAnio);
+    })();
+    
     const coincideTipoGasto = !filtroTipoGasto || item.tipo_gasto === filtroTipoGasto;
     const coincideFormaPago = !filtroFormaPago || item.forma_pago === filtroFormaPago;
     
-    return coincideDetalle && coincideFecha && coincideTipoGasto && coincideFormaPago;
+    return coincideDetalle && coincideFecha && coincideMes && coincideAnio && coincideTipoGasto && coincideFormaPago;
   });
 
   // Calcular totales
@@ -389,7 +436,7 @@ const FormularioGastos = () => {
                 🔍 Filtros de Búsqueda
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 mb-4">
                 {/* Búsqueda por detalle */}
                 <div>
                   <label className="block text-white text-sm font-medium mb-2">
@@ -415,6 +462,44 @@ const FormularioGastos = () => {
                     onChange={(e) => setFiltroFecha(e.target.value)}
                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
                   />
+                </div>
+
+                {/* Filtro por mes */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    📆 Filtrar por mes
+                  </label>
+                  <select
+                    value={filtroMes}
+                    onChange={(e) => setFiltroMes(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                  >
+                    <option value="">Todos los meses</option>
+                    {obtenerMesesUnicos().map(mes => (
+                      <option key={mes.value} value={mes.value} className="bg-gray-800 text-white">
+                        {mes.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Filtro por año */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    📅 Filtrar por año
+                  </label>
+                  <select
+                    value={filtroAnio}
+                    onChange={(e) => setFiltroAnio(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                  >
+                    <option value="">Todos los años</option>
+                    {obtenerAniosUnicos().map(anio => (
+                      <option key={anio} value={anio} className="bg-gray-800 text-white">
+                        {anio}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Filtro por tipo de gasto */}
@@ -457,7 +542,7 @@ const FormularioGastos = () => {
               </div>
 
                              {/* Filtros activos */}
-               {(busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago) && (
+               {(busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) && (
                 <div className="mb-4">
                   <p className="text-gray-300 text-sm mb-2">Filtros activos:</p>
                   <div className="flex flex-wrap gap-2">
@@ -473,10 +558,22 @@ const FormularioGastos = () => {
                         <button onClick={() => setFiltroFecha('')} className="text-green-400 hover:text-white">✕</button>
                       </span>
                     )}
-                    {filtroTipoGasto && (
+                    {filtroMes && (
                       <span className="inline-flex items-center gap-1 bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full text-xs">
+                        <span>📆 {obtenerMesesUnicos().find(m => m.value === Number(filtroMes))?.label}</span>
+                        <button onClick={() => setFiltroMes('')} className="text-purple-400 hover:text-white">✕</button>
+                      </span>
+                    )}
+                    {filtroAnio && (
+                      <span className="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full text-xs">
+                        <span>📅 {filtroAnio}</span>
+                        <button onClick={() => setFiltroAnio('')} className="text-yellow-400 hover:text-white">✕</button>
+                      </span>
+                    )}
+                    {filtroTipoGasto && (
+                      <span className="inline-flex items-center gap-1 bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded-full text-xs">
                         <span>🏷️ {filtroTipoGasto}</span>
-                        <button onClick={() => setFiltroTipoGasto('')} className="text-purple-400 hover:text-white">✕</button>
+                        <button onClick={() => setFiltroTipoGasto('')} className="text-indigo-400 hover:text-white">✕</button>
                       </span>
                     )}
                                          {filtroFormaPago && (
