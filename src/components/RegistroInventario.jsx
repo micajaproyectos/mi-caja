@@ -17,6 +17,7 @@ const RegistroInventario = () => {
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   // Opciones para el selector de unidad
   const opcionesUnidad = [
@@ -136,6 +137,9 @@ const RegistroInventario = () => {
     return coincideNombre && coincideFecha && coincideMes;
   });
 
+  // Limitar productos mostrados a 15 si no se ha activado "Ver todo"
+  const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 15);
+
   // Establecer fecha actual al cargar el componente
   useEffect(() => {
     const fechaActual = new Date().toISOString().split('T')[0];
@@ -145,6 +149,13 @@ const RegistroInventario = () => {
     }));
     cargarInventario();
   }, []);
+
+  // Resetear mostrarTodos cuando se apliquen filtros
+  useEffect(() => {
+    if (busquedaProducto || filtroFecha || filtroMes) {
+      setMostrarTodos(false);
+    }
+  }, [busquedaProducto, filtroFecha, filtroMes]);
 
   const cargarInventario = async () => {
     try {
@@ -629,6 +640,7 @@ const RegistroInventario = () => {
                         setBusquedaProducto('');
                         setFiltroFecha('');
                         setFiltroMes('');
+                        setMostrarTodos(false);
                       }}
                       className="text-gray-400 hover:text-white text-xs underline"
                     >
@@ -641,6 +653,16 @@ const RegistroInventario = () => {
                 {(busquedaProducto || filtroFecha || filtroMes) && (
                   <div className="mt-2 text-sm text-gray-300">
                     Mostrando {productosFiltrados.length} de {inventarioRegistrado.length} productos
+                  </div>
+                )}
+                
+                {/* Contador cuando no hay filtros activos */}
+                {!busquedaProducto && !filtroFecha && !filtroMes && (
+                  <div className="mt-2 text-sm text-gray-300">
+                    Mostrando {productosAMostrar.length} de {inventarioRegistrado.length} productos
+                    {!mostrarTodos && productosFiltrados.length > 15 && (
+                      <span className="text-green-300 ml-2">(limitado a 15)</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -672,7 +694,7 @@ const RegistroInventario = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {productosFiltrados.map((item, index) => (
+                    {productosAMostrar.map((item, index) => (
                       <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                                                  <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                            {(() => {
@@ -715,6 +737,32 @@ const RegistroInventario = () => {
                     ))}
                   </tbody>
                 </table>
+                
+                {/* Botón "Ver todo" cuando hay más de 15 productos y no se están mostrando todos */}
+                {!mostrarTodos && productosFiltrados.length > 15 && (
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => setMostrarTodos(true)}
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center mx-auto text-sm"
+                    >
+                      <span className="mr-2">👁️</span>
+                      Ver todos los productos ({productosFiltrados.length})
+                    </button>
+                  </div>
+                )}
+                
+                {/* Botón "Ver menos" cuando se están mostrando todos */}
+                {mostrarTodos && productosFiltrados.length > 15 && (
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => setMostrarTodos(false)}
+                      className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center mx-auto text-sm"
+                    >
+                      <span className="mr-2">👁️</span>
+                      Ver solo los primeros 15
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -392,23 +392,63 @@ export default function RegistroVenta() {
     return opcion || { value: valor, label: valor, icon: '❓' };
   };
 
-  // Función para calcular estadísticas diarias por tipo de pago
-  const calcularEstadisticasDiarias = () => {
-    const hoy = obtenerFechaActual(); // Usar la función consistente
-    
-    // Filtrar ventas del día actual
-    const ventasHoy = ventasRegistradas.filter(venta => {
-      const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
-      return fechaVenta === hoy;
-    });
+  // Función para calcular estadísticas dinámicas según filtros aplicados
+  const calcularEstadisticasDinamicas = () => {
+    let ventasFiltradas = [...ventasRegistradas];
+
+    // Si no hay filtros activos, mostrar solo las ventas del día actual
+    if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
+      const hoy = obtenerFechaActual();
+      ventasFiltradas = ventasFiltradas.filter(venta => {
+        const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
+        return fechaVenta === hoy;
+      });
+    } else {
+      // Aplicar los mismos filtros que se usan en filtrarVentas
+      if (filtroDia) {
+        const fechaSeleccionada = obtenerFechaFormatoISO(filtroDia);
+        ventasFiltradas = ventasFiltradas.filter(venta => {
+          const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
+          return fechaVenta === fechaSeleccionada;
+        });
+      }
+
+      if (filtroMes && !filtroDia) {
+        ventasFiltradas = ventasFiltradas.filter(venta => {
+          const fechaVenta = new Date(venta.fecha);
+          return fechaVenta.getUTCMonth() === parseInt(filtroMes);
+        });
+      }
+
+      if (filtroAnio && !filtroDia) {
+        ventasFiltradas = ventasFiltradas.filter(venta => {
+          const fechaVenta = new Date(venta.fecha);
+          return fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
+        });
+      }
+
+      if (filtroMes && filtroAnio && !filtroDia) {
+        ventasFiltradas = ventasFiltradas.filter(venta => {
+          const fechaVenta = new Date(venta.fecha);
+          return fechaVenta.getUTCMonth() === parseInt(filtroMes) && 
+                 fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
+        });
+      }
+
+      if (filtroTipoPago) {
+        ventasFiltradas = ventasFiltradas.filter(venta => {
+          return venta.tipo_pago === filtroTipoPago;
+        });
+      }
+    }
 
     // Filtrar ventas que tienen total_final (ventas completas)
-    const ventasCompletas = ventasHoy.filter(venta => venta.total_final !== null && venta.total_final !== undefined);
+    const ventasCompletas = ventasFiltradas.filter(venta => venta.total_final !== null && venta.total_final !== undefined);
 
     // Calcular totales por tipo de pago usando SOLO ventas completas
     const estadisticas = {
       total: {
-        cantidad: ventasCompletas.length, // Solo contar ventas con total_final
+        cantidad: ventasCompletas.length,
         monto: ventasCompletas.reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
       },
       efectivo: {
@@ -430,6 +470,46 @@ export default function RegistroVenta() {
     };
 
     return estadisticas;
+  };
+
+  // Función para obtener el título dinámico del resumen
+  const obtenerTituloResumen = () => {
+    if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
+      return `Resumen de Ventas - ${(() => {
+        const fechaActual = new Date();
+        const year = fechaActual.getFullYear();
+        const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaActual.getDate()).padStart(2, '0');
+        return `${day}/${month}/${year}`;
+      })()}`;
+    }
+
+    let titulo = 'Resumen de Ventas - ';
+    const partes = [];
+
+    if (filtroDia) {
+      const [year, month, day] = filtroDia.split('-');
+      partes.push(`${day}/${month}/${year}`);
+    }
+
+    if (filtroMes && !filtroDia) {
+      partes.push(nombresMeses[parseInt(filtroMes)]);
+    }
+
+    if (filtroAnio && !filtroDia) {
+      partes.push(filtroAnio);
+    }
+
+    if (filtroMes && filtroAnio && !filtroDia) {
+      partes.push(`${nombresMeses[parseInt(filtroMes)]} ${filtroAnio}`);
+    }
+
+    if (filtroTipoPago) {
+      const infoPago = obtenerInfoTipoPago(filtroTipoPago);
+      partes.push(`${infoPago.icon} ${infoPago.label}`);
+    }
+
+    return titulo + partes.join(' | ');
   };
 
   // Función para exportar datos filtrados
@@ -581,169 +661,7 @@ export default function RegistroVenta() {
   }, [ventasRegistradas, loading]);
 
   // Función de prueba para verificar conexión
-  const probarConexion = async () => {
-    console.log('🔍 Probando conexión con tabla "ventas"...');
-    
-    try {
-      // Probar conexión básica
-      console.log('🔍 1. Probando conexión básica...');
-      const { data: testData, error: testError } = await supabase
-        .from('ventas')
-        .select('count')
-        .limit(1);
-      
-      console.log('🔍 Resultado conexión básica:', { testData, testError });
-      
-      // Probar obtener estructura de la tabla
-      console.log('🔍 2. Probando obtener estructura...');
-      const { data: structureData, error: structureError } = await supabase
-        .from('ventas')
-        .select('*')
-        .limit(1);
-      
-      console.log('🔍 Estructura de la tabla:', structureData);
-      console.log('🔍 Error de estructura:', structureError);
-      
-      // Probar obtener todos los registros
-      console.log('🔍 3. Probando obtener todos los registros...');
-      const { data: allData, error: allError } = await supabase
-        .from('ventas')
-        .select('*');
-      
-      console.log('🔍 Todos los registros:', allData);
-      console.log('🔍 Error de todos los registros:', allError);
-      console.log('🔍 Cantidad de registros:', allData ? allData.length : 0);
-      
-    } catch (error) {
-      console.error('🔍 Error en prueba de conexión:', error);
-    }
-  };
 
-  // Ejecutar prueba al montar
-  useEffect(() => {
-    probarConexion();
-  }, []);
-
-  // Función para verificar permisos y estructura
-  const verificarTabla = async () => {
-    console.log('🔐 Verificando permisos y estructura de la tabla...');
-    
-    try {
-      // Verificar si podemos insertar (permisos de escritura)
-      console.log('🔐 Probando permisos de escritura...');
-      const testVenta = {
-        fecha: new Date().toISOString().split('T')[0],
-        tipo_pago: 'test',
-        producto: 'Test Product',
-        cantidad: 1,
-        unidad: 'Unid',
-        precio_unitario: 100,
-        total_venta: 100
-      };
-      
-      const { error: insertError } = await supabase
-        .from('ventas')
-        .insert([testVenta]); // ✅ No pide retornar columnas
-      
-      console.log('🔐 Resultado de inserción de prueba:', { insertError });
-      
-      if (!insertError) {
-        console.log('🔐 Permisos de escritura OK');
-        
-        // Eliminar el registro de prueba
-        const { error: deleteError } = await supabase
-          .from('ventas')
-          .delete()
-          .eq('producto', 'Test Product');
-        
-        console.log('🔐 Eliminación de prueba:', deleteError);
-      } else {
-        console.error('🔐 Error en inserción de prueba:', insertError);
-      }
-      
-    } catch (error) {
-      console.error('🔐 Error en verificación de permisos:', error);
-    }
-  };
-
-  // Función para verificar la estructura de la tabla
-  const verificarEstructuraTabla = async () => {
-    console.log('🔍 Verificando estructura de la tabla "ventas"...');
-    
-    try {
-      // Intentar obtener información de la estructura consultando un registro
-      console.log('🔍 1. Obteniendo información de estructura...');
-      const { data: estructuraData, error: estructuraError } = await supabase
-        .from('ventas')
-        .select('*')
-        .limit(1);
-      
-      console.log('🔍 Datos de estructura:', estructuraData);
-      console.log('🔍 Error de estructura:', estructuraError);
-      
-      if (estructuraData && estructuraData.length > 0) {
-        const primerRegistro = estructuraData[0];
-        console.log('🔍 Columnas encontradas en la tabla:');
-        Object.keys(primerRegistro).forEach(columna => {
-          console.log(`  - ${columna}: ${typeof primerRegistro[columna]} = ${primerRegistro[columna]}`);
-        });
-        
-        // Verificar si faltan columnas que estamos enviando
-        const columnasEsperadas = ['fecha', 'tipo_pago', 'producto', 'cantidad', 'unidad', 'precio_unitario', 'total_venta'];
-        const columnasFaltantes = columnasEsperadas.filter(col => !(col in primerRegistro));
-        
-        if (columnasFaltantes.length > 0) {
-          console.warn('⚠️ Columnas faltantes en la tabla:', columnasFaltantes);
-        } else {
-          console.log('✅ Todas las columnas esperadas están presentes');
-        }
-        
-        // Verificar columnas extra en la tabla
-        const columnasExtra = Object.keys(primerRegistro).filter(col => !columnasEsperadas.includes(col));
-        if (columnasExtra.length > 0) {
-          console.log('ℹ️ Columnas adicionales en la tabla:', columnasExtra);
-        }
-        
-      } else {
-        console.log('ℹ️ La tabla está vacía, no se puede determinar la estructura');
-        
-        // Intentar insertar un registro de prueba para ver la estructura
-        console.log('🔍 2. Intentando insertar registro de prueba para ver estructura...');
-        const testVenta = {
-          fecha: new Date().toISOString().split('T')[0],
-          tipo_pago: 'test',
-          producto: 'Test Product',
-          cantidad: 1,
-          unidad: 'Unid',
-          precio_unitario: 100,
-          total_venta: 100
-        };
-        
-        const { error: insertTestError } = await supabase
-          .from('ventas')
-          .insert([testVenta]); // ✅ No pide retornar columnas
-        
-        console.log('🔍 Resultado inserción de prueba:', { insertTestError });
-        
-        if (!insertTestError) {
-          console.log('🔍 Inserción de prueba exitosa');
-          
-          // Eliminar el registro de prueba
-          const { error: deleteError } = await supabase
-            .from('ventas')
-            .delete()
-            .eq('producto', 'Test Product');
-          
-          console.log('🔍 Eliminación de registro de prueba:', deleteError);
-        } else {
-          console.error('🔍 Error en inserción de prueba:', insertTestError);
-        }
-      }
-      
-    } catch (error) {
-      console.error('🔍 Error al verificar estructura:', error);
-    }
-  };
 
   // Función para validar formato de fecha
   const validarFecha = (fechaString) => {
@@ -900,57 +818,7 @@ export default function RegistroVenta() {
     }
   };
 
-  // Función para consulta directa de datos
-  const consultaDirecta = async () => {
-    console.log('🔍 Realizando consulta directa a Supabase...');
-    
-    try {
-      // Consulta 1: Contar registros
-      console.log('🔍 1. Contando registros...');
-      const { count, error: countError } = await supabase
-        .from('ventas')
-        .select('*', { count: 'exact', head: true });
-      
-      console.log('🔍 Total de registros:', count);
-      console.log('🔍 Error en conteo:', countError);
-      
-      // Consulta 2: Obtener todos los registros
-      console.log('🔍 2. Obteniendo todos los registros...');
-      const { data: allData, error: allError } = await supabase
-        .from('ventas')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      console.log('🔍 Datos completos:', allData);
-      console.log('🔍 Error en consulta completa:', allError);
-      
-      // Consulta 3: Obtener solo los últimos 5 registros
-      console.log('🔍 3. Obteniendo últimos 5 registros...');
-      const { data: recentData, error: recentError } = await supabase
-        .from('ventas')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      console.log('🔍 Últimos 5 registros:', recentData);
-      console.log('🔍 Error en consulta reciente:', recentError);
-      
-      // Mostrar resumen en alert
-      const mensaje = `
-📊 Resumen de consulta directa:
-• Total de registros: ${count || 0}
-• Registros obtenidos: ${allData ? allData.length : 0}
-• Últimos 5 registros: ${recentData ? recentData.length : 0}
-• Errores: ${countError || allError || recentError ? 'Sí' : 'No'}
-      `;
-      
-      alert(mensaje);
-      
-    } catch (error) {
-      console.error('🔍 Error en consulta directa:', error);
-      alert('❌ Error en consulta directa: ' + error.message);
-    }
-  };
+
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -1520,95 +1388,88 @@ export default function RegistroVenta() {
                     </div>
                   )}
                   
-                  {/* Estadísticas diarias siempre visibles */}
+                  {/* Resumen de Ventas dinámico según filtros */}
                   <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">Estadísticas Diarias - {(() => {
-                      // Función para mostrar fecha actual sin desfase de zona horaria
-                      const fechaActual = new Date();
-                      const year = fechaActual.getFullYear();
-                      const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
-                      const day = String(fechaActual.getDate()).padStart(2, '0');
-                      return `${day}/${month}/${year}`;
-                    })()}</h4>
+                    <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">{obtenerTituloResumen()}</h4>
                     
                     {/* Listado de estadísticas */}
                     <div className="space-y-2 md:space-y-3">
-                      {/* Total Diario */}
+                      {/* Total */}
                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
                           <div>
-                            <p className="text-blue-200 text-sm md:text-base font-medium">Total Diario</p>
-                            <p className="text-blue-300 text-xs md:text-sm">{calcularEstadisticasDiarias().total.cantidad} ventas</p>
+                            <p className="text-blue-200 text-sm md:text-base font-medium">Total</p>
+                            <p className="text-blue-300 text-xs md:text-sm">{calcularEstadisticasDinamicas().total.cantidad} ventas</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-blue-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().total.monto.toLocaleString()}
+                            ${calcularEstadisticasDinamicas().total.monto.toLocaleString()}
                           </p>
                         </div>
                       </div>
                       
-                      {/* Efectivo Diario */}
+                      {/* Efectivo */}
                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
                           <div>
                             <p className="text-green-200 text-sm md:text-base font-medium">Efectivo</p>
-                            <p className="text-green-300 text-xs md:text-sm">{calcularEstadisticasDiarias().efectivo.cantidad} ventas</p>
+                            <p className="text-green-300 text-xs md:text-sm">{calcularEstadisticasDinamicas().efectivo.cantidad} ventas</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-green-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().efectivo.monto.toLocaleString()}
+                            ${calcularEstadisticasDinamicas().efectivo.monto.toLocaleString()}
                           </p>
                         </div>
                       </div>
                       
-                      {/* Débito Diario */}
+                      {/* Débito */}
                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
                           <div>
                             <p className="text-purple-200 text-sm md:text-base font-medium">Débito</p>
-                            <p className="text-purple-300 text-xs md:text-sm">{calcularEstadisticasDiarias().debito.cantidad} ventas</p>
+                            <p className="text-purple-300 text-xs md:text-sm">{calcularEstadisticasDinamicas().debito.cantidad} ventas</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-purple-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().debito.monto.toLocaleString()}
+                            ${calcularEstadisticasDinamicas().debito.monto.toLocaleString()}
                           </p>
                         </div>
                       </div>
                       
-                      {/* Crédito Diario */}
+                      {/* Crédito */}
                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
                           <div>
                             <p className="text-orange-200 text-sm md:text-base font-medium">Crédito</p>
-                            <p className="text-orange-300 text-xs md:text-sm">{calcularEstadisticasDiarias().credito.cantidad} ventas</p>
+                            <p className="text-orange-300 text-xs md:text-sm">{calcularEstadisticasDinamicas().credito.cantidad} ventas</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-orange-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().credito.monto.toLocaleString()}
+                            ${calcularEstadisticasDinamicas().credito.monto.toLocaleString()}
                           </p>
                         </div>
                       </div>
                       
-                      {/* Transferencia Diaria */}
+                      {/* Transferencia */}
                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
                           <div>
                             <p className="text-indigo-200 text-sm md:text-base font-medium">Transferencia</p>
-                            <p className="text-indigo-300 text-xs md:text-sm">{calcularEstadisticasDiarias().transferencia.cantidad} ventas</p>
+                            <p className="text-indigo-300 text-xs md:text-sm">{calcularEstadisticasDinamicas().transferencia.cantidad} ventas</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-indigo-300 font-bold text-lg md:text-xl">
-                            ${calcularEstadisticasDiarias().transferencia.monto.toLocaleString()}
+                            ${calcularEstadisticasDinamicas().transferencia.monto.toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -1625,34 +1486,6 @@ export default function RegistroVenta() {
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   Actualizar Lista
-                </button>
-                <button
-                  onClick={probarConexion}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                  Probar Conexión
-                </button>
-                <button
-                  onClick={verificarTabla}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                  Verificar Permisos
-                </button>
-                <button
-                  onClick={verificarEstructuraTabla}
-                  className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                  Verificar Estructura
-                </button>
-                <button
-                  onClick={consultaDirecta}
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                  Consultar Datos
                 </button>
                 <button
                   onClick={exportarDatosFiltrados}
