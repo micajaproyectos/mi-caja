@@ -442,30 +442,31 @@ export default function RegistroVenta() {
       }
     }
 
-    // Filtrar ventas que tienen total_final (ventas completas)
+    // Filtrar ventas que tienen total_final (ventas completas) para el conteo
     const ventasCompletas = ventasFiltradas.filter(venta => venta.total_final !== null && venta.total_final !== undefined);
 
-    // Calcular totales por tipo de pago usando SOLO ventas completas
+    // Para montos acumulados, usar TODAS las ventas filtradas (columna total_venta)
+    // Para conteo de ventas, usar solo ventas completas (columna total_final)
     const estadisticas = {
       total: {
-        cantidad: ventasCompletas.length,
-        monto: ventasCompletas.reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
+        cantidad: ventasCompletas.length, // Conteo usando total_final
+        monto: ventasFiltradas.reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
       },
       efectivo: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'efectivo').length,
-        monto: ventasCompletas.filter(v => v.tipo_pago === 'efectivo').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'efectivo').length, // Conteo usando total_final
+        monto: ventasFiltradas.filter(v => v.tipo_pago === 'efectivo').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
       },
       debito: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'debito').length,
-        monto: ventasCompletas.filter(v => v.tipo_pago === 'debito').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'debito').length, // Conteo usando total_final
+        monto: ventasFiltradas.filter(v => v.tipo_pago === 'debito').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
       },
       credito: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'credito').length,
-        monto: ventasCompletas.filter(v => v.tipo_pago === 'credito').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'credito').length, // Conteo usando total_final
+        monto: ventasFiltradas.filter(v => v.tipo_pago === 'credito').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
       },
       transferencia: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'transferencia').length,
-        monto: ventasCompletas.filter(v => v.tipo_pago === 'transferencia').reduce((sum, venta) => sum + (parseFloat(venta.total_final) || 0), 0)
+        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'transferencia').length, // Conteo usando total_final
+        monto: ventasFiltradas.filter(v => v.tipo_pago === 'transferencia').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
       }
     };
 

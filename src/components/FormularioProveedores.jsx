@@ -196,47 +196,110 @@ const FormularioProveedores = () => {
   const cambiarEstado = async (id, nuevoEstado) => {
     try {
       setLoading(true);
-      
       console.log('🔄 Iniciando cambio de estado:', { id, nuevoEstado });
       
-      // Preparar los datos a actualizar
+      // Preparar datos para actualización
       const datosActualizar = { estado: nuevoEstado };
-      
-      // Si se está marcando como pagado, agregar la fecha de pago
       if (nuevoEstado === 'Pagado') {
         const fechaPago = obtenerFechaActual();
         datosActualizar.fecha_pago = fechaPago;
         console.log('📅 Fecha de pago asignada:', fechaPago);
       } else {
-        // Si se está marcando como pendiente, limpiar la fecha de pago
         datosActualizar.fecha_pago = null;
         console.log('🧹 Fecha de pago limpiada');
       }
-      
       console.log('📋 Datos a actualizar:', datosActualizar);
       
-      const { data, error } = await supabase
+      // Verificar que el registro existe antes de actualizar
+      const { data: registroExistente, error: errorVerificacion } = await supabase
+        .from('proveedores')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (errorVerificacion) {
+        console.error('❌ Error al verificar registro:', errorVerificacion);
+        alert('❌ Error al verificar el registro: ' + errorVerificacion.message);
+        return;
+      }
+      console.log('📋 Registro encontrado:', registroExistente);
+      
+      // Intentar actualización con retorno de datos
+      console.log('🔄 Ejecutando actualización...');
+      const { data, error, count } = await supabase
         .from('proveedores')
         .update(datosActualizar)
         .eq('id', id)
         .select('*');
+        
+      console.log('📊 Resultado de actualización:', { data, error, count });
       
       if (error) {
         console.error('❌ Error al cambiar estado:', error);
+        console.error('❌ Detalles completos del error:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          schema: error.schema,
+          table: error.table,
+          column: error.column,
+          dataType: error.dataType,
+          constraint: error.constraint
+        });
         alert('❌ Error al cambiar el estado: ' + error.message);
         return;
       }
       
-      console.log('✅ Estado actualizado exitosamente:', data);
-      if (nuevoEstado === 'Pagado') {
-        alert(`✅ Proveedor marcado como pagado\n📅 Fecha de pago: ${formatearFechaMostrar(obtenerFechaActual())}`);
+      // Verificar si la actualización fue exitosa
+      if (data && data.length > 0) {
+        console.log('✅ Estado actualizado exitosamente:', data[0]);
+        console.log('✅ Fecha de pago registrada:', data[0].fecha_pago);
+        
+        if (nuevoEstado === 'Pagado') {
+          alert(`✅ Proveedor marcado como pagado\n📅 Fecha de pago: ${formatearFechaMostrar(data[0].fecha_pago)}`);
+        } else {
+          alert(`✅ Proveedor marcado como pendiente`);
+        }
       } else {
-        alert(`✅ Proveedor marcado como pendiente`);
+        console.warn('⚠️ La actualización no devolvió datos');
+        console.warn('⚠️ Esto puede indicar un problema con las políticas RLS');
+        
+        // Intentar verificar si la actualización se realizó sin retorno de datos
+        const { data: verificacionPost, error: errorVerificacionPost } = await supabase
+          .from('proveedores')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (errorVerificacionPost) {
+          console.error('❌ Error al verificar después de actualización:', errorVerificacionPost);
+          alert('❌ Error al verificar la actualización: ' + errorVerificacionPost.message);
+          return;
+        }
+        
+        console.log('📋 Estado después de actualización:', verificacionPost);
+        
+        if (verificacionPost.estado === nuevoEstado) {
+          console.log('✅ La actualización fue exitosa (verificada)');
+          if (nuevoEstado === 'Pagado') {
+            alert(`✅ Proveedor marcado como pagado\n📅 Fecha de pago: ${formatearFechaMostrar(verificacionPost.fecha_pago || obtenerFechaActual())}`);
+          } else {
+            alert(`✅ Proveedor marcado como pendiente`);
+          }
+        } else {
+          console.error('❌ La actualización no se aplicó correctamente');
+          alert('❌ La actualización no se aplicó correctamente. Verifica las políticas RLS.');
+        }
       }
-      await cargarProveedores(); // Recargar la lista
+      
+      // Recargar datos
+      await cargarProveedores();
+      
     } catch (error) {
       console.error('❌ Error inesperado al cambiar estado:', error);
-      alert('❌ Error inesperado al cambiar el estado');
+      console.error('❌ Stack trace:', error.stack);
+      alert('❌ Error inesperado al cambiar el estado: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -249,38 +312,7 @@ const FormularioProveedores = () => {
     setFiltroEstado('');
   };
 
-  // Función de prueba para verificar la actualización de fecha_pago
-  const probarActualizacionFechaPago = async (id) => {
-    try {
-      console.log('🧪 Probando actualización de fecha_pago para ID:', id);
-      
-      const fechaPago = obtenerFechaActual();
-      console.log('📅 Fecha de pago a asignar:', fechaPago);
-      
-      const { data, error } = await supabase
-        .from('proveedores')
-        .update({ 
-          estado: 'Pagado',
-          fecha_pago: fechaPago 
-        })
-        .eq('id', id)
-        .select('*');
-      
-      if (error) {
-        console.error('❌ Error en prueba:', error);
-        alert('❌ Error en prueba: ' + error.message);
-        return;
-      }
-      
-      console.log('✅ Prueba exitosa:', data);
-      alert(`✅ Prueba exitosa\n📅 Fecha de pago: ${data[0]?.fecha_pago}`);
-      
-      await cargarProveedores();
-    } catch (error) {
-      console.error('❌ Error en prueba:', error);
-      alert('❌ Error en prueba: ' + error.message);
-    }
-  };
+
 
   // Exportar datos a CSV
   const exportarCSV = () => {
@@ -489,21 +521,21 @@ const FormularioProveedores = () => {
 
             {/* Lista de proveedores */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-              {/* Header con título y exportar */}
-              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  📋 Proveedores Registrados
-                </h2>
-                <button
-                  onClick={exportarCSV}
-                  className="group relative px-4 md:px-6 py-2 md:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📊</span>
-                    <span>Exportar CSV</span>
-                  </div>
-                </button>
-              </div>
+                             {/* Header con título y exportar */}
+               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
+                 <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                   📋 Proveedores Registrados
+                 </h2>
+                 <button
+                   onClick={exportarCSV}
+                   className="group relative px-3 md:px-4 py-1.5 md:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 text-xs md:text-sm font-medium shadow-md hover:shadow-lg transform hover:scale-105"
+                 >
+                   <div className="flex items-center gap-1">
+                     <span className="text-sm md:text-base">📊</span>
+                     <span>Exportar CSV</span>
+                   </div>
+                 </button>
+               </div>
 
               {/* Sección de filtros */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
@@ -512,22 +544,6 @@ const FormularioProveedores = () => {
                 </h3>
                 
                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                   {/* Botón de prueba temporal */}
-                   <div className="col-span-full">
-                     <button
-                       onClick={() => {
-                         if (proveedoresRegistrados.length > 0) {
-                           const primerProveedor = proveedoresRegistrados[0];
-                           probarActualizacionFechaPago(primerProveedor.id);
-                         } else {
-                           alert('❌ No hay proveedores para probar');
-                         }
-                       }}
-                       className="w-full px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
-                     >
-                       🧪 Probar Actualización Fecha Pago
-                     </button>
-                   </div>
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
                       🔍 Buscar Proveedor
@@ -603,50 +619,80 @@ const FormularioProveedores = () => {
                         key={prov.id}
                         className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4"
                       >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                        <div className="flex flex-col gap-3">
+                          {/* Información principal del proveedor */}
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-white text-sm md:text-base truncate">
+                            <div className="font-semibold text-white text-base md:text-lg mb-1">
                               🏢 {prov.nombre_proveedor}
                             </div>
-                            <div className="text-xs md:text-sm text-gray-400">
+                            <div className="text-sm md:text-base text-gray-300 mb-1">
                               📅 Registro: {formatearFechaMostrar(prov.fecha)}
                             </div>
                             {prov.fecha_pago && (
-                              <div className="text-xs md:text-sm text-green-400">
+                              <div className="text-sm md:text-base text-green-400 mb-1">
                                 💳 Pago: {formatearFechaMostrar(prov.fecha_pago)}
                               </div>
                             )}
-                            <div className="text-sm md:text-base text-green-400 font-medium">
+                            <div className="text-base md:text-lg text-green-400 font-bold">
                               💰 ${formatearNumero(prov.monto)}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                          
+                          {/* Controles compactos */}
+                          <div className="flex items-center justify-between gap-2">
+                            {/* Estado actual - más pequeño */}
+                            <div className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-xs md:text-sm font-medium flex-shrink-0 shadow-sm ${
                               prov.estado === 'Pagado'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                                ? 'bg-gradient-to-r from-green-400 to-green-500 text-white border border-green-300'
+                                : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border border-yellow-300'
                             }`}>
-                              {prov.estado === 'Pagado' ? '✅ Pagado' : '⏳ Pendiente'}
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm md:text-base">
+                                  {prov.estado === 'Pagado' ? '✅' : '⏳'}
+                                </span>
+                                <span>{prov.estado === 'Pagado' ? 'Pagado' : 'Pendiente'}</span>
+                              </div>
                             </div>
                             
-                            {/* Botón para cambiar estado */}
-                            <button
-                              onClick={() => cambiarEstado(prov.id, prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente')}
-                              disabled={loading}
-                              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                              title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
-                            >
-                              {prov.estado === 'Pendiente' ? '✅' : '⏳'}
-                            </button>
-                            
-                            <button
-                              onClick={() => eliminarProveedor(prov.id)}
-                              disabled={loading}
-                              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                              title="Eliminar registro"
-                            >
-                              🗑️
-                            </button>
+                            {/* Botones de acción - más pequeños */}
+                            <div className="flex items-center gap-1.5">
+                              {/* Botón para cambiar estado */}
+                              <button
+                                onClick={() => cambiarEstado(prov.id, prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente')}
+                                disabled={loading}
+                                className={`${
+                                  prov.estado === 'Pendiente' 
+                                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg animate-pulse' 
+                                    : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-md hover:shadow-lg'
+                                } disabled:from-gray-600 disabled:to-gray-700 disabled:text-gray-400 px-2.5 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-semibold transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border border-white/20 hover:border-white/40 min-w-[60px] relative overflow-hidden`}
+                                title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
+                              >
+                                {prov.estado === 'Pendiente' && (
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
+                                )}
+                                <div className="flex items-center justify-center gap-1 relative z-10">
+                                  <span className="text-sm md:text-base">
+                                    {prov.estado === 'Pendiente' ? '✅' : '⏳'}
+                                  </span>
+                                  <span className="font-medium">
+                                    {prov.estado === 'Pendiente' ? 'PAGAR' : 'PENDIENTE'}
+                                  </span>
+                                </div>
+                              </button>
+                              
+                              {/* Botón eliminar */}
+                              <button
+                                onClick={() => eliminarProveedor(prov.id)}
+                                disabled={loading}
+                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2.5 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border border-white/20 hover:border-white/40"
+                                title="Eliminar registro"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm md:text-base">🗑️</span>
+                                  <span className="hidden sm:inline font-medium">ELIMINAR</span>
+                                </div>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -151,3 +151,17 @@ select:not([size]) {
   animation: fade-in-delayed 1.5s ease-out 0.6s both;
 }
 
+/* Animación shimmer para botones destacados */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
