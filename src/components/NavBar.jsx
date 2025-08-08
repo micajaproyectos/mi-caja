@@ -88,15 +88,19 @@ const NavBar = () => {
           <div className="flex items-center justify-end h-16 relative" ref={menuRef}>
             <button
               onClick={toggleMenu}
-              className="px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 font-medium"
+              className="p-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
               style={{
-                backgroundColor: '#ef4444',
+                backgroundColor: '#0a1e0a',
                 color: 'white',
-                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                boxShadow: '0 4px 14px rgba(10, 30, 10, 0.4)',
                 border: '1px solid rgba(255, 255, 255, 0.1)'
               }}
             >
-              Cerrar Sesión
+              <div className="flex flex-col space-y-1">
+                <div className="w-5 h-0.5 bg-white rounded"></div>
+                <div className="w-5 h-0.5 bg-white rounded"></div>
+                <div className="w-5 h-0.5 bg-white rounded"></div>
+              </div>
             </button>
 
             {isMenuOpen && (
