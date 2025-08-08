@@ -9,7 +9,8 @@ const NavBar = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState({ nombre: '', email: '', createdAt: '' });
+  const [userInfo, setUserInfo] = useState({ nombre: '', email: '' });
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -25,40 +26,45 @@ const NavBar = () => {
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const closeMenu = () => setIsMenuOpen(false);
-  const openProfile = () => {
+  const openProfile = async () => {
     setIsProfileOpen(true);
     closeMenu();
+    
+    // Solo cargar datos si no los tenemos ya
+    if (!userInfo.nombre && !userInfo.email) {
+      setIsLoadingProfile(true);
+      try {
+        const profile = await authService.getCurrentUser();
+        setUserInfo({
+          nombre: profile?.nombre || '',
+          email: profile?.email || ''
+        });
+      } catch (e) {
+        console.error('Error cargando perfil:', e);
+        setUserInfo({ nombre: 'Error', email: 'Error' });
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    }
   };
 
   const closeProfile = () => setIsProfileOpen(false);
 
+  // Cargar datos básicos del usuario al montar el componente
   useEffect(() => {
-    const loadUser = async () => {
+    const loadBasicUserInfo = async () => {
       try {
         const profile = await authService.getCurrentUser();
-        const { data: authData } = await supabase.auth.getUser();
-        const createdAtRaw = authData?.user?.created_at || '';
-
-        const formatDate = (iso) => {
-          if (!iso) return '';
-          const d = new Date(iso);
-          const day = String(d.getDate()).padStart(2, '0');
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const year = d.getFullYear();
-          return `${day}-${month}-${year}`;
-        };
-
-        setUserInfo({
+        setUserInfo(prev => ({
+          ...prev,
           nombre: profile?.nombre || '',
-          email: profile?.email || authData?.user?.email || '',
-          createdAt: formatDate(createdAtRaw)
-        });
+          email: profile?.email || ''
+        }));
       } catch (e) {
-        // Silenciar errores y dejar datos vacíos
-        setUserInfo({ nombre: '', email: '', createdAt: '' });
+        console.error('Error cargando datos básicos:', e);
       }
     };
-    loadUser();
+    loadBasicUserInfo();
   }, []);
 
   useEffect(() => {
@@ -151,20 +157,25 @@ const NavBar = () => {
               <h3 className="text-2xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Perfil</h3>
               <p className="text-gray-300 text-sm">Información de tu cuenta</p>
             </div>
-            <div className="space-y-3 text-white">
-              <div>
-                <p className="text-xs text-gray-300">Nombre</p>
-                <p className="font-medium">{userInfo.nombre || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-300">Correo electrónico</p>
-                <p className="font-medium break-all">{userInfo.email || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-300">Fecha de creación</p>
-                <p className="font-medium">{userInfo.createdAt || '—'}</p>
-              </div>
-            </div>
+                         <div className="space-y-3 text-white">
+               {isLoadingProfile ? (
+                 <div className="flex items-center justify-center py-4">
+                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
+                   <span className="ml-2 text-gray-300">Cargando...</span>
+                 </div>
+               ) : (
+                                   <>
+                    <div>
+                      <p className="text-xs text-gray-300">Nombre</p>
+                      <p className="font-medium">{userInfo.nombre || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-300">Correo electrónico</p>
+                      <p className="font-medium break-all">{userInfo.email || '—'}</p>
+                    </div>
+                  </>
+               )}
+             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={closeProfile}
