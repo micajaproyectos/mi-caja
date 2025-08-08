@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
 import Footer from './Footer';
 
 export default function RegistroVenta() {
@@ -730,6 +731,13 @@ export default function RegistroVenta() {
     // Calcular el total de la venta
     const totalVenta = calcularTotalVenta();
 
+    // Obtener el usuario_id del usuario autenticado
+    const usuarioId = await authService.getCurrentUserId();
+    if (!usuarioId) {
+      alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+      return;
+    }
+
     try {
       // Calcular el total final de la venta (suma de todos los subtotales)
       const totalFinal = calcularTotalVenta();
@@ -747,6 +755,8 @@ export default function RegistroVenta() {
           total_venta: parseFloat(producto.subtotal) || 0,
           // Solo incluir total_final en la primera fila (i === 0)
           total_final: i === 0 ? totalFinal : null,
+          // Agregar el usuario_id del usuario autenticado
+          usuario_id: usuarioId,
         };
 
         const { error } = await supabase

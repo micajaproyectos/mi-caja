@@ -1,12 +1,15 @@
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Home from './components/Home';
-import RegistroVenta from './components/RegistroVenta';
 import RegistroInventario from './components/RegistroInventario';
 import Stock from './components/Stock';
 import RegistroAsistencia from './components/RegistroAsistencia';
 import FormularioGastos from './components/FormularioGastos';
 import FormularioProveedores from './components/FormularioProveedores';
-import Footer from './components/Footer';
+import Login from './components/Login';
+import Dashboard from './pages/Dashboard';
+import Ventas from './pages/Ventas';
+import RutaPrivada from './components/RutaPrivada';
+import NavBar from './components/NavBar';
 
 // Componentes placeholder para las otras secciones
 
@@ -23,16 +26,58 @@ const Proveedores = () => {
 };
 
 function App() {
+  const location = useLocation();
+  const showOffset = location.pathname !== '/login';
+
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/ventas" element={<RegistroVenta />} />
-      <Route path="/asistencia" element={<RegistroAsistencia />} />
-      <Route path="/gastos" element={<FormularioGastos />} />
-      <Route path="/inventario" element={<Inventario />} />
-      <Route path="/stock" element={<StockComponent />} />
-      <Route path="/proveedores" element={<Proveedores />} />
-    </Routes>
+    <>
+      <NavBar />
+      <div className={showOffset ? 'pt-16' : ''}>
+        <Routes>
+        <Route path="/" element={
+          <RutaPrivada>
+            <Home />
+          </RutaPrivada>
+        } />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={
+          <RutaPrivada>
+            <Dashboard />
+          </RutaPrivada>
+        } />
+        <Route path="/ventas" element={
+          <RutaPrivada>
+            <Ventas />
+          </RutaPrivada>
+        } />
+        <Route path="/asistencia" element={
+          <RutaPrivada>
+            <RegistroAsistencia />
+          </RutaPrivada>
+        } />
+        <Route path="/gastos" element={
+          <RutaPrivada>
+            <FormularioGastos />
+          </RutaPrivada>
+        } />
+        <Route path="/proveedores" element={
+          <RutaPrivada>
+            <Proveedores />
+          </RutaPrivada>
+        } />
+        <Route path="/inventario" element={
+          <RutaPrivada>
+            <Inventario />
+          </RutaPrivada>
+        } />
+        <Route path="/stock" element={
+          <RutaPrivada>
+            <StockComponent />
+          </RutaPrivada>
+        } />
+        </Routes>
+      </div>
+    </>
   );
 }
 

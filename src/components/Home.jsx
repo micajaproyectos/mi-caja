@@ -1,9 +1,25 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import logo from '../assets/logo.png';
 import Footer from './Footer';
+import { authService } from '../lib/authService.js';
 
 export default function Home() {
   const navigate = useNavigate();
+  const [nombreUsuario, setNombreUsuario] = useState('');
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await authService.getCurrentUser();
+        setNombreUsuario(userData?.nombre || '');
+      } catch (error) {
+        console.error('Error al cargar datos del usuario:', error);
+        setNombreUsuario('');
+      }
+    };
+    loadUserData();
+  }, []);
 
   const menuItems = [
     {
@@ -77,7 +93,7 @@ export default function Home() {
           {/* Título genérico con glassmorphism */}
           <div className="text-white">
             <h1 className="text-xl font-bold text-gray-100 drop-shadow-sm">Bienvenido a Mi Caja</h1>
-            <p className="text-sm text-gray-300 italic">Tu negocio en un solo lugar</p>
+            <p className="text-sm text-gray-300 italic">Hola, {nombreUsuario} - Tu negocio en un solo lugar</p>
           </div>
         </div>
       </div>
