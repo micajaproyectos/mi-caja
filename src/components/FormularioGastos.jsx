@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
+import { 
+  obtenerFechaHoyChile, 
+  formatearFechaChile,
+  formatearFechaCortaChile,
+  obtenerAniosUnicos
+} from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 const FormularioGastos = () => {
@@ -8,7 +15,7 @@ const FormularioGastos = () => {
   
   // Estado del formulario
   const [gasto, setGasto] = useState({
-    fecha: '',
+    fecha: obtenerFechaHoyChile(), // Inicializar con fecha actual de Chile
     tipo_gasto: '',
     detalle: '',
     monto: '',
@@ -89,36 +96,57 @@ const FormularioGastos = () => {
     });
   };
 
-  // Función para obtener años únicos
-  const obtenerAniosUnicos = () => {
-    const anios = gastosRegistrados.map(gasto => {
-      const fecha = new Date(gasto.fecha);
-      return fecha.getUTCFullYear();
-    });
-
-    // Eliminar duplicados y ordenar descendente
-    return [...new Set(anios)].sort((a, b) => b - a);
+  // Función para obtener años únicos usando fecha_cl
+  const obtenerAniosUnicosLocal = () => {
+    const fechas = gastosRegistrados.map(gasto => gasto.fecha_cl || gasto.fecha).filter(Boolean);
+    return obtenerAniosUnicos(fechas);
   };
 
-  // Función para cargar gastos registrados
+  // Función para cargar gastos registrados filtrados por usuario
   const cargarGastos = async () => {
     try {
       setLoadingDatos(true);
       setError(null);
 
-      const { data, error } = await supabase
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setGastosRegistrados([]);
+        return;
+      }
+
+      // Intentar consulta con fecha_cl primero, fallback a fecha
+      let { data, error } = await supabase
         .from('gasto')
-        .select('*')
-        .order('fecha', { ascending: false });
+        .select('id, fecha, fecha_cl, tipo_gasto, detalle, monto, forma_pago, usuario_id, created_at')
+        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
+        .order('fecha_cl', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      // Si hay error con fecha_cl, usar consulta sin fecha_cl
+      if (error && error.message?.includes('fecha_cl')) {
+        console.warn('⚠️ Columna fecha_cl no existe en gasto, usando fecha');
+        const fallbackQuery = await supabase
+          .from('gasto')
+          .select('id, fecha, tipo_gasto, detalle, monto, forma_pago, usuario_id, created_at')
+          .eq('usuario_id', usuarioId)
+          .order('fecha', { ascending: false })
+          .order('created_at', { ascending: false });
+        
+        data = fallbackQuery.data;
+        error = fallbackQuery.error;
+      }
 
       if (error) {
         console.error('Error al cargar gastos:', error);
         setError('Error al cargar los gastos registrados');
+        setGastosRegistrados([]);
         return;
       }
 
       setGastosRegistrados(data || []);
-      console.log('✅ Gastos cargados:', data);
+      console.log(`✅ Gastos cargados para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error inesperado al cargar gastos:', error);
       setError('Error inesperado al cargar los datos');
@@ -155,12 +183,22 @@ const FormularioGastos = () => {
       setLoading(true);
       setError(null);
 
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        setError('Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+        setLoading(false);
+        return;
+      }
+
       const gastoParaInsertar = {
         fecha: gasto.fecha,
+        // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
         tipo_gasto: gasto.tipo_gasto,
         detalle: gasto.detalle.trim(),
         monto: Number(gasto.monto),
-        forma_pago: gasto.forma_pago
+        forma_pago: gasto.forma_pago,
+        usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
       };
 
       console.log('💰 Registrando gasto:', gastoParaInsertar);
@@ -230,21 +268,26 @@ const FormularioGastos = () => {
     }
   };
 
-  // Filtrar gastos
+  // Filtrar gastos usando fecha_cl
   const gastosFiltrados = gastosRegistrados.filter(item => {
     const coincideDetalle = item.detalle?.toLowerCase().includes(busquedaDetalle.toLowerCase());
-    const coincideFecha = !filtroFecha || item.fecha === filtroFecha;
+    
+    // Usar fecha_cl para filtros (fallback a fecha)
+    const fechaFiltro = item.fecha_cl || item.fecha;
+    const coincideFecha = !filtroFecha || fechaFiltro === filtroFecha;
     
     // Filtro por mes
     const coincideMes = !filtroMes || (() => {
-      const fecha = new Date(item.fecha);
-      return fecha.getUTCMonth() + 1 === Number(filtroMes);
+      if (!fechaFiltro) return false;
+      const [year, month] = fechaFiltro.split('-');
+      return parseInt(month) === Number(filtroMes);
     })();
     
     // Filtro por año
     const coincideAnio = !filtroAnio || (() => {
-      const fecha = new Date(item.fecha);
-      return fecha.getUTCFullYear() === Number(filtroAnio);
+      if (!fechaFiltro) return false;
+      const year = fechaFiltro.split('-')[0];
+      return parseInt(year) === Number(filtroAnio);
     })();
     
     const coincideTipoGasto = !filtroTipoGasto || item.tipo_gasto === filtroTipoGasto;
@@ -494,7 +537,7 @@ const FormularioGastos = () => {
                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
                   >
                     <option value="">Todos los años</option>
-                    {obtenerAniosUnicos().map(anio => (
+                    {obtenerAniosUnicosLocal().map(anio => (
                       <option key={anio} value={anio} className="bg-gray-800 text-white">
                         {anio}
                       </option>
@@ -662,7 +705,7 @@ const FormularioGastos = () => {
                       {gastosFiltrados.map((item, index) => (
                         <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                            {formatearFechaMostrar(item.fecha)}
+                            {formatearFechaCortaChile(item.fecha_cl || item.fecha)}
                           </td>
                           <td className="p-2 md:p-4">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

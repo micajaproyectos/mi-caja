@@ -1,5 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
+import { useSessionData } from '../lib/useSessionData.js';
+import { 
+  obtenerFechaHoyChile, 
+  formatearFechaChile,
+  formatearFechaCortaChile,
+  obtenerMesesUnicos,
+  validarFechaISO
+} from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 const RegistroInventario = () => {
@@ -9,7 +18,7 @@ const RegistroInventario = () => {
     cantidad: '',
     unidad: '',
     costo_total: '',
-    porcentaje_ganancia: ''
+    porcentaje_ganancia: '' // Campo para cálculos (no se guarda en BD)
   });
 
   const [inventarioRegistrado, setInventarioRegistrado] = useState([]);
@@ -112,15 +121,18 @@ const RegistroInventario = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Filtrar productos por nombre, fecha y mes
+  // Filtrar productos por nombre, fecha y mes usando fecha_cl
   const productosFiltrados = inventarioRegistrado.filter(item => {
     const coincideNombre = item.producto.toLowerCase().includes(busquedaProducto.toLowerCase());
     
+    // Usar fecha_cl para filtros (fallback a fecha_ingreso)
+    const fechaFiltro = item.fecha_cl || extraerFechaSinZonaHoraria(item.fecha_ingreso);
+    
     // Filtro por fecha específica
-    const coincideFecha = !filtroFecha || extraerFechaSinZonaHoraria(item.fecha_ingreso) === filtroFecha;
+    const coincideFecha = !filtroFecha || fechaFiltro === filtroFecha;
     
     // Filtro por mes
-    const anioMesItem = obtenerAnioMes(item.fecha_ingreso);
+    const anioMesItem = fechaFiltro ? fechaFiltro.substring(0, 7) : obtenerAnioMes(item.fecha_ingreso);
     const coincideMes = !filtroMes || anioMesItem === filtroMes;
     
     // Debug del filtro por mes
@@ -140,15 +152,24 @@ const RegistroInventario = () => {
   // Limitar productos mostrados a 30 si no se ha activado "Ver todo"
   const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 30);
 
-  // Establecer fecha actual al cargar el componente
+  // Función para recargar datos
+  const recargarDatos = useCallback(() => {
+    console.log('🔄 RegistroInventario: Recargando datos...');
+    cargarInventario();
+  }, []);
+
+  // Hook para gestionar cambios de sesión
+  useSessionData(recargarDatos, 'RegistroInventario');
+
+  // Establecer fecha actual al cargar el componente usando fecha Chile
   useEffect(() => {
-    const fechaActual = new Date().toISOString().split('T')[0];
+    const fechaActual = obtenerFechaHoyChile();
     setInventario(prev => ({
       ...prev,
       fecha_ingreso: fechaActual
     }));
-    cargarInventario();
-  }, []);
+    recargarDatos();
+  }, [recargarDatos]);
 
   // Resetear mostrarTodos cuando se apliquen filtros
   useEffect(() => {
@@ -159,22 +180,43 @@ const RegistroInventario = () => {
 
   const cargarInventario = async () => {
     try {
-      const { data, error } = await supabase
-        .from('inventario')
-        .select('*')
-        .order('fecha_ingreso', { ascending: false });
-
-      if (error) {
-        console.error('Error al cargar inventario:', error);
-        alert('Error al cargar el inventario');
+      console.log('🔄 Iniciando carga de inventario...');
+      
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      console.log('👤 Usuario ID obtenido:', usuarioId);
+      
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setInventarioRegistrado([]);
         return;
       }
 
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('id, fecha_ingreso, fecha_cl, producto, cantidad, unidad, costo_total, precio_unitario, precio_venta, usuario_id, created_at')
+        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
+        .order('fecha_cl', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      console.log('📊 Respuesta de Supabase:', { data, error });
+
+      if (error) {
+        console.error('❌ Error en consulta Supabase:', error);
+        console.error('❌ Mensaje de error:', error.message);
+        console.error('❌ Detalles del error:', error.details);
+        alert(`Error al cargar el inventario: ${error.message}`);
+        setInventarioRegistrado([]);
+        return;
+      }
+
+      console.log('✅ Inventario cargado exitosamente:', data?.length || 0, 'registros');
       setInventarioRegistrado(data || []);
-      console.log('✅ Inventario cargado:', data);
+      console.log(`✅ Inventario cargado para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error inesperado al cargar inventario:', error);
       alert('Error inesperado al cargar el inventario');
+      setInventarioRegistrado([]);
     }
   };
 
@@ -223,6 +265,14 @@ const RegistroInventario = () => {
     setLoading(true);
 
     try {
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+        setLoading(false);
+        return;
+      }
+
       // Calcular precios automáticamente
       const precios = calcularPrecios();
       
@@ -235,12 +285,14 @@ const RegistroInventario = () => {
       
       const inventarioParaInsertar = {
         fecha_ingreso: fechaConZonaHoraria,
+        // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
         producto: inventario.producto,
         cantidad: parseFloat(inventario.cantidad) || 0,
         unidad: inventario.unidad,
         costo_total: parseFloat(inventario.costo_total) || 0,
         precio_unitario: parseFloat(precios.precio_unitario) || 0,
-        precio_venta: parseFloat(precios.precio_venta) || 0
+        precio_venta: parseFloat(precios.precio_venta) || 0,
+        usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
       };
 
       console.log('📦 Registrando inventario:', inventarioParaInsertar);
@@ -265,7 +317,7 @@ const RegistroInventario = () => {
         cantidad: '',
         unidad: '',
         costo_total: '',
-        porcentaje_ganancia: ''
+        porcentaje_ganancia: '' // Campo para cálculos (no se guarda en BD)
       });
 
       // Recargar inventario
@@ -442,7 +494,7 @@ const RegistroInventario = () => {
                   />
                 </div>
 
-                {/* Porcentaje de Ganancia */}
+                {/* Porcentaje de Ganancia - Para cálculos (no se guarda en BD) */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
                     📈 Porcentaje de Ganancia
@@ -697,15 +749,7 @@ const RegistroInventario = () => {
                     {productosAMostrar.map((item, index) => (
                       <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                                                  <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                           {(() => {
-                             // Función para mostrar fecha sin desfase de zona horaria
-                             const fecha = new Date(item.fecha_ingreso);
-                             // Usar UTC para evitar conversión de zona horaria
-                             const year = fecha.getUTCFullYear();
-                             const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
-                             const day = String(fecha.getUTCDate()).padStart(2, '0');
-                             return `${day}/${month}/${year}`;
-                           })()}
+                           {formatearFechaCortaChile(item.fecha_cl || item.fecha_ingreso)}
                          </td>
                         <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                           {item.producto}

@@ -1,6 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
+import { useSessionData } from '../lib/useSessionData.js';
+import { sessionManager } from '../lib/sessionManager.js';
+import { 
+  obtenerFechaHoyChile, 
+  obtenerHoraActualChile,
+  formatearFechaChile,
+  formatearFechaCortaChile
+} from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 export default function RegistroAsistencia() {
@@ -27,6 +36,7 @@ export default function RegistroAsistencia() {
   const [localStorageVersion, setLocalStorageVersion] = useState(0); // Forzar re-render cuando localStorage cambie
   const [empleadoActivo, setEmpleadoActivo] = useState(() => {
     // Recuperar empleado activo desde localStorage al inicializar
+    // Nota: Esta clave es específica de asistencia y se mantiene por compatibilidad
     const empleadoGuardado = localStorage.getItem('empleadoActivo');
     return empleadoGuardado || '';
   }); // Controla cuándo mostrar entradas del empleado
@@ -41,13 +51,9 @@ export default function RegistroAsistencia() {
     }
   };
 
-  // Función para obtener la fecha actual en formato YYYY-MM-DD en Santiago, Chile
+  // Función para obtener la fecha actual en Chile (usando dateUtils)
   const obtenerFechaActual = () => {
-    const fecha = new Date();
-    const fechaSantiago = fecha.toLocaleDateString('en-CA', {
-      timeZone: 'America/Santiago'
-    });
-    return fechaSantiago; // Formato YYYY-MM-DD
+    return obtenerFechaHoyChile();
   };
 
   // Función para obtener la hora actual en Santiago, Chile
@@ -97,37 +103,112 @@ export default function RegistroAsistencia() {
     }
   }, [empleadoActivo, fechaActual]);
 
-  // Cargar asistencias desde la tabla asistencia
+  // Cargar asistencias desde la tabla asistencia filtradas por usuario
   const cargarAsistencias = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from('asistencia')
-        .select('*')
-        .order('fecha', { ascending: false })
-        .order('hora_entrada', { ascending: false });
-
-      // Aplicar filtro por fecha si está activo
-      if (filtroFecha) {
-        query = query.eq('fecha', filtroFecha);
+      
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setAsistencias([]);
+        return;
       }
 
-      const { data, error } = await query;
+      // Intentar consulta con fecha_cl primero, fallback a fecha
+      let { data, error } = await supabase
+        .from('asistencia')
+        .select('id, empleado, fecha, fecha_cl, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
+        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
+        .order('fecha_cl', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      // Si hay error con fecha_cl, usar consulta sin fecha_cl
+      if (error && error.message?.includes('fecha_cl')) {
+        console.warn('⚠️ Columna fecha_cl no existe en asistencia, usando fecha');
+        let fallbackQuery = supabase
+          .from('asistencia')
+          .select('id, empleado, fecha, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
+          .eq('usuario_id', usuarioId)
+          .order('fecha', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        // Aplicar filtro por fecha si está activo (usar fecha)
+        if (filtroFecha) {
+          fallbackQuery = fallbackQuery.eq('fecha', filtroFecha);
+        }
+
+        const fallbackResult = await fallbackQuery;
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      } else {
+        // Aplicar filtro por fecha si está activo (usar fecha_cl)
+        if (filtroFecha) {
+          const filteredResult = await supabase
+            .from('asistencia')
+            .select('id, empleado, fecha, fecha_cl, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
+            .eq('usuario_id', usuarioId)
+            .eq('fecha_cl', filtroFecha)
+            .order('fecha_cl', { ascending: false })
+            .order('created_at', { ascending: false });
+          
+          data = filteredResult.data;
+          error = filteredResult.error;
+        }
+      }
 
       if (error) throw error;
       setAsistencias(data || []);
+      console.log(`📋 Asistencias cargadas para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error al cargar asistencias:', error);
       setError('Error al cargar el registro de asistencias');
+      setAsistencias([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Cargar datos al montar el componente
-  useEffect(() => {
+  // Función para recargar datos
+  const recargarDatos = useCallback(() => {
+    console.log('🔄 RegistroAsistencia: Recargando datos...');
     cargarAsistencias();
   }, [filtroFecha]);
+
+  // Función personalizada para limpiar datos de asistencia específicos
+  const limpiarDatosAsistencia = useCallback(() => {
+    console.log('🧹 RegistroAsistencia: Limpiando datos específicos de asistencia...');
+    
+    // Limpiar empleado activo
+    setEmpleadoActivo('');
+    localStorage.removeItem('empleadoActivo');
+    
+    // Limpiar campo de empleado
+    setEmpleado('');
+    
+    // Forzar actualización visual
+    setLocalStorageVersion(prev => prev + 1);
+  }, []);
+
+  // Hook para gestionar cambios de sesión
+  useSessionData(recargarDatos, 'RegistroAsistencia');
+
+  // Efecto para limpiar datos específicos al logout
+  useEffect(() => {
+    const unsubscribe = sessionManager.subscribe((event) => {
+      if (event === 'SIGNED_OUT') {
+        limpiarDatosAsistencia();
+      }
+    });
+    
+    return unsubscribe;
+  }, [limpiarDatosAsistencia]);
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    recargarDatos();
+  }, [recargarDatos]);
 
   // Función para calcular horas trabajadas entre dos horarios (formato HH:MM para mostrar)
   const calcularTotalHoras = (horaEntrada, horaSalida) => {
@@ -362,13 +443,22 @@ export default function RegistroAsistencia() {
        console.log('⏰ Total horas calculadas (formato):', totalHorasFormato);
        console.log('⏰ Total horas calculadas (decimal):', totalHorasDecimal);
 
+       // Obtener el usuario_id del usuario autenticado
+       const usuarioId = await authService.getCurrentUserId();
+       if (!usuarioId) {
+         alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+         return;
+       }
+
        // Crear registro completo para enviar a Supabase
        const registroCompleto = {
          empleado: empleado,
          fecha: fechaActual,
+         // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
          hora_entrada: entradaPendiente.hora_entrada,
          hora_salida: horaActual,
-         total_horas: totalHorasDecimal
+         total_horas: totalHorasDecimal,
+         usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
        };
       
       console.log('📋 Registro completo a enviar:', registroCompleto);
@@ -467,12 +557,21 @@ export default function RegistroAsistencia() {
           const totalHorasFormato = calcularTotalHoras(horaEntrada, horaActual);
           const totalHorasDecimal = calcularTotalHorasDecimal(horaEntrada, horaActual);
           
+          // Obtener el usuario_id del usuario autenticado
+          const usuarioId = await authService.getCurrentUserId();
+          if (!usuarioId) {
+            alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+            return;
+          }
+
           const registroCompleto = {
             empleado: empleadoEntrada,
             fecha: fechaActual,
+            // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
             hora_entrada: horaEntrada,
             hora_salida: horaActual,
-            total_horas: totalHorasDecimal
+            total_horas: totalHorasDecimal,
+            usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
           };
           
           const { data, error } = await supabase
@@ -517,33 +616,10 @@ export default function RegistroAsistencia() {
     return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
   };
 
-  // Función para formatear fecha de manera consistente (evitar problemas de timezone)
+  // Función para formatear fecha usando utilidades de Chile
   const formatearFecha = (fechaString) => {
     if (!fechaString) return '';
-    
-    // Si la fecha ya está en formato YYYY-MM-DD, usarla directamente
-    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
-      const [year, month, day] = fechaString.split('-');
-      return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    }
-    
-    // Si es una fecha completa, formatearla considerando Santiago timezone
-    try {
-      const fecha = new Date(fechaString);
-      return fecha.toLocaleDateString('es-ES', {
-        timeZone: 'America/Santiago',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('Error al formatear fecha:', error);
-      return fechaString;
-    }
+    return formatearFechaChile(fechaString);
   };
 
   // Función para exportar datos a CSV
@@ -556,7 +632,7 @@ export default function RegistroAsistencia() {
                       asistencia.hora_entrada ? 'Solo Entrada' : 'Sin Registro';
         return [
           asistencia.empleado || '',
-          asistencia.fecha,
+          asistencia.fecha_cl || asistencia.fecha,
           asistencia.hora_entrada || '',
           asistencia.hora_salida || '',
           convertirHorasDecimalesAFormato(asistencia.total_horas) || '',
@@ -576,7 +652,7 @@ export default function RegistroAsistencia() {
     document.body.removeChild(link);
   };
 
-  // Función para eliminar una asistencia
+  // Función para eliminar una asistencia (solo del usuario actual)
   const eliminarAsistencia = async (id) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este registro de asistencia? Esta acción no se puede deshacer.')) {
       return;
@@ -584,10 +660,19 @@ export default function RegistroAsistencia() {
     
     try {
       setLoading(true);
+      
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+      
       const { error } = await supabase
         .from('asistencia')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo eliminar registros del usuario actual
       
       if (error) {
         console.error('❌ Error al eliminar asistencia:', error);
@@ -1185,7 +1270,7 @@ export default function RegistroAsistencia() {
                               {asistencia.empleado}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
-                              {formatearFecha(asistencia.fecha)}
+                              {formatearFecha(asistencia.fecha_cl || asistencia.fecha)}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
                               Entrada: {asistencia.hora_entrada || 'No registrada'} | 

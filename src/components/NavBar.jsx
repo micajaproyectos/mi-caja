@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../lib/authService.js';
+import { sessionManager } from '../lib/sessionManager.js';
 import { supabase } from '../lib/supabaseClient.js';
 
 const NavBar = () => {
@@ -65,6 +66,21 @@ const NavBar = () => {
       }
     };
     loadBasicUserInfo();
+
+    // Suscribirse a cambios de sesión
+    const unsubscribe = sessionManager.subscribe((event, session, extra) => {
+      console.log('🔄 NavBar: Cambio de sesión detectado:', event);
+      
+      if (event === 'SIGNED_OUT') {
+        setUserInfo({ nombre: '', email: '' });
+        console.log('🧹 NavBar: Datos de usuario limpiados tras logout');
+      } else if (event === 'SIGNED_IN') {
+        console.log('🔄 NavBar: Recargando perfil tras login');
+        loadBasicUserInfo();
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {

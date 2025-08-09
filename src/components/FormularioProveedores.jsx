@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
+import { 
+  obtenerFechaHoyChile, 
+  formatearFechaChile,
+  formatearFechaCortaChile
+} from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 const FormularioProveedores = () => {
@@ -31,14 +37,10 @@ const FormularioProveedores = () => {
     { value: 'Pagado', label: 'Pagado' }
   ];
 
-  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  // Función para obtener la fecha actual en Chile
   const obtenerFechaActual = () => {
-    const fecha = new Date();
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    const fechaFormateada = `${year}-${month}-${day}`;
-    console.log('📅 Fecha actual generada:', fechaFormateada);
+    const fechaFormateada = obtenerFechaHoyChile();
+    console.log('📅 Fecha actual generada (Chile):', fechaFormateada);
     return fechaFormateada;
   };
 
@@ -64,10 +66,20 @@ const FormularioProveedores = () => {
   const cargarProveedores = async () => {
     try {
       setLoadingDatos(true);
+      
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setProveedoresRegistrados([]);
+        return;
+      }
+
       let query = supabase
         .from('proveedores')
-        .select('*')
-        .order('fecha', { ascending: false })
+        .select('id, fecha, fecha_cl, nombre_proveedor, monto, estado, fecha_pago, usuario_id, created_at')
+        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
+        .order('fecha_cl', { ascending: false })
         .order('created_at', { ascending: false });
 
       // Aplicar filtros
@@ -75,7 +87,7 @@ const FormularioProveedores = () => {
         query = query.ilike('nombre_proveedor', `%${busquedaProveedor}%`);
       }
       if (filtroFecha) {
-        query = query.eq('fecha', filtroFecha);
+        query = query.eq('fecha_cl', filtroFecha);
       }
       if (filtroEstado) {
         query = query.eq('estado', filtroEstado);
@@ -85,11 +97,12 @@ const FormularioProveedores = () => {
 
       if (error) throw error;
       
-      console.log('📋 Proveedores cargados:', data);
+      console.log(`📋 Proveedores cargados para usuario ${usuarioId}:`, data?.length || 0);
       setProveedoresRegistrados(data || []);
     } catch (error) {
       console.error('Error al cargar proveedores:', error);
       setError('Error al cargar los proveedores registrados');
+      setProveedoresRegistrados([]);
     } finally {
       setLoadingDatos(false);
     }
@@ -126,11 +139,22 @@ const FormularioProveedores = () => {
     try {
       setLoading(true);
       
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+        setLoading(false);
+        return;
+      }
+      
+      const fechaActual = obtenerFechaActual();
       const nuevoProveedor = {
-        fecha: obtenerFechaActual(),
+        fecha: fechaActual,
+        // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
         nombre_proveedor: proveedor.nombre_proveedor.trim(),
         monto: Number(proveedor.monto),
-        estado: proveedor.estado
+        estado: proveedor.estado,
+        usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
       };
 
       const { data, error } = await supabase
@@ -170,10 +194,19 @@ const FormularioProveedores = () => {
     
     try {
       setLoading(true);
+      
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+      
       const { error } = await supabase
         .from('proveedores')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo eliminar registros del usuario actual
       
       if (error) {
         console.error('❌ Error al eliminar proveedor:', error);
@@ -210,11 +243,19 @@ const FormularioProveedores = () => {
       }
       console.log('📋 Datos a actualizar:', datosActualizar);
       
-      // Verificar que el registro existe antes de actualizar
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Verificar que el registro existe y pertenece al usuario antes de actualizar
       const { data: registroExistente, error: errorVerificacion } = await supabase
         .from('proveedores')
         .select('*')
         .eq('id', id)
+        .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo actualizar registros del usuario actual
         .single();
         
       if (errorVerificacion) {
@@ -230,6 +271,7 @@ const FormularioProveedores = () => {
         .from('proveedores')
         .update(datosActualizar)
         .eq('id', id)
+        .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo actualizar registros del usuario actual
         .select('*');
         
       console.log('📊 Resultado de actualización:', { data, error, count });
@@ -320,7 +362,7 @@ const FormularioProveedores = () => {
     const csvContent = [
       headers.join(','),
       ...proveedoresRegistrados.map(prov => [
-        formatearFechaMostrar(prov.fecha),
+        formatearFechaCortaChile(prov.fecha_cl || prov.fecha),
         prov.nombre_proveedor,
         prov.monto,
         prov.estado,
@@ -626,7 +668,7 @@ const FormularioProveedores = () => {
                               🏢 {prov.nombre_proveedor}
                             </div>
                             <div className="text-sm md:text-base text-gray-300 mb-1">
-                              📅 Registro: {formatearFechaMostrar(prov.fecha)}
+                              📅 Registro: {formatearFechaCortaChile(prov.fecha_cl || prov.fecha)}
                             </div>
                             {prov.fecha_pago && (
                               <div className="text-sm md:text-base text-green-400 mb-1">

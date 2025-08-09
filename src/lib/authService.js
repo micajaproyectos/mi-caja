@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { sessionManager } from './sessionManager.js';
 
 export const authService = {
   // Iniciar sesión con correo y contraseña usando Supabase Auth
@@ -38,8 +39,12 @@ export const authService = {
             email: data.user.email
           };
 
-          // Guardar datos en localStorage para compatibilidad
+          // Guardar datos usando el session manager
           this.saveUserData(userInfo);
+          
+          // Invalidar datos anteriores y marcar para recargar
+          sessionManager.invalidateUserData(userInfo.id);
+          
           return userInfo;
         }
       }
@@ -100,16 +105,29 @@ export const authService = {
   // Cerrar sesión
   async signOut() {
     try {
+      // Obtener usuario actual antes del logout
+      const currentUserId = await this.getCurrentUserId();
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error al cerrar sesión:', error);
         throw error;
       }
       
-      // Limpiar datos locales
+      // Limpiar datos locales usando session manager
+      if (currentUserId) {
+        sessionManager.clearUserData(currentUserId);
+      }
+      sessionManager.clearAllData();
+      
+      // También limpiar datos legacy
       this.clearUserData();
+      
     } catch (error) {
       console.error('Error en signOut:', error);
+      // En caso de error, forzar limpieza
+      sessionManager.clearAllData();
+      this.clearUserData();
       throw error;
     }
   },
@@ -171,9 +189,14 @@ export const authService = {
 
   // Guardar datos del usuario en localStorage (para compatibilidad)
   saveUserData(userData) {
+    // Datos legacy para compatibilidad con código existente
     localStorage.setItem('usuario_data', JSON.stringify(userData));
     localStorage.setItem('nombre_usuario', userData.nombre);
     localStorage.setItem('usuario_id', userData.id);
+    
+    // Datos usando session manager con claves por usuario
+    sessionManager.setUserData('profile', userData, userData.id);
+    sessionManager.setUserData('nombre', userData.nombre, userData.id);
   },
 
   // Limpiar datos del usuario

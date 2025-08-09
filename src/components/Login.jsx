@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { authService } from '../lib/authService.js';
+import { sessionManager } from '../lib/sessionManager.js';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -32,7 +33,15 @@ function Login() {
         
         if (userData) {
           // Usuario autenticado correctamente
-          navigate('/');
+          console.log('✅ Login exitoso, marcando datos para recargar...');
+          
+          // Marcar que los datos necesitan ser recargados en todos los componentes
+          sessionManager.invalidateUserData(userData.id);
+          
+          // Pequeña pausa para que se complete la configuración de la sesión
+          setTimeout(() => {
+            navigate('/');
+          }, 100);
         } else {
           setError('Credenciales inválidas. Verifica tu correo y contraseña.');
         }

@@ -3,44 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
+import { useSessionData } from '../lib/useSessionData.js';
+import { 
+  obtenerFechaHoyChile, 
+  obtenerRangoMesActualChile,
+  formatearFechaChile,
+  formatearFechaCortaChile,
+  obtenerAniosUnicos,
+  obtenerMesesUnicos,
+  validarFechaISO,
+  generarClaveCacheFecha
+} from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 export default function RegistroVenta() {
   const navigate = useNavigate();
   
-  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  // Función para obtener la fecha actual en Chile (reemplazada por dateUtils)
   const obtenerFechaActual = () => {
-    return new Date().toISOString().split('T')[0];
+    return obtenerFechaHoyChile();
   };
   
-  // Función para formatear fechas correctamente sin problemas de zona horaria
+  // Función para formatear fechas usando utilidades de Chile
   const formatearFecha = (fechaString) => {
     if (!fechaString) return 'Fecha inválida';
-    
-    try {
-      // Si la fecha ya está en formato YYYY-MM-DD, usarla directamente
-      if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
-        const [year, month, day] = fechaString.split('-');
-        return `${day}/${month}/${year}`;
-      }
-      
-      // Si es una fecha con timestamp, convertirla correctamente
-      const fecha = new Date(fechaString);
-      if (isNaN(fecha.getTime())) {
-        return 'Fecha inválida';
-      }
-      
-      // Usar toLocaleDateString con opciones específicas para evitar problemas de zona horaria
-      return fecha.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: 'UTC' // Forzar UTC para evitar desfases
-      });
-    } catch (error) {
-      console.error('Error al formatear fecha:', error);
-      return 'Fecha inválida';
-    }
+    return formatearFechaCortaChile(fechaString);
   };
   
   // Función para obtener fecha en formato YYYY-MM-DD sin problemas de zona horaria
@@ -112,23 +99,34 @@ export default function RegistroVenta() {
   const searchInputRef = useRef(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
-  // Función para cargar productos del inventario
+  // Función para cargar productos del inventario filtrados por usuario
   const cargarProductosInventario = async () => {
     try {
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setProductosInventario([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('inventario')
         .select('*')
+        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .order('producto', { ascending: true });
 
       if (error) {
         console.error('Error al cargar productos del inventario:', error);
+        setProductosInventario([]);
         return;
       }
 
       setProductosInventario(data || []);
-      console.log('✅ Productos del inventario cargados:', data);
+      console.log(`✅ Productos del inventario cargados para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error inesperado al cargar productos del inventario:', error);
+      setProductosInventario([]);
     }
   };
 
@@ -250,50 +248,55 @@ export default function RegistroVenta() {
     return productosVenta.reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
   };
 
-  // Función para filtrar ventas
+  // Función para filtrar ventas usando fecha_cl
   const filtrarVentas = useCallback(() => {
     let ventasFiltradas = [...ventasRegistradas];
 
     // Si no hay filtros activos, mostrar solo las ventas del día actual
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
-      const fechaActual = obtenerFechaActual(); // Usar la función consistente
+      const fechaActual = obtenerFechaActual();
       
       ventasFiltradas = ventasFiltradas.filter(venta => {
-        const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
+        const fechaVenta = venta.fecha_cl || venta.fecha;
         return fechaVenta === fechaActual;
       });
     } else {
       // Filtrar por día específico (si se selecciona)
       if (filtroDia) {
-        const fechaSeleccionada = obtenerFechaFormatoISO(filtroDia);
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
-          return fechaVenta === fechaSeleccionada;
+          const fechaVenta = venta.fecha_cl || venta.fecha;
+          return fechaVenta === filtroDia;
         });
       }
 
       // Filtrar por mes (si se selecciona)
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getUTCMonth() === parseInt(filtroMes);
+          const fechaVenta = venta.fecha_cl || venta.fecha;
+          if (!fechaVenta) return false;
+          const [year, month] = fechaVenta.split('-');
+          return parseInt(month) === parseInt(filtroMes) + 1; // +1 porque los meses van de 0-11
         });
       }
 
       // Filtrar por año (si se selecciona)
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
+          const fechaVenta = venta.fecha_cl || venta.fecha;
+          if (!fechaVenta) return false;
+          const year = fechaVenta.split('-')[0];
+          return parseInt(year) === parseInt(filtroAnio);
         });
       }
 
       // Si hay mes y año seleccionados (sin día específico)
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getUTCMonth() === parseInt(filtroMes) && 
-                 fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
+          const fechaVenta = venta.fecha_cl || venta.fecha;
+          if (!fechaVenta) return false;
+          const [year, month] = fechaVenta.split('-');
+          return parseInt(month) === parseInt(filtroMes) + 1 && 
+                 parseInt(year) === parseInt(filtroAnio);
         });
       }
 
@@ -326,14 +329,10 @@ export default function RegistroVenta() {
     setFiltroTipoPago('');
   };
 
-  // Función para obtener años únicos de las ventas
-  const obtenerAniosUnicos = () => {
-    const anios = [...new Set(ventasRegistradas.map(venta => {
-      // Usar UTC para evitar problemas de zona horaria
-      const fecha = new Date(venta.fecha);
-      return fecha.getUTCFullYear();
-    }))].sort((a, b) => b - a); // Orden descendente
-    return anios;
+  // Función para obtener años únicos de las ventas usando fecha_cl
+  const obtenerAniosUnicosLocal = () => {
+    const fechas = ventasRegistradas.map(venta => venta.fecha_cl || venta.fecha).filter(Boolean);
+    return obtenerAniosUnicos(fechas);
   };
 
   // Función para obtener las ventas que se deben mostrar
@@ -351,14 +350,10 @@ export default function RegistroVenta() {
     setVentasMostradas(ventasFiltradas.length);
   };
 
-  // Función para obtener meses únicos de las ventas
-  const obtenerMesesUnicos = () => {
-    const meses = [...new Set(ventasRegistradas.map(venta => {
-      // Usar UTC para evitar problemas de zona horaria
-      const fecha = new Date(venta.fecha);
-      return fecha.getUTCMonth(); // getUTCMonth() retorna 0-11
-    }))].sort((a, b) => a - b); // Orden ascendente
-    return meses;
+  // Función para obtener meses únicos de las ventas usando fecha_cl
+  const obtenerMesesUnicosLocal = () => {
+    const fechas = ventasRegistradas.map(venta => venta.fecha_cl || venta.fecha).filter(Boolean);
+    return obtenerMesesUnicos(fechas);
   };
 
   // Nombres de los meses
@@ -526,7 +521,7 @@ export default function RegistroVenta() {
     const csvContent = [
       headers.join(','),
       ...ventasFiltradas.map(venta => [
-        formatearFecha(venta.fecha),
+        formatearFecha(venta.fecha_cl || venta.fecha),
         venta.producto,
         venta.cantidad,
         venta.unidad,
@@ -549,33 +544,70 @@ export default function RegistroVenta() {
     document.body.removeChild(link);
   };
 
-  // Función para cargar ventas registradas
+  // Función para cargar ventas registradas filtradas por usuario
   const cargarVentas = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setVentasRegistradas([]);
+        return;
+      }
+
+      // Intentar consulta con fecha_cl primero, fallback a fecha
+      let { data, error } = await supabase
         .from('ventas')
-        .select('*')
+        .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
+        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
+        .order('fecha_cl', { ascending: false })
         .order('created_at', { ascending: false });
+
+      // Si hay error con fecha_cl, usar consulta sin fecha_cl
+      if (error && error.message?.includes('fecha_cl')) {
+        console.warn('⚠️ Columna fecha_cl no existe en ventas, usando fecha');
+        const fallbackQuery = await supabase
+          .from('ventas')
+          .select('id, fecha, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
+          .eq('usuario_id', usuarioId)
+          .order('fecha', { ascending: false })
+          .order('created_at', { ascending: false });
+        
+        data = fallbackQuery.data;
+        error = fallbackQuery.error;
+      }
 
       if (error) {
         console.error('❌ Error al cargar ventas:', error);
+        setVentasRegistradas([]);
       } else {
+        console.log(`📊 Cargadas ${data?.length || 0} ventas para usuario ${usuarioId}`);
         setVentasRegistradas(data || []);
       }
     } catch (error) {
       console.error('❌ Error general al cargar ventas:', error);
+      setVentasRegistradas([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Cargar ventas y productos del inventario al montar el componente
-  useEffect(() => {
-    console.log('🚀 Componente montado, cargando ventas y productos del inventario...');
+  // Función para recargar todos los datos
+  const recargarDatos = useCallback(() => {
+    console.log('🔄 RegistroVenta: Recargando datos...');
     cargarVentas();
     cargarProductosInventario();
   }, []);
+
+  // Hook para gestionar cambios de sesión
+  useSessionData(recargarDatos, 'RegistroVenta');
+
+  // Cargar ventas y productos del inventario al montar el componente
+  useEffect(() => {
+    console.log('🚀 Componente montado, cargando ventas y productos del inventario...');
+    recargarDatos();
+  }, [recargarDatos]);
 
   // Asegurar que la fecha esté siempre actualizada al montar el componente
   useEffect(() => {
@@ -747,6 +779,7 @@ export default function RegistroVenta() {
         const producto = productosVenta[i];
         const ventaParaInsertar = {
           fecha: venta.fecha,
+          // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
           tipo_pago: venta.tipo_pago,
           producto: producto.producto,
           cantidad: parseFloat(producto.cantidad) || 0,
@@ -795,7 +828,7 @@ export default function RegistroVenta() {
     }
   };
 
-  // Función para eliminar una venta
+  // Función para eliminar una venta (solo del usuario actual)
   const eliminarVenta = async (id) => {
     if (!confirm('¿Estás seguro de que quieres eliminar esta venta? Esta acción no se puede deshacer.')) {
       return;
@@ -804,10 +837,18 @@ export default function RegistroVenta() {
     try {
       setLoading(true);
       
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+      
       const { error } = await supabase
         .from('ventas')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo eliminar ventas del usuario actual
 
       if (error) {
         console.error('❌ Error al eliminar venta:', error);
@@ -1192,9 +1233,9 @@ export default function RegistroVenta() {
                     }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los meses</option>
-                    {obtenerMesesUnicos().map(mes => (
-                      <option key={mes} value={mes} className="bg-gray-800 text-white">
-                        {nombresMeses[mes]}
+                    {obtenerMesesUnicosLocal().map(mesObj => (
+                      <option key={mesObj.value} value={mesObj.month - 1} className="bg-gray-800 text-white">
+                        {mesObj.label}
                       </option>
                     ))}
                   </select>
@@ -1214,7 +1255,7 @@ export default function RegistroVenta() {
                     }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los años</option>
-                    {obtenerAniosUnicos().map(anio => (
+                    {obtenerAniosUnicosLocal().map(anio => (
                       <option key={anio} value={anio} className="bg-gray-800 text-white">
                         {anio}
                       </option>
@@ -1319,7 +1360,7 @@ export default function RegistroVenta() {
                         {obtenerVentasAMostrar().map((venta, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
                             <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              {formatearFecha(venta.fecha)}
+                              {formatearFecha(venta.fecha_cl || venta.fecha)}
                             </td>
                             <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
                             <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
