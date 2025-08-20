@@ -474,7 +474,7 @@ const FormularioProveedores = () => {
               {/* COLUMNA IZQUIERDA - SOLO CANTIDADES */}
               <div className="space-y-3 md:space-y-4">
                   {/* Total Registros */}
-                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center">
+                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-2xl md:text-3xl font-bold text-white mb-1">
                       {estadisticas.total}
                     </div>
@@ -482,7 +482,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Pendientes */}
-                  <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center">
+                  <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-1">
                       {estadisticas.pendientes}
                     </div>
@@ -490,7 +490,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Pagados */}
-                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center">
+                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
                       {estadisticas.pagados}
                     </div>
@@ -501,7 +501,7 @@ const FormularioProveedores = () => {
               {/* COLUMNA DERECHA - SOLO MONTOS */}
               <div className="space-y-3 md:space-y-4">
                   {/* Monto Total */}
-                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center">
+                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
                       ${formatearNumero(estadisticas.montoTotal)}
                     </div>
@@ -509,7 +509,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Por Pagar */}
-                  <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center">
+                  <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-lg md:text-xl font-bold text-red-400 mb-1">
                       ${formatearNumero(estadisticas.montoPendiente)}
                     </div>
@@ -517,7 +517,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Pagado */}
-                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center">
+                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-lg md:text-xl font-bold text-green-400 mb-1">
                       ${formatearNumero(estadisticas.montoPagado)}
                     </div>
