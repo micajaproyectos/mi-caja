@@ -33,6 +33,7 @@ export default function RegistroAsistencia() {
   const [horaActual, setHoraActual] = useState('');
   const [empleado, setEmpleado] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroEmpleado, setFiltroEmpleado] = useState('');
   const [localStorageVersion, setLocalStorageVersion] = useState(0); // Forzar re-render cuando localStorage cambie
   const [empleadoActivo, setEmpleadoActivo] = useState(() => {
     // Recuperar empleado activo desde localStorage al inicializar
@@ -56,12 +57,13 @@ export default function RegistroAsistencia() {
     return obtenerFechaHoyChile();
   };
 
-  // Función para obtener la hora actual en Santiago, Chile
+  // Función para obtener la hora actual en Santiago, Chile (formato 24hrs)
   const obtenerHoraActual = () => {
     return new Date().toLocaleTimeString('es-CL', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
+      hour12: false, // Forzar formato 24 horas
       timeZone: 'America/Santiago'
     });
   };
@@ -94,13 +96,19 @@ export default function RegistroAsistencia() {
 
   // Verificar si el empleado activo tiene entradas pendientes al cargar el componente
   useEffect(() => {
-    if (empleadoActivo && fechaActual) {
-      const entradasPendientes = obtenerEntradasPendientes(empleadoActivo, fechaActual);
-      // Si no hay entradas pendientes, limpiar el empleado activo
-      if (!entradasPendientes || entradasPendientes.length === 0) {
-        actualizarEmpleadoActivo('');
+    // Agregar una pequeña demora para evitar limpiezas prematuras al remontar componente
+    const timeoutId = setTimeout(() => {
+      if (empleadoActivo && fechaActual) {
+        const entradasPendientes = obtenerEntradasPendientes(empleadoActivo, fechaActual);
+        
+        // Solo limpiar si realmente no hay entradas pendientes después de verificar
+        if (!entradasPendientes || entradasPendientes.length === 0) {
+          actualizarEmpleadoActivo('');
+        }
       }
-    }
+    }, 100); // Pequeña demora para permitir que el localStorage se cargue completamente
+
+    return () => clearTimeout(timeoutId);
   }, [empleadoActivo, fechaActual]);
 
   // Cargar asistencias desde la tabla asistencia filtradas por usuario
@@ -117,12 +125,23 @@ export default function RegistroAsistencia() {
       }
 
       // Intentar consulta con fecha_cl primero, fallback a fecha
-      let { data, error } = await supabase
+      let query = supabase
         .from('asistencia')
         .select('id, empleado, fecha, fecha_cl, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .order('fecha_cl', { ascending: false })
         .order('created_at', { ascending: false });
+
+      // Aplicar filtros si están activos
+      if (filtroFecha) {
+        query = query.eq('fecha_cl', filtroFecha);
+      }
+      
+      if (filtroEmpleado && filtroEmpleado.trim()) {
+        query = query.ilike('empleado', `%${filtroEmpleado.trim()}%`);
+      }
+
+      let { data, error } = await query;
 
       // Si hay error con fecha_cl, usar consulta sin fecha_cl
       if (error && error.message?.includes('fecha_cl')) {
@@ -134,33 +153,22 @@ export default function RegistroAsistencia() {
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
 
-        // Aplicar filtro por fecha si está activo (usar fecha)
+        // Aplicar filtros en consulta fallback
         if (filtroFecha) {
           fallbackQuery = fallbackQuery.eq('fecha', filtroFecha);
+        }
+        
+        if (filtroEmpleado && filtroEmpleado.trim()) {
+          fallbackQuery = fallbackQuery.ilike('empleado', `%${filtroEmpleado.trim()}%`);
         }
 
         const fallbackResult = await fallbackQuery;
         data = fallbackResult.data;
         error = fallbackResult.error;
-      } else {
-        // Aplicar filtro por fecha si está activo (usar fecha_cl)
-        if (filtroFecha) {
-          const filteredResult = await supabase
-            .from('asistencia')
-            .select('id, empleado, fecha, fecha_cl, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
-            .eq('usuario_id', usuarioId)
-            .eq('fecha_cl', filtroFecha)
-            .order('fecha_cl', { ascending: false })
-            .order('created_at', { ascending: false });
-          
-          data = filteredResult.data;
-          error = filteredResult.error;
-        }
       }
 
       if (error) throw error;
       setAsistencias(data || []);
-      console.log(`📋 Asistencias cargadas para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error al cargar asistencias:', error);
       setError('Error al cargar el registro de asistencias');
@@ -172,14 +180,11 @@ export default function RegistroAsistencia() {
 
   // Función para recargar datos
   const recargarDatos = useCallback(() => {
-    console.log('🔄 RegistroAsistencia: Recargando datos...');
     cargarAsistencias();
-  }, [filtroFecha]);
+  }, [filtroFecha, filtroEmpleado]);
 
   // Función personalizada para limpiar datos de asistencia específicos
   const limpiarDatosAsistencia = useCallback(() => {
-    console.log('🧹 RegistroAsistencia: Limpiando datos específicos de asistencia...');
-    
     // Limpiar empleado activo
     setEmpleadoActivo('');
     localStorage.removeItem('empleadoActivo');
@@ -286,8 +291,6 @@ export default function RegistroAsistencia() {
     entradasExistentes.push(nuevaEntrada);
     localStorage.setItem(clave, JSON.stringify(entradasExistentes));
     
-    console.log('💾 Entrada guardada en localStorage:', nuevaEntrada);
-    
     // Forzar re-render del componente para actualizar la lista
     setLocalStorageVersion(prev => prev + 1);
     
@@ -298,13 +301,11 @@ export default function RegistroAsistencia() {
   const obtenerEntradasPendientes = (empleado, fecha) => {
     // Validar que existan empleado y fecha antes de proceder
     if (!empleado || !fecha || empleado.trim().length < 2) {
-      console.log('🔍 No se pueden obtener entradas pendientes: empleado inválido o fecha faltante');
       return [];
     }
     
     const clave = obtenerClaveLocalStorage(empleado, fecha);
     if (!clave) {
-      console.log('🔍 No se pueden obtener entradas pendientes: clave inválida');
       return [];
     }
     
@@ -315,7 +316,6 @@ export default function RegistroAsistencia() {
       entrada.hora_entrada && !entrada.hora_salida && !entrada.sincronizado
     );
     
-    console.log('🔍 Entradas pendientes encontradas:', pendientes);
     return pendientes;
   };
 
@@ -343,7 +343,6 @@ export default function RegistroAsistencia() {
     });
     
     localStorage.setItem(clave, JSON.stringify(entradasActualizadas));
-    console.log('🗑️ Entrada marcada como sincronizada en localStorage');
     
     // Forzar re-render del componente para actualizar la lista
     setLocalStorageVersion(prev => prev + 1);
@@ -394,12 +393,8 @@ export default function RegistroAsistencia() {
       setLoading(true);
       const horaActual = obtenerHoraActualFormato();
       
-      console.log('📝 Registrando entrada para:', empleado, 'fecha:', fechaActual, 'hora:', horaActual);
-      
       // Guardar entrada en localStorage
       const entradaGuardada = guardarEntradaLocal(empleado, fechaActual, horaActual);
-      
-      console.log('✅ Hora de entrada registrada localmente:', entradaGuardada);
       alert(`✅ Hora de entrada registrada localmente: ${horaActual}\n\nLa entrada se sincronizará con el servidor cuando registres la salida.\n\n💾 La entrada se mantendrá guardada incluso si navegas a otra sección.`);
       
       // Activar el empleado para mostrar sus entradas (persistido en localStorage)
@@ -424,10 +419,11 @@ export default function RegistroAsistencia() {
       setLoading(true);
       const horaActual = obtenerHoraActualFormato();
       
-      console.log('🔍 Buscando entradas pendientes para:', empleado, 'fecha:', fechaActual);
+      // Usar empleadoActivo si el campo empleado está vacío (para casos de navegación)
+      const empleadoParaBuscar = empleado || empleadoActivo;
       
       // Buscar entradas pendientes en localStorage
-      const entradasPendientes = obtenerEntradasPendientes(empleado, fechaActual);
+      const entradasPendientes = obtenerEntradasPendientes(empleadoParaBuscar, fechaActual);
 
       if (!entradasPendientes || entradasPendientes.length === 0) {
         alert('❌ No hay registros de entrada pendientes para este empleado en la fecha actual');
@@ -436,12 +432,9 @@ export default function RegistroAsistencia() {
 
       // Tomar la última entrada pendiente
       const entradaPendiente = entradasPendientes[entradasPendientes.length - 1];
-      console.log('📝 Entrada pendiente a completar:', entradaPendiente);
       
-             const totalHorasFormato = calcularTotalHoras(entradaPendiente.hora_entrada, horaActual);
+       const totalHorasFormato = calcularTotalHoras(entradaPendiente.hora_entrada, horaActual);
        const totalHorasDecimal = calcularTotalHorasDecimal(entradaPendiente.hora_entrada, horaActual);
-       console.log('⏰ Total horas calculadas (formato):', totalHorasFormato);
-       console.log('⏰ Total horas calculadas (decimal):', totalHorasDecimal);
 
        // Obtener el usuario_id del usuario autenticado
        const usuarioId = await authService.getCurrentUserId();
@@ -452,7 +445,7 @@ export default function RegistroAsistencia() {
 
        // Crear registro completo para enviar a Supabase
        const registroCompleto = {
-         empleado: empleado,
+         empleado: empleadoParaBuscar,
          fecha: fechaActual,
          // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
          hora_entrada: entradaPendiente.hora_entrada,
@@ -460,8 +453,6 @@ export default function RegistroAsistencia() {
          total_horas: totalHorasDecimal,
          usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
        };
-      
-      console.log('📋 Registro completo a enviar:', registroCompleto);
 
       // Enviar a Supabase
       const { data, error } = await supabase
@@ -474,10 +465,8 @@ export default function RegistroAsistencia() {
         throw error;
       }
 
-             // Marcar entrada como sincronizada en localStorage
-       eliminarEntradaPendiente(empleado, fechaActual, entradaPendiente.hora_entrada);
-
-              console.log('✅ Hora de salida registrada exitosamente:', data);
+       // Marcar entrada como sincronizada en localStorage
+       eliminarEntradaPendiente(empleadoParaBuscar, fechaActual, entradaPendiente.hora_entrada);
         cargarAsistencias();
         
         // Limpiar el campo del empleado y desactivar para limpiar el listado
@@ -497,6 +486,7 @@ export default function RegistroAsistencia() {
   // Limpiar filtros
   const limpiarFiltros = () => {
     setFiltroFecha('');
+    setFiltroEmpleado('');
   };
 
   // Función para limpiar entradas pendientes del localStorage
@@ -505,7 +495,6 @@ export default function RegistroAsistencia() {
       const clave = obtenerClaveLocalStorage(empleado, fechaActual);
       if (clave) {
         localStorage.removeItem(clave);
-        console.log('🧹 Entradas pendientes eliminadas del localStorage');
         alert('✅ Entradas pendientes eliminadas del localStorage');
         
         // Forzar re-render del componente para actualizar la lista
@@ -526,12 +515,6 @@ export default function RegistroAsistencia() {
       const entradas = obtenerTodasLasEntradas(empleado, fechaActual);
       const pendientes = obtenerEntradasPendientes(empleado, fechaActual);
       
-      console.log('🔍 Información de debug:');
-      console.log('Empleado:', empleado);
-      console.log('Fecha:', fechaActual);
-      console.log('Todas las entradas:', entradas);
-      console.log('Entradas pendientes:', pendientes);
-      
       alert(`🔍 Información de Debug:\n\nEmpleado: ${empleado}\nFecha: ${fechaActual}\n\nTodas las entradas: ${JSON.stringify(entradas, null, 2)}\n\nEntradas pendientes: ${JSON.stringify(pendientes, null, 2)}`);
     } else {
       alert('❌ No se puede mostrar debug: empleado inválido o fecha faltante');
@@ -544,12 +527,12 @@ export default function RegistroAsistencia() {
       setLoading(true);
       const horaActual = obtenerHoraActualFormato();
       
-      console.log('🔍 Registrando salida desde listado para:', empleadoEntrada, 'entrada:', horaEntrada);
-      
-      // Si la entrada es del localStorage, usar la lógica existente
-      if (empleadoEntrada === empleado) {
-        // Buscar la entrada específica en localStorage
-        const entradasPendientes = obtenerEntradasPendientes(empleadoEntrada, fechaActual);
+      // Usar empleadoActivo en lugar de empleado para mejor persistencia
+      if (empleadoEntrada === empleadoActivo || empleadoEntrada === empleado) {
+        // Buscar la entrada específica en localStorage usando el empleado correcto
+        const empleadoParaBuscar = empleadoActivo || empleadoEntrada;
+        
+        const entradasPendientes = obtenerEntradasPendientes(empleadoParaBuscar, fechaActual);
         const entradaPendiente = entradasPendientes.find(e => e.hora_entrada === horaEntrada);
         
         if (entradaPendiente) {
@@ -581,8 +564,8 @@ export default function RegistroAsistencia() {
           
           if (error) throw error;
           
-          // Marcar entrada como sincronizada
-          eliminarEntradaPendiente(empleadoEntrada, fechaActual, horaEntrada);
+          // Marcar entrada como sincronizada usando el empleado correcto
+          eliminarEntradaPendiente(empleadoParaBuscar, fechaActual, horaEntrada);
           
           cargarAsistencias();
           
@@ -595,12 +578,12 @@ export default function RegistroAsistencia() {
         }
       }
       
-      // Si no se encuentra en localStorage o es de otro empleado, mostrar error
-      alert('❌ No se puede registrar la salida: entrada no encontrada o no válida');
+      // Si no se encuentra en localStorage, mostrar error más detallado
+      alert(`❌ No se puede registrar la salida para ${empleadoEntrada}\n\nPosibles causas:\n• La entrada no fue registrada localmente\n• Los datos se perdieron al navegar\n• Error en la sincronización\n\nIntenta registrar una nueva entrada.`);
       
     } catch (error) {
       console.error('Error al registrar salida desde listado:', error);
-      alert('❌ Error al registrar la hora de salida');
+      alert('❌ Error al registrar la hora de salida: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -680,7 +663,6 @@ export default function RegistroAsistencia() {
         return;
       }
       
-      console.log('✅ Registro de asistencia eliminado exitosamente');
       alert('✅ Registro de asistencia eliminado exitosamente');
       await cargarAsistencias(); // Recargar la lista
     } catch (error) {
@@ -842,408 +824,272 @@ export default function RegistroAsistencia() {
             📋 Registro de Asistencia
           </h1>
 
-          {/* Reloj y fecha actual */}
+          {/* 1. SECCIÓN SUPERIOR: Reloj y fecha actual (formato 24hrs) */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <div className="text-center">
               <div className="text-2xl md:text-4xl font-bold text-white mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 {horaActual}
               </div>
               <div className="text-base md:text-xl text-gray-300" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                {new Date(fechaActual).toLocaleDateString('es-ES', {
+                {new Date(fechaActual + 'T12:00:00').toLocaleDateString('es-CL', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
+                  timeZone: 'America/Santiago'
                 })}
               </div>
             </div>
           </div>
 
-          {/* Horas trabajadas por empleado */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              ⏰ Horas Trabajadas por Empleado
+          {/* 2. SECCIÓN MEDIA: Formulario de registro de asistencia */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              📝 Registrar Asistencia
             </h2>
             
-            {horasPorEmpleado.length === 0 ? (
-              <div className="text-center py-6 md:py-8">
-                <div className="text-gray-300 text-sm md:text-base">📭 No hay registros de horas trabajadas</div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                {horasPorEmpleado.map((empleado, index) => (
-                  <div
-                    key={`${empleado.nombre}_${index}`}
-                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4"
-                  >
-                    <div className="text-center">
-                      <div className="text-lg md:text-xl font-bold text-white mb-1 truncate" title={empleado.nombre}>
-                        👤 {empleado.nombre}
-                      </div>
-                      <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
-                        {convertirHorasDecimalesAFormato(empleado.total_horas)}
-                      </div>
-                      <div className="text-gray-300 text-xs md:text-sm">
-                        {empleado.registros} registro{empleado.registros !== 1 ? 's' : ''}
-                      </div>
-                      <div className="text-gray-400 text-xs">
-                        Total horas: {empleado.total_horas.toFixed(2)}h
+            <div className="space-y-6 md:space-y-8">
+              {/* Sección de entrada de empleado */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                <div className="mb-4">
+                  <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    👤 Nombre del Empleado
+                  </label>
+                  <input
+                    type="text"
+                    value={empleado}
+                    onChange={(e) => setEmpleado(e.target.value)}
+                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
+                    placeholder="Ingresa el nombre completo del empleado"
+                    required
+                  />
+                  
+                  {/* Indicador de empleado activo con entradas pendientes */}
+                  {empleadoActivo && (
+                    <div className="mt-3 p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400 text-lg">👤</span>
+                          <span className="text-green-300 font-medium">{empleadoActivo}</span>
+                          <span className="text-green-400 text-sm">tiene entradas pendientes</span>
+                        </div>
+                        <button
+                          onClick={() => actualizarEmpleadoActivo('')}
+                          className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 text-red-300 hover:text-red-200 rounded-md text-sm transition-all duration-200"
+                        >
+                          Limpiar
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
-            )}
-            
-            {/* Resumen total */}
-            {horasPorEmpleado.length > 0 && (
-              <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
-                <div className="text-center">
-                  <div className="text-lg md:text-xl font-bold text-white">
-                    📊 Total General: {convertirHorasDecimalesAFormato(
-                      horasPorEmpleado.reduce((total, emp) => total + emp.total_horas, 0)
-                    )}
-                  </div>
-                  <div className="text-gray-300 text-sm">
-                    {horasPorEmpleado.length} empleado{horasPorEmpleado.length !== 1 ? 's' : ''} registrado{horasPorEmpleado.length !== 1 ? 's' : ''}
+
+              {/* Sección de botones de acción */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  ⚡ Acciones Disponibles
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                  {/* Botón de entrada */}
+                  <button
+                    onClick={registrarEntrada}
+                    disabled={loading || !empleado}
+                    className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xl md:text-2xl">📥</span>
+                      <span>{loading ? '⏳ Registrando...' : 'Registrar Entrada'}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </button>
+
+                  {/* Botón de salida */}
+                  <button
+                    onClick={registrarSalida}
+                    disabled={loading || !empleado}
+                    className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xl md:text-2xl">📤</span>
+                      <span>{loading ? '⏳ Registrando...' : 'Registrar Salida'}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </button>
+                </div>
+                
+                {/* Información de ayuda */}
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="text-center">
+                    <p className="text-gray-300 text-sm md:text-base">
+                      💡 <strong>Proceso:</strong> Registra entrada → Trabaja → Registra salida
+                    </p>
+                    <p className="text-gray-400 text-xs md:text-sm mt-1">
+                      Los datos se sincronizan automáticamente con el servidor
+                    </p>
                   </div>
                 </div>
               </div>
-            )}
-                     </div>
 
-           {/* Listado de entradas registradas hoy */}
-           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
-             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-               📋 Entradas del Empleado Seleccionado
-             </h2>
-             
-             {!empleadoActivo || empleadoActivo.trim().length < 2 ? (
-               <div className="text-center py-6 md:py-8">
-                 <div className="text-gray-300 text-sm md:text-base">👤 Presiona "Registrar Entrada" para ver las entradas del empleado</div>
-               </div>
-             ) : entradasRegistradasHoy.length === 0 ? (
-               <div className="text-center py-6 md:py-8">
-                 <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas para {empleadoActivo} hoy</div>
-               </div>
-             ) : (
-               <div className="space-y-3 md:space-y-4">
-                 {entradasRegistradasHoy.map((entrada, index) => (
-                   <div
-                     key={`${entrada.empleado}_${entrada.hora_entrada}_${index}`}
-                     className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4"
-                   >
-                     <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center gap-2 mb-2">
-                           <div className="text-lg md:text-xl font-bold text-white truncate">
-                             👤 {entrada.empleado}
-                           </div>
-                           <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                             entrada.origen === 'servidor' 
-                               ? 'bg-green-500/30 text-green-300 border border-green-500/50'
-                               : 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
-                           }`}>
-                             {entrada.origen === 'servidor' ? '✅ Sincronizado' : '⏳ Pendiente'}
-                           </div>
-                         </div>
-                         
-                         <div className="text-sm md:text-base text-gray-300 mb-1">
-                           🕒 Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
-                         </div>
-                         
-                         {entrada.hora_salida && (
-                           <div className="text-sm md:text-base text-gray-300 mb-1">
-                             🚪 Hora de salida: <span className="font-semibold text-white">{entrada.hora_salida}</span>
-                           </div>
-                         )}
-                         
-                         {entrada.total_horas && (
-                           <div className="text-sm md:text-base text-green-400 font-medium">
-                             ⏰ Total: {convertirHorasDecimalesAFormato(entrada.total_horas)} horas
-                           </div>
-                         )}
-                       </div>
-                       
-                       <div className="flex-shrink-0">
-                         {!entrada.hora_salida && entrada.origen === 'local' && entrada.empleado === empleadoActivo ? (
-                           <button
-                             onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada)}
-                             disabled={loading}
-                             className="px-3 md:px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             {loading ? '⏳ Registrando...' : '📤 Registrar Salida'}
-                           </button>
-                         ) : entrada.hora_salida ? (
-                           <div className="px-3 py-2 bg-green-500/30 border border-green-500/50 rounded-lg">
-                             <span className="text-green-300 text-sm font-medium">✅ Completado</span>
-                           </div>
-                         ) : (
-                           <div className="px-3 py-2 bg-gray-500/30 border border-gray-500/50 rounded-lg">
-                             <span className="text-gray-300 text-sm">⏳ Pendiente</span>
-                           </div>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             )}
-             
-             {/* Resumen del día */}
-             {entradasRegistradasHoy.length > 0 && (
-               <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
-                 <div className="text-center">
-                   <div className="text-lg md:text-xl font-bold text-white mb-2">
-                     📊 Resumen del Día
-                   </div>
-                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                     <div className="text-gray-300">
-                       <span className="font-semibold text-white">{entradasRegistradasHoy.length}</span> entradas registradas
-                     </div>
-                     <div className="text-gray-300">
-                       <span className="font-semibold text-white">
-                         {entradasRegistradasHoy.filter(e => e.hora_salida).length}
-                       </span> salidas registradas
-                     </div>
-                     <div className="text-gray-300">
-                       <span className="font-semibold text-white">
-                         {entradasRegistradasHoy.filter(e => !e.hora_salida).length}
-                       </span> pendientes
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             )}
-           </div>
+              {/* Entradas del Empleado Seleccionado */}
+              {empleadoActivo && (
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                  <h3 className="text-lg md:text-xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    👤 Entradas del Empleado Seleccionado: {empleadoActivo}
+                  </h3>
+                  
+                  {entradasRegistradasHoy.length === 0 ? (
+                    <div className="text-center py-6 md:py-8">
+                      <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas para {empleadoActivo} hoy</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 md:space-y-4 max-h-80 overflow-y-auto">
+                      {entradasRegistradasHoy.map((entrada, index) => (
+                        <div
+                          key={`${entrada.empleado}_${entrada.hora_entrada}_${index}`}
+                          className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4"
+                        >
+                          <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="text-lg md:text-xl font-bold text-white truncate">
+                                  👤 {entrada.empleado}
+                                </div>
+                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  entrada.origen === 'servidor' 
+                                    ? 'bg-green-500/30 text-green-300 border border-green-500/50'
+                                    : 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                                }`}>
+                                  {entrada.origen === 'servidor' ? '✅ Sincronizado' : '⏳ Pendiente'}
+                                </div>
+                              </div>
+                              
+                              <div className="text-sm md:text-base text-gray-300 mb-1">
+                                🕒 Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
+                              </div>
+                              
+                              {entrada.hora_salida && (
+                                <div className="text-sm md:text-base text-gray-300 mb-1">
+                                  🚪 Hora de salida: <span className="font-semibold text-white">{entrada.hora_salida}</span>
+                                </div>
+                              )}
+                              
+                              {entrada.total_horas && (
+                                <div className="text-sm md:text-base text-green-400 font-medium">
+                                  ⏰ Total: {convertirHorasDecimalesAFormato(entrada.total_horas)} horas
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex-shrink-0">
+                              {!entrada.hora_salida && entrada.origen === 'local' && entrada.empleado === empleadoActivo ? (
+                                <button
+                                  onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada)}
+                                  disabled={loading}
+                                  className="px-3 md:px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {loading ? '⏳ Registrando...' : '📤 Registrar Salida'}
+                                </button>
+                              ) : entrada.hora_salida ? (
+                                <div className="px-3 py-2 bg-green-500/30 border border-green-500/50 rounded-lg">
+                                  <span className="text-green-300 text-sm font-medium">✅ Completado</span>
+                                </div>
+                              ) : (
+                                <div className="px-3 py-2 bg-gray-500/30 border border-gray-500/50 rounded-lg">
+                                  <span className="text-gray-300 text-sm">⏳ Pendiente</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
 
-                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-             {/* Formulario de registro */}
-             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                 📝 Registrar Asistencia
-               </h2>
-               
-               <div className="space-y-6 md:space-y-8">
-                 {/* Sección de entrada de empleado */}
-                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
-                   <div className="mb-4">
-                     <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                       👤 Nombre del Empleado
-                     </label>
-                     <input
-                       type="text"
-                       value={empleado}
-                       onChange={(e) => setEmpleado(e.target.value)}
-                       className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
-                       placeholder="Ingresa el nombre completo del empleado"
-                       required
-                     />
-                     
-                     {/* Indicador de empleado activo con entradas pendientes */}
-                     {empleadoActivo && (
-                       <div className="mt-3 p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
-                         <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-2">
-                             <span className="text-green-400 text-lg">👤</span>
-                             <span className="text-green-300 font-medium">{empleadoActivo}</span>
-                             <span className="text-green-400 text-sm">tiene entradas pendientes</span>
-                           </div>
-                           <button
-                             onClick={() => actualizarEmpleadoActivo('')}
-                             className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 text-red-300 hover:text-red-200 rounded-md text-sm transition-all duration-200"
-                           >
-                             Limpiar
-                           </button>
-                         </div>
-                       </div>
-                     )}
-                   </div>
-                 </div>
+                </div>
+              )}
 
-                 {/* Sección de botones de acción */}
-                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
-                   <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                     ⚡ Acciones Disponibles
-                   </h3>
-                   
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                     {/* Botón de entrada */}
-                     <button
-                       onClick={registrarEntrada}
-                       disabled={loading || !empleado}
-                       className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
-                       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                     >
-                       <div className="flex items-center justify-center gap-2">
-                         <span className="text-xl md:text-2xl">📥</span>
-                         <span>{loading ? '⏳ Registrando...' : 'Registrar Entrada'}</span>
-                       </div>
-                       <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                     </button>
 
-                     {/* Botón de salida */}
-                     <button
-                       onClick={registrarSalida}
-                       disabled={loading || !empleado}
-                       className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
-                       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                     >
-                       <div className="flex items-center justify-center gap-2">
-                         <span className="text-xl md:text-2xl">📤</span>
-                         <span>{loading ? '⏳ Registrando...' : 'Registrar Salida'}</span>
-                       </div>
-                       <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                     </button>
-                   </div>
-                   
-                   {/* Información de ayuda */}
-                   <div className="mt-4 pt-4 border-t border-white/10">
-                     <div className="text-center">
-                       <p className="text-gray-300 text-sm md:text-base">
-                         💡 <strong>Proceso:</strong> Registra entrada → Trabaja → Registra salida
-                       </p>
-                       <p className="text-gray-400 text-xs md:text-sm mt-1">
-                         Los datos se sincronizan automáticamente con el servidor
-                       </p>
-                       <p className="text-green-400 text-xs md:text-sm mt-1">
-                         💾 Las entradas se mantienen guardadas al navegar entre secciones
-                       </p>
-                     </div>
-                   </div>
-                 </div>
+            </div>
+          </div>
 
-                 {/* Listado visual de entradas pendientes */}
-                 {empleado && entradasPendientesVisual.length > 0 && (
-                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
-                     <div className="mb-4">
-                       <h3 className="text-lg md:text-xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                         📋 Entradas Pendientes
-                       </h3>
-                       <p className="text-gray-400 text-sm text-center">
-                         Estas entradas se sincronizarán al registrar la salida
-                       </p>
-                     </div>
-                     
-                     <div className="space-y-3 max-h-48 md:max-h-56 overflow-y-auto">
-                       {entradasPendientesVisual.map((entrada, index) => (
-                         <div
-                           key={`${entrada.hora_entrada}_${index}`}
-                           className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4"
-                         >
-                           <div className="flex items-center justify-between">
-                             <div className="flex-1 min-w-0">
-                               <div className="font-semibold text-white text-sm md:text-base truncate">
-                                 👤 {empleado}
-                               </div>
-                               <div className="text-gray-300 text-sm">
-                                 🕒 Entrada: <span className="font-medium text-white">{entrada.hora_entrada}</span>
-                               </div>
-                               <div className="text-gray-400 text-xs">
-                                 📅 {new Date(fechaActual).toLocaleDateString('es-ES', {
-                                   weekday: 'long',
-                                   year: 'numeric',
-                                   month: 'long',
-                                   day: 'numeric'
-                                 })}
-                               </div>
-                             </div>
-                             <div className="ml-3 flex-shrink-0">
-                               <div className="px-3 py-2 bg-yellow-500/30 border border-yellow-500/50 rounded-full">
-                                 <span className="text-yellow-300 text-sm font-medium">
-                                   ⏳ Pendiente
-                                 </span>
-                               </div>
-                             </div>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                     
-                     <div className="mt-4 pt-4 border-t border-white/10">
-                       <div className="text-center">
-                         <p className="text-gray-300 text-sm">
-                           💡 Haz clic en "Registrar Salida" para completar el registro
-                         </p>
-                       </div>
-                     </div>
-                   </div>
-                 )}
-               </div>
-             </div>
+          {/* 3. LISTA DE REGISTROS GENERADOS DE ASISTENCIA */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              📋 Registros de Asistencia Generados
+            </h2>
 
-                         {/* Lista de asistencias */}
-             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-               {/* Header con título y exportar */}
-               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
-                 <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                   📋 Registro de Asistencias
-                 </h2>
-                 <button
-                   onClick={exportarCSV}
-                   className="group relative px-4 md:px-6 py-2 md:py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-                 >
-                   <div className="flex items-center gap-2">
-                     <span className="text-lg">📊</span>
-                     <span>Exportar CSV</span>
-                   </div>
-                 </button>
-               </div>
+            {/* Sección de filtros */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
+              <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                🔍 Filtros y Controles
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                    📅 Filtrar por Fecha
+                  </label>
+                  <input
+                    type="date"
+                    value={filtroFecha}
+                    onChange={(e) => setFiltroFecha(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    placeholder="Seleccionar fecha"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                    👤 Filtrar por Empleado
+                  </label>
+                  <input
+                    type="text"
+                    value={filtroEmpleado}
+                    onChange={(e) => setFiltroEmpleado(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    placeholder="Buscar por nombre del empleado"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={limpiarFiltros}
+                    className="flex-1 px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
+                  >
+                    🔄 Limpiar Filtros
+                  </button>
+                  <button
+                    onClick={exportarCSV}
+                    className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
+                  >
+                    📊 Exportar CSV
+                  </button>
+                </div>
+              </div>
 
-               {/* Sección de filtros */}
-               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
-                 <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                   🔍 Filtros y Controles
-                 </h3>
-                 
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                   <div>
-                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                       📅 Filtrar por Fecha
-                     </label>
-                     <input
-                       type="date"
-                       value={filtroFecha}
-                       onChange={(e) => setFiltroFecha(e.target.value)}
-                       className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
-                       placeholder="Seleccionar fecha"
-                     />
-                   </div>
-                   <div className="flex items-end">
-                     <button
-                       onClick={limpiarFiltros}
-                       className="w-full px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
-                     >
-                       🔄 Limpiar Filtros
-                     </button>
-                   </div>
-                 </div>
 
-                 {/* Botones adicionales */}
-                 {empleado && (
-                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                     <button
-                       onClick={mostrarInfoDebug}
-                       className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-xs md:text-sm font-medium"
-                     >
-                       🔍 Debug Info
-                     </button>
-                     <button
-                       onClick={limpiarEntradasPendientes}
-                       className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-xs md:text-sm font-medium"
-                     >
-                       🧹 Limpiar Pendientes
-                     </button>
-                     <div className="px-3 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
-                       <div className="text-yellow-300 text-xs md:text-sm font-medium">
-                         📊 Pendientes: {estadisticas.entradasPendientes}
-                       </div>
-                     </div>
-                   </div>
-                 )}
-               </div>
+            </div>
 
-              {/* Lista de asistencias */}
+
+
+            {/* Lista general de todas las asistencias */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+                <h3 className="text-lg md:text-xl font-bold text-white text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  📋 Todos los Registros de Asistencia
+                </h3>
+                {(filtroFecha || filtroEmpleado) && (
+                  <div className="px-3 py-1 bg-blue-500/30 border border-blue-500/50 rounded-full">
+                    <span className="text-blue-300 text-sm font-medium">
+                      🔍 {asistencias.length} resultado{asistencias.length !== 1 ? 's' : ''} encontrado{asistencias.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
               <div className="max-h-80 md:max-h-96 overflow-y-auto">
                 {loading ? (
                   <div className="text-center py-6 md:py-8">
@@ -1267,18 +1113,18 @@ export default function RegistroAsistencia() {
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-white text-sm md:text-base truncate">
-                              {asistencia.empleado}
+                              👤 {asistencia.empleado}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
-                              {formatearFecha(asistencia.fecha_cl || asistencia.fecha)}
+                              📅 {formatearFecha(asistencia.fecha_cl || asistencia.fecha)}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
-                              Entrada: {asistencia.hora_entrada || 'No registrada'} | 
-                              Salida: {asistencia.hora_salida || 'No registrada'}
+                              🕒 Entrada: {asistencia.hora_entrada || 'No registrada'} | 
+                              🚪 Salida: {asistencia.hora_salida || 'No registrada'}
                             </div>
                             {asistencia.total_horas && (
                               <div className="text-xs md:text-sm text-green-400 font-medium">
-                                Total: {convertirHorasDecimalesAFormato(asistencia.total_horas)} horas
+                                ⏰ Total: {convertirHorasDecimalesAFormato(asistencia.total_horas)} horas
                               </div>
                             )}
                           </div>
@@ -1310,6 +1156,62 @@ export default function RegistroAsistencia() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* 4. SECCIÓN FINAL: Total de horas trabajadas por empleado */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              ⏰ Total de Horas Trabajadas por Empleado
+            </h2>
+            
+            {horasPorEmpleado.length === 0 ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-gray-300 text-sm md:text-base">📭 No hay registros de horas trabajadas</div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                {horasPorEmpleado.map((empleado, index) => (
+                  <div
+                    key={`${empleado.nombre}_${index}`}
+                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 transform hover:scale-105 transition-all duration-200"
+                  >
+                    <div className="text-center">
+                      <div className="text-lg md:text-xl font-bold text-white mb-1 truncate" title={empleado.nombre}>
+                        👤 {empleado.nombre}
+                      </div>
+                      <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
+                        {convertirHorasDecimalesAFormato(empleado.total_horas)}
+                      </div>
+                      <div className="text-gray-300 text-xs md:text-sm">
+                        {empleado.registros} registro{empleado.registros !== 1 ? 's' : ''}
+                      </div>
+                      <div className="text-gray-400 text-xs">
+                        Total horas: {empleado.total_horas.toFixed(2)}h
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Resumen total */}
+            {horasPorEmpleado.length > 0 && (
+              <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
+                <div className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-white mb-2">
+                    📊 Total General: {convertirHorasDecimalesAFormato(
+                      horasPorEmpleado.reduce((total, emp) => total + emp.total_horas, 0)
+                    )}
+                  </div>
+                  <div className="text-gray-300 text-sm md:text-base">
+                    {horasPorEmpleado.length} empleado{horasPorEmpleado.length !== 1 ? 's' : ''} registrado{horasPorEmpleado.length !== 1 ? 's' : ''}
+                  </div>
+                  <div className="text-gray-400 text-xs md:text-sm mt-2">
+                    💼 {horasPorEmpleado.reduce((total, emp) => total + emp.registros, 0)} registros totales
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

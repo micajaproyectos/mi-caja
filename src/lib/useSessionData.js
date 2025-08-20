@@ -13,7 +13,9 @@ export function useSessionData(reloadDataCallback, componentName = 'Component') 
     
     if (event === 'SIGNED_OUT') {
       console.log(`🧹 ${componentName}: Limpiando datos tras logout`);
-      // Los datos se limpiarán automáticamente ya que las consultas fallarán sin usuario
+      if (typeof reloadDataCallback === 'function') {
+        reloadDataCallback();
+      }
     } else if (event === 'SIGNED_IN') {
       console.log(`🔄 ${componentName}: Recargando datos tras login`);
       if (typeof reloadDataCallback === 'function') {
@@ -22,7 +24,9 @@ export function useSessionData(reloadDataCallback, componentName = 'Component') 
       }
     } else if (event === 'TOKEN_REFRESHED') {
       console.log(`🔄 ${componentName}: Token renovado, verificando datos`);
-      // Opcional: revalidar datos si es necesario
+      if (typeof reloadDataCallback === 'function') {
+        reloadDataCallback();
+      }
     }
   }, [reloadDataCallback, componentName]);
 

@@ -13,7 +13,7 @@ import Footer from './Footer';
 
 const RegistroInventario = () => {
   const [inventario, setInventario] = useState({
-    fecha_ingreso: '',
+    fecha_ingreso: obtenerFechaHoyChile(),
     producto: '',
     cantidad: '',
     unidad: '',

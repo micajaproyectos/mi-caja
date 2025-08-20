@@ -1,37 +1,40 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../lib/authService.js';
+import { supabase } from '../lib/supabaseClient.js';
+import { sessionManager } from '../lib/sessionManager.js';
 
 function RutaPrivada({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [auth, setAuth] = useState({ loading: true, user: null });
   const navigate = useNavigate();
 
   useEffect(() => {
-    const verificarAutenticacion = async () => {
+    let alive = true;
+    (async () => {
       try {
-        const isAuth = await authService.isAuthenticated();
-        
-        if (!isAuth) {
-          // No hay usuario autenticado, redirigir a login
-          navigate('/login');
-          return;
-        }
-        
-        // Usuario autenticado, permitir acceso
-        setIsAuthenticated(true);
-        setIsLoading(false);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (alive) setAuth({ loading: false, user: session?.user || null });
       } catch (error) {
-        console.error('Error al verificar autenticación:', error);
-        navigate('/login');
+        console.error('Error al obtener sesión inicial:', error);
+        if (alive) setAuth({ loading: false, user: null });
       }
-    };
+    })();
 
-    verificarAutenticacion();
-  }, [navigate]);
+    const unsubscribe = sessionManager.subscribe((event, session) => {
+      setAuth({ loading: false, user: session?.user || null });
+    });
+
+    return () => { alive = false; unsubscribe(); };
+  }, []);
+
+  // Redirigir si no hay usuario y no está cargando
+  useEffect(() => {
+    if (!auth.loading && !auth.user) {
+      navigate('/login', { replace: true });
+    }
+  }, [auth.loading, auth.user, navigate]);
 
   // Mostrar loading mientras verifica la autenticación
-  if (isLoading) {
+  if (auth.loading) {
     return (
       <div className="min-h-screen flex justify-center items-center" style={{ backgroundColor: '#1a3d1a' }}>
         <div className="text-center">
@@ -42,13 +45,13 @@ function RutaPrivada({ children }) {
     );
   }
 
-  // Si está autenticado, renderizar el contenido
-  if (isAuthenticated) {
-    return children;
+  // Si no hay usuario, no renderizar nada (la redirección ya se ejecutó)
+  if (!auth.user) {
+    return null;
   }
 
-  // No debería llegar aquí, pero por seguridad
-  return null;
+  // Si está autenticado, renderizar el contenido
+  return children;
 }
 
 export default RutaPrivada; 

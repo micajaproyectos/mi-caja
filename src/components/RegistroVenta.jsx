@@ -337,6 +337,8 @@ export default function RegistroVenta() {
 
   // Función para obtener las ventas que se deben mostrar
   const obtenerVentasAMostrar = () => {
+    // Para la visualización, mostrar todas las ventas filtradas
+    // Pero para los contadores, usar solo las que tienen total_final
     return ventasFiltradas.slice(0, ventasMostradas);
   };
 
@@ -347,7 +349,8 @@ export default function RegistroVenta() {
 
   // Función para mostrar todas las ventas
   const mostrarTodasLasVentas = () => {
-    setVentasMostradas(ventasFiltradas.length);
+    const ventasCompletas = ventasFiltradas.filter(v => v.total_final && v.total_final > 0);
+    setVentasMostradas(ventasCompletas.length);
   };
 
   // Función para obtener meses únicos de las ventas usando fecha_cl
@@ -473,10 +476,8 @@ export default function RegistroVenta() {
   const obtenerTituloResumen = () => {
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
       return `Resumen de Ventas - ${(() => {
-        const fechaActual = new Date();
-        const year = fechaActual.getFullYear();
-        const month = String(fechaActual.getMonth() + 1).padStart(2, '0');
-        const day = String(fechaActual.getDate()).padStart(2, '0');
+        const fechaActual = obtenerFechaHoyChile();
+        const [year, month, day] = fechaActual.split('-');
         return `${day}/${month}/${year}`;
       })()}`;
     }
@@ -892,7 +893,7 @@ export default function RegistroVenta() {
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-sm mx-auto sm:max-w-lg md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
           {/* Botón de regreso */}
           <div className="mb-4 md:mb-6">
             <button
@@ -922,8 +923,8 @@ export default function RegistroVenta() {
                 type="text"
                 value={busquedaProducto}
                 onChange={handleBusquedaProducto}
-                className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
-                placeholder="Escribe el nombre del producto..."
+                className="w-full px-3 md:px-4 py-3 md:py-4 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base transition-all duration-200"
+                placeholder="🔍 Escribe el nombre del producto..."
               />
             </div>
 
@@ -935,20 +936,7 @@ export default function RegistroVenta() {
               </div>
               
               {/* Campos del producto */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
-                <div>
-                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Cantidad</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="cantidad"
-                    value={productoActual.cantidad}
-                    onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
-                    placeholder="0.00"
-                  />
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
                 <div>
                   <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Unidad</label>
                   <select
@@ -966,8 +954,21 @@ export default function RegistroVenta() {
                   </select>
                 </div>
 
-                <div className="sm:col-span-2 lg:col-span-1">
-                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Precio Unitario</label>
+                <div>
+                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Cantidad</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="cantidad"
+                    value={productoActual.cantidad}
+                    onChange={handleChange}
+                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 xl:col-span-1">
+                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Precio</label>
                   <input
                     type="number"
                     step="0.01"
@@ -985,9 +986,9 @@ export default function RegistroVenta() {
                 <button
                   type="button"
                   onClick={agregarProducto}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-all duration-300 text-sm md:text-base"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-lg transition-all duration-300 text-base md:text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
-                  Agregar Producto
+                  ➕ Agregar Producto
                 </button>
               </div>
             </div>
@@ -1013,9 +1014,9 @@ export default function RegistroVenta() {
                         </div>
                         <button
                           onClick={() => eliminarProducto(producto.id)}
-                          className="text-red-400 hover:text-red-300 text-lg md:text-xl font-bold ml-2 flex-shrink-0"
+                          className="text-red-400 hover:text-red-300 text-lg md:text-xl font-bold ml-2 flex-shrink-0 px-2 py-1 rounded hover:bg-red-600/20 transition-colors"
                         >
-                          ×
+                          🗑️
                         </button>
                       </div>
                     ))}
@@ -1092,9 +1093,9 @@ export default function RegistroVenta() {
                     });
                     setMostrarDropdown(false);
                   }}
-                  className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300"
+                  className="w-full px-6 py-3 md:py-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg"
                 >
-                  Ingresar producto manualmente
+                  ✏️ Ingresar producto manualmente
                 </button>
               </div>,
               document.body
@@ -1113,7 +1114,7 @@ export default function RegistroVenta() {
                 <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">💳</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Tipo de Pago</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'efectivo'})}
@@ -1181,7 +1182,7 @@ export default function RegistroVenta() {
               <button
                 type="button"
                 onClick={registrarVenta}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-lg md:text-xl"
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-4 md:py-5 px-8 md:px-12 rounded-xl transition-all duration-300 transform hover:scale-105 text-lg md:text-2xl shadow-2xl hover:shadow-green-500/25"
               >
                 <span className="text-yellow-400 mr-2">💰</span>
                 Procesar Venta
@@ -1290,10 +1291,10 @@ export default function RegistroVenta() {
               <div className="mt-3 md:mt-4 flex justify-center">
                 <button
                   onClick={limpiarFiltros}
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 md:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base"
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-medium py-3 md:py-4 px-6 md:px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base shadow-lg"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
-                  Limpiar Filtros
+                  🧹 Limpiar Filtros
                 </button>
               </div>
 
@@ -1315,7 +1316,7 @@ export default function RegistroVenta() {
                       {filtroTipoPago && ` Pago: ${obtenerInfoTipoPago(filtroTipoPago).icon} ${obtenerInfoTipoPago(filtroTipoPago).label}`}
                     </>
                   )}
-                  {` | Mostrando ${ventasFiltradas.length} de ${ventasRegistradas.length} ventas`}
+                  {` | Mostrando ${ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length} de ${ventasRegistradas.filter(v => v.total_final && v.total_final > 0).length} ventas completas`}
                 </p>
               </div>
             </div>
@@ -1341,67 +1342,132 @@ export default function RegistroVenta() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  {/* Contenedor con altura máxima y scroll vertical */}
-                  <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
-                    <table className="w-full text-left">
-                      <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
-                        <tr className="border-b border-white/20">
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Cantidad</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Precio</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
-                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {obtenerVentasAMostrar().map((venta, index) => (
-                          <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              {formatearFecha(venta.fecha_cl || venta.fecha)}
-                            </td>
-                            <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon} {obtenerInfoUnidad(venta.unidad).label}
-                            </td>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
-                            </td>
-                            <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
-                              ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
-                            </td>
-                            <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
-                              {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
-                            </td>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
-                                {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
-                              </span>
-                            </td>
-                            <td className="p-2 md:p-3">
-                              <button
-                                onClick={() => eliminarVenta(venta.id)}
-                                disabled={loading}
-                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                                title="Eliminar venta"
-                              >
-                                🗑️ Eliminar
-                              </button>
-                            </td>
+                  {/* Vista de cards para móviles */}
+                  <div className="block lg:hidden">
+                    <div className="max-h-96 overflow-y-auto space-y-4">
+                      {obtenerVentasAMostrar().map((venta, index) => (
+                        <div key={index} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="text-white font-semibold text-sm">
+                              📅 {formatearFecha(venta.fecha_cl || venta.fecha)}
+                            </div>
+                            <div className="text-xs bg-green-600/20 px-2 py-1 rounded-full">
+                              {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div>
+                              <div className="text-gray-400 text-xs mb-1">Producto</div>
+                              <div className="text-white text-sm font-medium">{venta.producto || 'Sin producto'}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-400 text-xs mb-1">Cantidad</div>
+                              <div className="text-white text-sm">
+                                {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-gray-400 text-xs mb-1">Precio Unit.</div>
+                              <div className="text-white text-sm">
+                                ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-gray-400 text-xs mb-1">Total</div>
+                              <div className="text-green-300 text-sm font-bold">
+                                ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {venta.total_final && (
+                            <div className="mb-3 p-2 bg-blue-600/10 rounded-lg">
+                              <div className="text-gray-400 text-xs mb-1">Total Final</div>
+                              <div className="text-blue-300 text-lg font-bold">
+                                ${parseFloat(venta.total_final).toLocaleString()}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => eliminarVenta(venta.id)}
+                              disabled={loading}
+                              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                              title="Eliminar venta"
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Vista de tabla para pantallas grandes */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
+                      <table className="w-full text-left">
+                        <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                          <tr className="border-b border-white/20">
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Fecha</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Producto</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Cantidad</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Precio</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Total</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Total Final</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Pago</th>
+                            <th className="text-gray-200 font-semibold p-3 text-sm">Acciones</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {obtenerVentasAMostrar().map((venta, index) => (
+                            <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                              <td className="text-gray-200 p-3 text-sm">
+                                {formatearFecha(venta.fecha_cl || venta.fecha)}
+                              </td>
+                              <td className="text-gray-200 p-3 font-medium text-sm truncate max-w-32">{venta.producto || 'Sin producto'}</td>
+                              <td className="text-gray-200 p-3 text-sm">
+                                {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon} {obtenerInfoUnidad(venta.unidad).label}
+                              </td>
+                              <td className="text-gray-200 p-3 text-sm">
+                                ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
+                              </td>
+                              <td className="text-green-300 p-3 font-bold text-sm">
+                                ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
+                              </td>
+                              <td className="text-blue-300 p-3 font-bold text-sm">
+                                {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
+                              </td>
+                              <td className="text-gray-200 p-3 text-sm">
+                                <span className="px-2 py-1 bg-green-600/20 rounded-full text-xs">
+                                  {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <button
+                                  onClick={() => eliminarVenta(venta.id)}
+                                  disabled={loading}
+                                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                  title="Eliminar venta"
+                                >
+                                  🗑️ Eliminar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                   
                   {/* Controles para cargar más ventas */}
-                  {ventasFiltradas.length > ventasMostradas && (
+                  {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length > ventasMostradas && (
                     <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                         <p className="text-blue-200 text-sm">
-                          Mostrando {ventasMostradas} de {ventasFiltradas.length} ventas
+                          Mostrando {Math.min(ventasMostradas, ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length)} de {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length} ventas completas
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -1422,10 +1488,10 @@ export default function RegistroVenta() {
                   )}
                   
                   {/* Información cuando se muestran todas las ventas */}
-                  {ventasFiltradas.length > 0 && ventasMostradas >= ventasFiltradas.length && (
+                  {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length > 0 && ventasMostradas >= ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length && (
                     <div className="mt-4 p-3 bg-green-600/20 backdrop-blur-sm rounded-lg border border-green-500/30">
                       <p className="text-green-200 text-sm text-center">
-                        ✅ Mostrando todas las {ventasFiltradas.length} ventas
+                        ✅ Mostrando todas las {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length} ventas completas
                       </p>
                     </div>
                   )}
@@ -1521,20 +1587,20 @@ export default function RegistroVenta() {
               )}
               
               {/* Botones de control */}
-              <div className="mt-4 md:mt-6 text-center space-y-2 md:space-y-0 md:space-x-2 lg:space-x-4">
+              <div className="mt-4 md:mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                 <button
                   onClick={cargarVentas}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
+                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 md:py-4 px-4 md:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base shadow-lg"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
-                  Actualizar Lista
+                  🔄 Actualizar Lista
                 </button>
                 <button
                   onClick={exportarDatosFiltrados}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3 md:px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm"
+                  className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 md:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base shadow-lg"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
-                  Exportar CSV
+                  📊 Exportar CSV
                 </button>
               </div>
             </div>

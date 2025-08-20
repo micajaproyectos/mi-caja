@@ -11,13 +11,17 @@ const TIMEZONE = 'America/Santiago';
  */
 export const obtenerFechaHoyChile = () => {
   const fecha = new Date();
-  const fechaChile = new Date(fecha.toLocaleString('en-US', { timeZone: TIMEZONE }));
   
-  const year = fechaChile.getFullYear();
-  const month = String(fechaChile.getMonth() + 1).padStart(2, '0');
-  const day = String(fechaChile.getDate()).padStart(2, '0');
+  // Usar Intl.DateTimeFormat para obtener la fecha correcta en Santiago
+  const formatoChile = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
   
-  return `${year}-${month}-${day}`;
+  // Esto retorna automáticamente en formato YYYY-MM-DD
+  return formatoChile.format(fecha);
 };
 
 /**
@@ -26,10 +30,17 @@ export const obtenerFechaHoyChile = () => {
  */
 export const obtenerPrimerDiaMesChile = () => {
   const fecha = new Date();
-  const fechaChile = new Date(fecha.toLocaleString('en-US', { timeZone: TIMEZONE }));
   
-  const year = fechaChile.getFullYear();
-  const month = String(fechaChile.getMonth() + 1).padStart(2, '0');
+  // Obtener año y mes en zona horaria de Santiago
+  const formatoChile = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit'
+  });
+  
+  const partes = formatoChile.formatToParts(fecha);
+  const year = partes.find(p => p.type === 'year').value;
+  const month = partes.find(p => p.type === 'month').value;
   
   return `${year}-${month}-01`;
 };
@@ -40,10 +51,17 @@ export const obtenerPrimerDiaMesChile = () => {
  */
 export const obtenerUltimoDiaMesChile = () => {
   const fecha = new Date();
-  const fechaChile = new Date(fecha.toLocaleString('en-US', { timeZone: TIMEZONE }));
   
-  const year = fechaChile.getFullYear();
-  const month = fechaChile.getMonth() + 1;
+  // Obtener año y mes en zona horaria de Santiago
+  const formatoChile = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit'
+  });
+  
+  const partes = formatoChile.formatToParts(fecha);
+  const year = parseInt(partes.find(p => p.type === 'year').value);
+  const month = parseInt(partes.find(p => p.type === 'month').value);
   
   // Crear fecha del primer día del siguiente mes y restar un día
   const ultimoDia = new Date(year, month, 0);
@@ -186,13 +204,16 @@ export const convertirTimestampAFechaChile = (timestamp) => {
   
   try {
     const fecha = new Date(timestamp);
-    const fechaChile = new Date(fecha.toLocaleString('en-US', { timeZone: TIMEZONE }));
     
-    const year = fechaChile.getFullYear();
-    const month = String(fechaChile.getMonth() + 1).padStart(2, '0');
-    const day = String(fechaChile.getDate()).padStart(2, '0');
+    // Usar Intl.DateTimeFormat para obtener la fecha correcta en Santiago
+    const formatoChile = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
     
-    return `${year}-${month}-${day}`;
+    return formatoChile.format(fecha);
   } catch (error) {
     console.error('Error al convertir timestamp:', error);
     return null;

@@ -14,7 +14,7 @@ const FormularioProveedores = () => {
   
   // Estado del formulario
   const [proveedor, setProveedor] = useState({
-    fecha: '',
+    fecha: obtenerFechaHoyChile(),
     nombre_proveedor: '',
     monto: '',
     estado: 'Pendiente'
@@ -29,12 +29,30 @@ const FormularioProveedores = () => {
   // Estados para filtros
   const [busquedaProveedor, setBusquedaProveedor] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
 
   // Opciones para el selector de estado
   const opcionesEstado = [
     { value: 'Pendiente', label: 'Pendiente' },
     { value: 'Pagado', label: 'Pagado' }
+  ];
+
+  // Opciones para el selector de meses
+  const opcionesMeses = [
+    { value: '', label: 'Todos los meses' },
+    { value: '01', label: 'Enero' },
+    { value: '02', label: 'Febrero' },
+    { value: '03', label: 'Marzo' },
+    { value: '04', label: 'Abril' },
+    { value: '05', label: 'Mayo' },
+    { value: '06', label: 'Junio' },
+    { value: '07', label: 'Julio' },
+    { value: '08', label: 'Agosto' },
+    { value: '09', label: 'Septiembre' },
+    { value: '10', label: 'Octubre' },
+    { value: '11', label: 'Noviembre' },
+    { value: '12', label: 'Diciembre' }
   ];
 
   // Función para obtener la fecha actual en Chile
@@ -89,6 +107,16 @@ const FormularioProveedores = () => {
       if (filtroFecha) {
         query = query.eq('fecha_cl', filtroFecha);
       }
+      if (filtroMes) {
+        // Filtrar por mes usando el formato YYYY-MM
+        const fechaActual = new Date();
+        const year = fechaActual.getFullYear();
+        const mesFormateado = filtroMes.padStart(2, '0');
+        const fechaInicio = `${year}-${mesFormateado}-01`;
+        const fechaFin = `${year}-${mesFormateado}-31`;
+        
+        query = query.gte('fecha_cl', fechaInicio).lte('fecha_cl', fechaFin);
+      }
       if (filtroEstado) {
         query = query.eq('estado', filtroEstado);
       }
@@ -98,6 +126,7 @@ const FormularioProveedores = () => {
       if (error) throw error;
       
       console.log(`📋 Proveedores cargados para usuario ${usuarioId}:`, data?.length || 0);
+      console.log('🔍 Filtros aplicados:', { busquedaProveedor, filtroFecha, filtroMes, filtroEstado });
       setProveedoresRegistrados(data || []);
     } catch (error) {
       console.error('Error al cargar proveedores:', error);
@@ -111,7 +140,7 @@ const FormularioProveedores = () => {
   // Cargar datos al montar el componente
   useEffect(() => {
     cargarProveedores();
-  }, [busquedaProveedor, filtroFecha, filtroEstado]);
+  }, [busquedaProveedor, filtroFecha, filtroMes, filtroEstado]);
 
   // Manejar cambios en el formulario
   const handleChange = (e) => {
@@ -351,6 +380,7 @@ const FormularioProveedores = () => {
   const limpiarFiltros = () => {
     setBusquedaProveedor('');
     setFiltroFecha('');
+    setFiltroMes('');
     setFiltroEstado('');
   };
 
@@ -484,17 +514,17 @@ const FormularioProveedores = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-            {/* Formulario de registro */}
+          <div className="grid grid-cols-1 gap-6 md:gap-8">
+            {/* Formulario de registro - Horizontal */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 📝 Registrar Proveedor
               </h2>
               
-              <form onSubmit={registrarProveedor} className="space-y-6 md:space-y-8">
+              <form onSubmit={registrarProveedor} className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
                 {/* Nombre del proveedor */}
                 <div>
-                  <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     🏢 Nombre del Proveedor
                   </label>
                   <input
@@ -502,7 +532,7 @@ const FormularioProveedores = () => {
                     name="nombre_proveedor"
                     value={proveedor.nombre_proveedor}
                     onChange={handleChange}
-                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
+                    className="w-full px-3 md:px-4 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                     placeholder="Ingresa el nombre del proveedor"
                     required
                   />
@@ -510,7 +540,7 @@ const FormularioProveedores = () => {
 
                 {/* Monto */}
                 <div>
-                  <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     💰 Monto
                   </label>
                   <input
@@ -520,7 +550,7 @@ const FormularioProveedores = () => {
                     onChange={handleChange}
                     min="0"
                     step="1"
-                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
+                    className="w-full px-3 md:px-4 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                     placeholder="Ingresa el monto"
                     required
                   />
@@ -528,14 +558,14 @@ const FormularioProveedores = () => {
 
                 {/* Estado */}
                 <div>
-                  <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     📊 Estado
                   </label>
                   <select
                     name="estado"
                     value={proveedor.estado}
                     onChange={handleChange}
-                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
+                    className="w-full px-3 md:px-4 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                   >
                     {opcionesEstado.map(opcion => (
                       <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
@@ -546,38 +576,40 @@ const FormularioProveedores = () => {
                 </div>
 
                 {/* Botón de registro */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="group relative w-full px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-xl md:text-2xl">📝</span>
-                    <span>{loading ? '⏳ Registrando...' : 'Registrar Proveedor'}</span>
-                  </div>
-                  <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                </button>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm md:text-base"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-lg md:text-xl">📝</span>
+                      <span>{loading ? '⏳ Registrando...' : 'Registrar'}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </button>
+                </div>
               </form>
             </div>
 
-            {/* Lista de proveedores */}
+            {/* Lista de proveedores - Completa */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-                             {/* Header con título y exportar */}
-               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
-                 <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                   📋 Proveedores Registrados
-                 </h2>
-                 <button
-                   onClick={exportarCSV}
-                   className="group relative px-3 md:px-4 py-1.5 md:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 text-xs md:text-sm font-medium shadow-md hover:shadow-lg transform hover:scale-105"
-                 >
-                   <div className="flex items-center gap-1">
-                     <span className="text-sm md:text-base">📊</span>
-                     <span>Exportar CSV</span>
-                   </div>
-                 </button>
-               </div>
+              {/* Header con título y exportar */}
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  📋 Proveedores Registrados
+                </h2>
+                <button
+                  onClick={exportarCSV}
+                  className="group relative px-3 md:px-4 py-1.5 md:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 text-xs md:text-sm font-medium shadow-md hover:shadow-lg transform hover:scale-105"
+                >
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm md:text-base">📊</span>
+                    <span>Exportar CSV</span>
+                  </div>
+                </button>
+              </div>
 
               {/* Sección de filtros */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
@@ -585,7 +617,7 @@ const FormularioProveedores = () => {
                   🔍 Filtros y Búsqueda
                 </h3>
                 
-                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
                       🔍 Buscar Proveedor
@@ -609,6 +641,23 @@ const FormularioProveedores = () => {
                       onChange={(e) => setFiltroFecha(e.target.value)}
                       className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                      📆 Filtrar por Mes
+                    </label>
+                    <select
+                      value={filtroMes}
+                      onChange={(e) => setFiltroMes(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    >
+                      {opcionesMeses.map(opcion => (
+                        <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
+                          {opcion.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   
                   <div>
@@ -641,7 +690,7 @@ const FormularioProveedores = () => {
               </div>
 
               {/* Lista de proveedores */}
-              <div className="max-h-80 md:max-h-96 overflow-y-auto">
+              <div className="max-h-96 md:max-h-[500px] overflow-y-auto">
                 {loadingDatos ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-white text-sm md:text-base">⏳ Cargando proveedores...</div>
@@ -654,91 +703,124 @@ const FormularioProveedores = () => {
                   <div className="text-center py-6 md:py-8">
                     <div className="text-gray-300 text-sm md:text-base">📭 No hay proveedores registrados</div>
                   </div>
-                ) : (
-                  <div className="space-y-2 md:space-y-3">
-                    {proveedoresRegistrados.map((prov) => (
-                      <div
-                        key={prov.id}
-                        className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4"
-                      >
-                        <div className="flex flex-col gap-3">
-                          {/* Información principal del proveedor */}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-white text-base md:text-lg mb-1">
-                              🏢 {prov.nombre_proveedor}
-                            </div>
-                            <div className="text-sm md:text-base text-gray-300 mb-1">
-                              📅 Registro: {formatearFechaCortaChile(prov.fecha_cl || prov.fecha)}
-                            </div>
-                            {prov.fecha_pago && (
-                              <div className="text-sm md:text-base text-green-400 mb-1">
-                                💳 Pago: {formatearFechaMostrar(prov.fecha_pago)}
-                              </div>
-                            )}
-                            <div className="text-base md:text-lg text-green-400 font-bold">
-                              💰 ${formatearNumero(prov.monto)}
-                            </div>
+                                  ) : (
+                    <div className="overflow-x-auto">
+                      {/* Leyenda de botones */}
+                      <div className="flex items-center justify-center gap-6 mb-4 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
+                            <span className="text-xs">⏳</span>
                           </div>
-                          
-                          {/* Controles compactos */}
-                          <div className="flex items-center justify-between gap-2">
-                            {/* Estado actual - más pequeño */}
-                            <div className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-xs md:text-sm font-medium flex-shrink-0 shadow-sm ${
-                              prov.estado === 'Pagado'
-                                ? 'bg-gradient-to-r from-green-400 to-green-500 text-white border border-green-300'
-                                : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border border-yellow-300'
-                            }`}>
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm md:text-base">
-                                  {prov.estado === 'Pagado' ? '✅' : '⏳'}
-                                </span>
-                                <span>{prov.estado === 'Pagado' ? 'Pagado' : 'Pendiente'}</span>
-                              </div>
-                            </div>
-                            
-                            {/* Botones de acción - más pequeños */}
-                            <div className="flex items-center gap-1.5">
-                              {/* Botón para cambiar estado */}
-                              <button
-                                onClick={() => cambiarEstado(prov.id, prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente')}
-                                disabled={loading}
-                                className={`${
-                                  prov.estado === 'Pendiente' 
-                                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg animate-pulse' 
-                                    : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-md hover:shadow-lg'
-                                } disabled:from-gray-600 disabled:to-gray-700 disabled:text-gray-400 px-2.5 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-semibold transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border border-white/20 hover:border-white/40 min-w-[60px] relative overflow-hidden`}
-                                title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
-                              >
-                                {prov.estado === 'Pendiente' && (
-                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
-                                )}
-                                <div className="flex items-center justify-center gap-1 relative z-10">
-                                  <span className="text-sm md:text-base">
-                                    {prov.estado === 'Pendiente' ? '✅' : '⏳'}
-                                  </span>
-                                  <span className="font-medium">
-                                    {prov.estado === 'Pendiente' ? 'PAGAR' : 'PENDIENTE'}
-                                  </span>
-                                </div>
-                              </button>
-                              
-                              {/* Botón eliminar */}
-                              <button
-                                onClick={() => eliminarProveedor(prov.id)}
-                                disabled={loading}
-                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2.5 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border border-white/20 hover:border-white/40"
-                                title="Eliminar registro"
-                              >
-                                <div className="flex items-center gap-1">
-                                  <span className="text-sm md:text-base">🗑️</span>
-                                  <span className="hidden sm:inline font-medium">ELIMINAR</span>
-                                </div>
-                              </button>
-                            </div>
+                          <span className="text-white text-sm font-medium">Pendiente</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                            <span className="text-xs">✅</span>
                           </div>
+                          <span className="text-white text-sm font-medium">Pagado</span>
                         </div>
                       </div>
-                    ))}
+
+                      {/* Encabezados de la tabla */}
+                     <div className="grid grid-cols-6 gap-4 p-4 md:p-5 bg-gradient-to-r from-green-600/30 to-green-700/30 backdrop-blur-md border-2 border-green-400/40 rounded-xl mb-4 font-bold text-white text-base md:text-lg shadow-lg">
+                       <div className="flex items-center justify-center">
+                         <span className="hidden sm:inline">Fecha</span>
+                       </div>
+                       <div className="flex items-center justify-center">
+                         <span className="hidden sm:inline">Proveedor</span>
+                       </div>
+                       <div className="flex items-center justify-center">
+                         <span className="hidden sm:inline">Monto</span>
+                       </div>
+                       <div className="flex items-center justify-center w-20">
+                         <span className="hidden sm:inline">Estado</span>
+                       </div>
+                       <div className="flex items-center justify-center w-24">
+                         <span className="hidden sm:inline">Fecha Pago</span>
+                       </div>
+                       <div className="flex items-center justify-center w-32">
+                         <span className="hidden sm:inline">Acciones</span>
+                       </div>
+                     </div>
+
+                                         {/* Filas de datos */}
+                     <div className="space-y-3">
+                       {proveedoresRegistrados.map((prov) => (
+                         <div
+                           key={prov.id}
+                           className="grid grid-cols-6 gap-4 p-4 md:p-5 bg-white/15 backdrop-blur-md border-2 border-white/25 rounded-xl items-center hover:bg-white/20 hover:border-white/40 transition-all duration-200 shadow-md hover:shadow-lg"
+                         >
+                                                     {/* Fecha */}
+                           <div className="text-sm md:text-base text-white font-medium text-center">
+                             {formatearFechaCortaChile(prov.fecha_cl || prov.fecha)}
+                           </div>
+
+                           {/* Proveedor */}
+                           <div className="font-bold text-white text-base md:text-lg text-center">
+                             {prov.nombre_proveedor}
+                           </div>
+
+                           {/* Monto */}
+                           <div className="text-green-300 font-bold text-lg md:text-xl text-center">
+                             ${formatearNumero(prov.monto)}
+                           </div>
+
+                                                     {/* Estado - Columna más delgada */}
+                           <div className={`px-2 py-1.5 rounded-lg text-sm font-bold flex-shrink-0 shadow-lg w-20 ${
+                             prov.estado === 'Pagado'
+                               ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-2 border-green-300 shadow-green-500/50'
+                               : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-2 border-yellow-300 shadow-yellow-500/50'
+                           }`}>
+                             <div className="flex items-center justify-center gap-1">
+                               <span className="text-sm">
+                                 {prov.estado === 'Pagado' ? '✅' : '⏳'}
+                               </span>
+                             </div>
+                           </div>
+
+                                                     {/* Fecha de Pago - Columna más delgada */}
+                           <div className="text-sm text-white font-medium w-24 text-center">
+                             {prov.fecha_pago ? formatearFechaMostrar(prov.fecha_pago) : '-'}
+                           </div>
+
+                          {/* Acciones - Columna más ancha */}
+                          <div className="flex items-center gap-1.5 justify-center w-32">
+                                                         {/* Botón para cambiar estado */}
+                             <button
+                               onClick={() => cambiarEstado(prov.id, prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente')}
+                               disabled={loading}
+                               className={`${
+                                 prov.estado === 'Pendiente' 
+                                   ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl animate-pulse' 
+                                   : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl'
+                               } disabled:from-gray-600 disabled:to-gray-700 disabled:text-gray-400 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px] relative overflow-hidden`}
+                               title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
+                             >
+                              {prov.estado === 'Pendiente' && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
+                              )}
+                              <div className="flex items-center justify-center gap-0.5 relative z-10">
+                                <span className="text-xs">
+                                  {prov.estado === 'Pendiente' ? '✅' : '⏳'}
+                                </span>
+                              </div>
+                            </button>
+                            
+                                                         {/* Botón eliminar */}
+                             <button
+                               onClick={() => eliminarProveedor(prov.id)}
+                               disabled={loading}
+                               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px]"
+                               title="Eliminar registro"
+                             >
+                              <div className="flex items-center gap-0.5 justify-center">
+                                <span className="text-xs">🗑️</span>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

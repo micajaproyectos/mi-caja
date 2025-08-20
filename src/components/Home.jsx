@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import logo from '../assets/logo.png';
 import Footer from './Footer';
 import { authService } from '../lib/authService.js';
@@ -21,7 +21,8 @@ export default function Home() {
     loadUserData();
   }, []);
 
-  const menuItems = [
+  // Memoizar menuItems para evitar recreaciones innecesarias
+  const menuItems = useMemo(() => [
     {
       id: 'ventas',
       icon: '🤝',
@@ -57,8 +58,20 @@ export default function Home() {
       icon: '✅',
       label: 'Stock',
       route: '/stock'
+    },
+    {
+      id: 'inventario-ia',
+      icon: '🤖',
+      label: 'Inventario IA',
+      route: '/inventario-ia'
+    },
+    {
+      id: 'clientes',
+      icon: '👥',
+      label: 'Clientes',
+      route: '/clientes'
     }
-  ];
+  ], []);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -93,7 +106,11 @@ export default function Home() {
           {/* Título genérico con glassmorphism */}
           <div className="text-white">
             <h1 className="text-xl font-bold text-gray-100 drop-shadow-sm">Bienvenido a Mi Caja</h1>
-            <p className="text-sm text-gray-300 italic">Hola, {nombreUsuario} - Tu negocio en un solo lugar</p>
+            {nombreUsuario ? (
+              <p className="text-sm text-gray-300 italic">Hola, {nombreUsuario} - Tu negocio en un solo lugar</p>
+            ) : (
+              <p className="text-sm text-gray-300 italic">Cargando...</p>
+            )}
           </div>
         </div>
       </div>
@@ -113,7 +130,7 @@ export default function Home() {
       {/* Panel inferior con iconos - Neumorfismo */}
       <div className="relative z-10 py-12" style={{ backgroundColor: '#1f4a1f' }}>
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-6">
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -144,8 +161,8 @@ export default function Home() {
         </div>
       </div>
 
-             {/* Footer */}
-       <Footer />
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }  

@@ -693,12 +693,12 @@ const FormularioGastos = () => {
                   <table className="w-full text-xs md:text-sm">
                     <thead>
                       <tr className="bg-white/10 backdrop-blur-sm">
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">📅 Fecha</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">🏷️ Tipo</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">📝 Detalle</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">💵 Monto</th>
-                                                 <th className="text-white font-semibold p-2 md:p-4 text-left">💳 Forma Pago</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">🗑️ Acciones</th>
+                        <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
+                        <th className="text-white font-semibold p-2 md:p-4 text-left">Tipo</th>
+                        <th className="text-white font-semibold p-2 md:p-4 text-left">Detalle</th>
+                        <th className="text-white font-semibold p-2 md:p-4 text-left">Monto</th>
+                        <th className="text-white font-semibold p-2 md:p-4 text-left">Forma Pago</th>
+                        <th className="text-white font-semibold p-2 md:p-4 text-left">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
