@@ -470,10 +470,9 @@ const FormularioProveedores = () => {
             </h2>
             
             {/* Estadísticas reorganizadas: Cantidades a la izquierda, Montos a la derecha */}
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               {/* COLUMNA IZQUIERDA - SOLO CANTIDADES */}
-              <div className="lg:col-span-3">
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
+              <div className="space-y-3 md:space-y-4">
                   {/* Total Registros */}
                   <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center">
                     <div className="text-2xl md:text-3xl font-bold text-white mb-1">
@@ -497,12 +496,10 @@ const FormularioProveedores = () => {
                     </div>
                     <div className="text-green-300 text-xs md:text-sm">Pagados</div>
                   </div>
-                </div>
               </div>
               
               {/* COLUMNA DERECHA - SOLO MONTOS */}
-              <div className="lg:col-span-3">
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
+              <div className="space-y-3 md:space-y-4">
                   {/* Monto Total */}
                   <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center">
                     <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
@@ -526,7 +523,6 @@ const FormularioProveedores = () => {
                     </div>
                     <div className="text-green-300 text-xs md:text-sm">Pagado</div>
                   </div>
-                </div>
               </div>
             </div>
           </div>
