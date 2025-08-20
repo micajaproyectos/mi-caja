@@ -1342,124 +1342,60 @@ export default function RegistroVenta() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  {/* Vista de cards para móviles */}
-                  <div className="block lg:hidden">
-                    <div className="max-h-96 overflow-y-auto space-y-4">
-                      {obtenerVentasAMostrar().map((venta, index) => (
-                        <div key={index} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-all duration-200">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="text-white font-semibold text-sm">
-                              📅 {formatearFecha(venta.fecha_cl || venta.fecha)}
-                            </div>
-                            <div className="text-xs bg-green-600/20 px-2 py-1 rounded-full">
-                              {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div>
-                              <div className="text-gray-400 text-xs mb-1">Producto</div>
-                              <div className="text-white text-sm font-medium">{venta.producto || 'Sin producto'}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-400 text-xs mb-1">Cantidad</div>
-                              <div className="text-white text-sm">
-                                {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-gray-400 text-xs mb-1">Precio Unit.</div>
-                              <div className="text-white text-sm">
-                                ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-gray-400 text-xs mb-1">Total</div>
-                              <div className="text-green-300 text-sm font-bold">
-                                ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {venta.total_final && (
-                            <div className="mb-3 p-2 bg-blue-600/10 rounded-lg">
-                              <div className="text-gray-400 text-xs mb-1">Total Final</div>
-                              <div className="text-blue-300 text-lg font-bold">
-                                ${parseFloat(venta.total_final).toLocaleString()}
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => eliminarVenta(venta.id)}
-                              disabled={loading}
-                              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                              title="Eliminar venta"
-                            >
-                              🗑️ Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Vista de tabla para pantallas grandes */}
-                  <div className="hidden lg:block overflow-x-auto">
-                    <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
-                      <table className="w-full text-left">
-                        <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
-                          <tr className="border-b border-white/20">
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Fecha</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Producto</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Cantidad</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Precio</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Total</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Total Final</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Pago</th>
-                            <th className="text-gray-200 font-semibold p-3 text-sm">Acciones</th>
+                  {/* Tabla única para todos los dispositivos */}
+                  <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
+                    <table className="w-full text-left">
+                      <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                        <tr className="border-b border-white/20">
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Cantidad</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Precio</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {obtenerVentasAMostrar().map((venta, index) => (
+                          <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              {formatearFecha(venta.fecha_cl || venta.fecha)}
+                            </td>
+                            <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon}
+                            </td>
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
+                            </td>
+                            <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
+                              ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
+                            </td>
+                            <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
+                              {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
+                            </td>
+                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                              <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
+                                {obtenerInfoTipoPago(venta.tipo_pago).icon}
+                              </span>
+                            </td>
+                            <td className="p-2 md:p-3">
+                              <button
+                                onClick={() => eliminarVenta(venta.id)}
+                                disabled={loading}
+                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                title="Eliminar venta"
+                              >
+                                🗑️
+                              </button>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {obtenerVentasAMostrar().map((venta, index) => (
-                            <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                              <td className="text-gray-200 p-3 text-sm">
-                                {formatearFecha(venta.fecha_cl || venta.fecha)}
-                              </td>
-                              <td className="text-gray-200 p-3 font-medium text-sm truncate max-w-32">{venta.producto || 'Sin producto'}</td>
-                              <td className="text-gray-200 p-3 text-sm">
-                                {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon} {obtenerInfoUnidad(venta.unidad).label}
-                              </td>
-                              <td className="text-gray-200 p-3 text-sm">
-                                ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
-                              </td>
-                              <td className="text-green-300 p-3 font-bold text-sm">
-                                ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
-                              </td>
-                              <td className="text-blue-300 p-3 font-bold text-sm">
-                                {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
-                              </td>
-                              <td className="text-gray-200 p-3 text-sm">
-                                <span className="px-2 py-1 bg-green-600/20 rounded-full text-xs">
-                                  {obtenerInfoTipoPago(venta.tipo_pago).icon} {obtenerInfoTipoPago(venta.tipo_pago).label}
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                <button
-                                  onClick={() => eliminarVenta(venta.id)}
-                                  disabled={loading}
-                                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                                  title="Eliminar venta"
-                                >
-                                  🗑️ Eliminar
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
+
                   </div>
                   
                   {/* Controles para cargar más ventas */}

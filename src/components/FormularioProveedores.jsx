@@ -469,47 +469,64 @@ const FormularioProveedores = () => {
               📊 Estadísticas Generales
             </h2>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center">
-                <div className="text-2xl md:text-3xl font-bold text-white mb-1">
-                  {estadisticas.total}
+            {/* Estadísticas reorganizadas: Cantidades a la izquierda, Montos a la derecha */}
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
+              {/* COLUMNA IZQUIERDA - SOLO CANTIDADES */}
+              <div className="lg:col-span-3">
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                  {/* Total Registros */}
+                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center">
+                    <div className="text-2xl md:text-3xl font-bold text-white mb-1">
+                      {estadisticas.total}
+                    </div>
+                    <div className="text-gray-300 text-xs md:text-sm">Total</div>
+                  </div>
+                  
+                  {/* Pendientes */}
+                  <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center">
+                    <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-1">
+                      {estadisticas.pendientes}
+                    </div>
+                    <div className="text-yellow-300 text-xs md:text-sm">Pendientes</div>
+                  </div>
+                  
+                  {/* Pagados */}
+                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center">
+                    <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
+                      {estadisticas.pagados}
+                    </div>
+                    <div className="text-green-300 text-xs md:text-sm">Pagados</div>
+                  </div>
                 </div>
-                <div className="text-gray-300 text-xs md:text-sm">Total Registros</div>
               </div>
               
-              <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center">
-                <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-1">
-                  {estadisticas.pendientes}
+              {/* COLUMNA DERECHA - SOLO MONTOS */}
+              <div className="lg:col-span-3">
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                  {/* Monto Total */}
+                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center">
+                    <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
+                      ${formatearNumero(estadisticas.montoTotal)}
+                    </div>
+                    <div className="text-blue-300 text-xs md:text-sm">Total</div>
+                  </div>
+                  
+                  {/* Por Pagar */}
+                  <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center">
+                    <div className="text-lg md:text-xl font-bold text-red-400 mb-1">
+                      ${formatearNumero(estadisticas.montoPendiente)}
+                    </div>
+                    <div className="text-red-300 text-xs md:text-sm">Por Pagar</div>
+                  </div>
+                  
+                  {/* Pagado */}
+                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center">
+                    <div className="text-lg md:text-xl font-bold text-green-400 mb-1">
+                      ${formatearNumero(estadisticas.montoPagado)}
+                    </div>
+                    <div className="text-green-300 text-xs md:text-sm">Pagado</div>
+                  </div>
                 </div>
-                <div className="text-yellow-300 text-xs md:text-sm">Pendientes</div>
-              </div>
-              
-              <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center">
-                <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
-                  {estadisticas.pagados}
-                </div>
-                <div className="text-green-300 text-xs md:text-sm">Pagados</div>
-              </div>
-              
-              <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center">
-                <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
-                  ${formatearNumero(estadisticas.montoTotal)}
-                </div>
-                <div className="text-blue-300 text-xs">Monto Total</div>
-              </div>
-              
-              <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center">
-                <div className="text-lg md:text-xl font-bold text-red-400 mb-1">
-                  ${formatearNumero(estadisticas.montoPendiente)}
-                </div>
-                <div className="text-red-300 text-xs">Por Pagar</div>
-              </div>
-              
-              <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center">
-                <div className="text-lg md:text-xl font-bold text-green-400 mb-1">
-                  ${formatearNumero(estadisticas.montoPagado)}
-                </div>
-                <div className="text-green-300 text-xs">Pagado</div>
               </div>
             </div>
           </div>
@@ -721,106 +738,99 @@ const FormularioProveedores = () => {
                         </div>
                       </div>
 
-                      {/* Encabezados de la tabla */}
-                     <div className="grid grid-cols-6 gap-4 p-4 md:p-5 bg-gradient-to-r from-green-600/30 to-green-700/30 backdrop-blur-md border-2 border-green-400/40 rounded-xl mb-4 font-bold text-white text-base md:text-lg shadow-lg">
-                       <div className="flex items-center justify-center">
-                         <span className="hidden sm:inline">Fecha</span>
-                       </div>
-                       <div className="flex items-center justify-center">
-                         <span className="hidden sm:inline">Proveedor</span>
-                       </div>
-                       <div className="flex items-center justify-center">
-                         <span className="hidden sm:inline">Monto</span>
-                       </div>
-                       <div className="flex items-center justify-center w-20">
-                         <span className="hidden sm:inline">Estado</span>
-                       </div>
-                       <div className="flex items-center justify-center w-24">
-                         <span className="hidden sm:inline">Fecha Pago</span>
-                       </div>
-                       <div className="flex items-center justify-center w-32">
-                         <span className="hidden sm:inline">Acciones</span>
-                       </div>
-                     </div>
+                      {/* Tabla real con estructura HTML table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead className="sticky top-0 bg-gradient-to-r from-green-600/30 to-green-700/30 backdrop-blur-md border-2 border-green-400/40 rounded-xl z-10">
+                            <tr>
+                              <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center">Fecha</th>
+                              <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center">Proveedor</th>
+                              <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center">Monto</th>
+                              <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center w-20">Estado</th>
+                              <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center w-24">Fecha Pago</th>
+                              <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center w-32">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {proveedoresRegistrados.map((prov) => (
+                              <tr key={prov.id} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
+                                {/* Fecha */}
+                                <td className="text-white p-2 md:p-3 text-xs md:text-sm font-medium text-center">
+                                  {formatearFechaCortaChile(prov.fecha_cl || prov.fecha)}
+                                </td>
 
-                                         {/* Filas de datos */}
-                     <div className="space-y-3">
-                       {proveedoresRegistrados.map((prov) => (
-                         <div
-                           key={prov.id}
-                           className="grid grid-cols-6 gap-4 p-4 md:p-5 bg-white/15 backdrop-blur-md border-2 border-white/25 rounded-xl items-center hover:bg-white/20 hover:border-white/40 transition-all duration-200 shadow-md hover:shadow-lg"
-                         >
-                                                     {/* Fecha */}
-                           <div className="text-sm md:text-base text-white font-medium text-center">
-                             {formatearFechaCortaChile(prov.fecha_cl || prov.fecha)}
-                           </div>
+                                {/* Proveedor */}
+                                <td className="text-white p-2 md:p-3 text-xs md:text-base font-bold text-center">
+                                  {prov.nombre_proveedor}
+                                </td>
 
-                           {/* Proveedor */}
-                           <div className="font-bold text-white text-base md:text-lg text-center">
-                             {prov.nombre_proveedor}
-                           </div>
+                                {/* Monto */}
+                                <td className="text-green-300 p-2 md:p-3 text-sm md:text-lg font-bold text-center">
+                                  ${formatearNumero(prov.monto)}
+                                </td>
 
-                           {/* Monto */}
-                           <div className="text-green-300 font-bold text-lg md:text-xl text-center">
-                             ${formatearNumero(prov.monto)}
-                           </div>
+                                {/* Estado */}
+                                <td className="p-2 md:p-3 text-center">
+                                  <div className={`px-2 py-1.5 rounded-lg text-sm font-bold flex-shrink-0 shadow-lg w-20 mx-auto ${
+                                    prov.estado === 'Pagado'
+                                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-2 border-green-300 shadow-green-500/50'
+                                      : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-2 border-yellow-300 shadow-yellow-500/50'
+                                  }`}>
+                                    <div className="flex items-center justify-center">
+                                      <span className="text-sm">
+                                        {prov.estado === 'Pagado' ? '✅' : '⏳'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
 
-                                                     {/* Estado - Columna más delgada */}
-                           <div className={`px-2 py-1.5 rounded-lg text-sm font-bold flex-shrink-0 shadow-lg w-20 ${
-                             prov.estado === 'Pagado'
-                               ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-2 border-green-300 shadow-green-500/50'
-                               : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-2 border-yellow-300 shadow-yellow-500/50'
-                           }`}>
-                             <div className="flex items-center justify-center gap-1">
-                               <span className="text-sm">
-                                 {prov.estado === 'Pagado' ? '✅' : '⏳'}
-                               </span>
-                             </div>
-                           </div>
+                                {/* Fecha de Pago */}
+                                <td className="text-white p-2 md:p-3 text-xs md:text-sm font-medium text-center">
+                                  {prov.fecha_pago ? formatearFechaMostrar(prov.fecha_pago) : '-'}
+                                </td>
 
-                                                     {/* Fecha de Pago - Columna más delgada */}
-                           <div className="text-sm text-white font-medium w-24 text-center">
-                             {prov.fecha_pago ? formatearFechaMostrar(prov.fecha_pago) : '-'}
-                           </div>
-
-                          {/* Acciones - Columna más ancha */}
-                          <div className="flex items-center gap-1.5 justify-center w-32">
-                                                         {/* Botón para cambiar estado */}
-                             <button
-                               onClick={() => cambiarEstado(prov.id, prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente')}
-                               disabled={loading}
-                               className={`${
-                                 prov.estado === 'Pendiente' 
-                                   ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl animate-pulse' 
-                                   : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl'
-                               } disabled:from-gray-600 disabled:to-gray-700 disabled:text-gray-400 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px] relative overflow-hidden`}
-                               title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
-                             >
-                              {prov.estado === 'Pendiente' && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
-                              )}
-                              <div className="flex items-center justify-center gap-0.5 relative z-10">
-                                <span className="text-xs">
-                                  {prov.estado === 'Pendiente' ? '✅' : '⏳'}
-                                </span>
-                              </div>
-                            </button>
-                            
-                                                         {/* Botón eliminar */}
-                             <button
-                               onClick={() => eliminarProveedor(prov.id)}
-                               disabled={loading}
-                               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px]"
-                               title="Eliminar registro"
-                             >
-                              <div className="flex items-center gap-0.5 justify-center">
-                                <span className="text-xs">🗑️</span>
-                              </div>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                                {/* Acciones */}
+                                <td className="p-2 md:p-3 text-center">
+                                  <div className="flex items-center gap-1.5 justify-center">
+                                    {/* Botón para cambiar estado */}
+                                    <button
+                                      onClick={() => cambiarEstado(prov.id, prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente')}
+                                      disabled={loading}
+                                      className={`${
+                                        prov.estado === 'Pendiente' 
+                                          ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl animate-pulse' 
+                                          : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl'
+                                      } disabled:from-gray-600 disabled:to-gray-700 disabled:text-gray-400 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px] relative overflow-hidden`}
+                                      title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
+                                    >
+                                     {prov.estado === 'Pendiente' && (
+                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
+                                     )}
+                                     <div className="flex items-center justify-center gap-0.5 relative z-10">
+                                       <span className="text-xs">
+                                         {prov.estado === 'Pendiente' ? '✅' : '⏳'}
+                                       </span>
+                                     </div>
+                                   </button>
+                                   
+                                    {/* Botón eliminar */}
+                                    <button
+                                      onClick={() => eliminarProveedor(prov.id)}
+                                      disabled={loading}
+                                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px]"
+                                      title="Eliminar registro"
+                                    >
+                                     <div className="flex items-center gap-0.5 justify-center">
+                                       <span className="text-xs">🗑️</span>
+                                     </div>
+                                   </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                   </div>
                 )}
               </div>
