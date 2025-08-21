@@ -17,7 +17,7 @@ export default function Clientes() {
   // Estados para el formulario de pedido
   const [pedidoActual, setPedidoActual] = useState({
     fecha_cl: obtenerFechaHoyChile(),
-    nombre_cliente: ''
+    nombre_empresa: ''
   });
   
   // Estados para productos individuales
@@ -41,10 +41,11 @@ export default function Clientes() {
     producto: ''
   });
   
-  // Estados para resumen de clientes
-  const [resumenClientes, setResumenClientes] = useState([]);
-  const [estadosPago, setEstadosPago] = useState({}); // {nombre_cliente: 'pagado'/'pendiente'}
-  const [fechasPago, setFechasPago] = useState({}); // {nombre_cliente: 'YYYY-MM-DD'}
+     // Estados para resumen de clientes
+   const [resumenClientes, setResumenClientes] = useState([]);
+   const [estadosPago, setEstadosPago] = useState({}); // {nombre_cliente: 'pagado'/'pendiente'}
+   const [fechasPago, setFechasPago] = useState({}); // {nombre_cliente: 'YYYY-MM-DD'}
+   const [montosPago, setMontosPago] = useState({}); // {nombre_cliente: monto_total}
   
   // Estados para filtros del resumen
   const [filtrosResumen, setFiltrosResumen] = useState({
@@ -53,31 +54,35 @@ export default function Clientes() {
     ano: ''
   });
   
-  // Función para cargar clientes únicos del usuario autenticado
+  // Función para cargar empresas únicas del usuario autenticado
+  // ✅ Esta función carga desde la base de datos, por lo que refleja el estado real
+  // 📝 IMPORTANTE: nombre_empresa es solo texto para el frontend, cliente_id es para el backend
   const cargarClientesUnicos = async () => {
     try {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Obtener clientes únicos de la tabla clientes basados en nombre_cliente
+      // Obtener empresas únicas de la tabla clientes basados en nombre_empresa
+      // El nombre_empresa es solo texto para identificar a la empresa en el frontend
+      // El cliente_id y usuario_id son campos del backend para las políticas RLS
       const { data, error } = await supabase
         .from('clientes')
-        .select('nombre_cliente')
+        .select('nombre_empresa')
         .eq('usuario_id', usuarioId) // ✅ FILTRO CRÍTICO POR USUARIO
-        .not('nombre_cliente', 'is', null);
+        .not('nombre_empresa', 'is', null);
 
       if (error) {
         console.error('Error al cargar clientes únicos:', error);
         return;
       }
 
-      // Obtener nombres únicos de clientes (sin duplicados)
-      const nombresUnicos = [...new Set(data?.map(item => item.nombre_cliente))];
+      // Obtener nombres únicos de empresas (sin duplicados)
+      const nombresUnicos = [...new Set(data?.map(item => item.nombre_empresa))];
       
       // Formatear para la lista local - SIN ordenamiento alfabético
       const clientesUnicosFormateados = nombresUnicos
         .map((nombre, index) => ({
-          id: `cliente_${index}_${Date.now()}`, // ID temporal único para la UI
+          id: `empresa_${index}_${Date.now()}`, // ID temporal único para la UI
           nombre: nombre
         }));
 
@@ -87,57 +92,63 @@ export default function Clientes() {
     }
   };
 
-  // Función para agregar un nuevo cliente único
-  const agregarClienteUnico = async (nombreCliente) => {
+  // Función para agregar una nueva empresa única
+  const agregarClienteUnico = async (nombreEmpresa) => {
     try {
-      // Verificar si el cliente ya existe
-      const clienteExistente = clientesUnicos.find(
-        cliente => cliente.nombre.toLowerCase() === nombreCliente.toLowerCase()
+      // Verificar si la empresa ya existe
+      const empresaExistente = clientesUnicos.find(
+        empresa => empresa.nombre.toLowerCase() === nombreEmpresa.toLowerCase()
       );
       
-      if (clienteExistente) {
-        return true; // Cliente ya existe, no necesita crearse
+      if (empresaExistente) {
+        return true; // Empresa ya existe, no necesita crearse
       }
 
-      // Agregar el cliente a la lista local (solo para UI)
-      const nuevoCliente = {
-        id: `cliente_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // ID temporal único para la UI
-        nombre: nombreCliente // Solo el nombre del cliente externo
+      // Agregar la empresa a la lista local (solo para UI)
+      const nuevaEmpresa = {
+        id: `empresa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // ID temporal único para la UI
+        nombre: nombreEmpresa // Solo el nombre de la empresa externa
       };
       
-      setClientesUnicos(prev => [...prev, nuevoCliente]); // SIN ordenamiento alfabético
+      setClientesUnicos(prev => [...prev, nuevaEmpresa]); // SIN ordenamiento alfabético
       
       return true;
     } catch (error) {
-      console.error('Error inesperado al agregar cliente único:', error);
+      console.error('Error inesperado al agregar empresa única:', error);
       return false;
     }
   };
 
-  // Función para eliminar un cliente único
-  const eliminarClienteUnico = async (clienteId) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este cliente del dropdown? Los registros de pedidos existentes NO se eliminarán.')) {
+  // Función para eliminar una empresa única
+  // ⚠️ IMPORTANTE: Esta función SOLO elimina la empresa del dropdown local
+  // NO interfiere con la tabla usuarios de Supabase
+  // NO elimina registros de pedidos existentes
+  // NO elimina registros de la tabla clientes
+  const eliminarClienteUnico = async (empresaId) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta empresa del dropdown? Los registros de pedidos existentes NO se eliminarán.')) {
       return;
     }
 
     try {
-      // Encontrar el cliente en la lista local
-      const clienteAEliminar = clientesUnicos.find(c => c.id === clienteId);
-      if (!clienteAEliminar) return;
+      // Encontrar la empresa en la lista local
+      const empresaAEliminar = clientesUnicos.find(e => e.id === empresaId);
+      if (!empresaAEliminar) return;
 
       // Solo eliminar el nombre del dropdown (lista local)
       // NO eliminar los registros de pedidos existentes
-      setClientesUnicos(prev => prev.filter(cliente => cliente.id !== clienteId));
+      // NO tocar la tabla usuarios de Supabase
+      // NO eliminar registros de la tabla clientes
+      setClientesUnicos(prev => prev.filter(empresa => empresa.id !== empresaId));
       
-      // Si el cliente eliminado estaba seleccionado, limpiar la selección
-      if (pedidoActual.nombre_cliente === clienteAEliminar.nombre) {
-        setPedidoActual(prev => ({ ...prev, nombre_cliente: '' }));
+      // Si la empresa eliminada estaba seleccionada, limpiar la selección
+      if (pedidoActual.nombre_empresa === empresaAEliminar.nombre) {
+        setPedidoActual(prev => ({ ...prev, nombre_empresa: '' }));
       }
       
-      alert('✅ Cliente eliminado del dropdown correctamente. Los registros de pedidos se mantienen intactos.');
+      alert('✅ Empresa eliminada del dropdown correctamente. Los registros de pedidos se mantienen intactos.');
     } catch (error) {
-      console.error('Error inesperado al eliminar cliente del dropdown:', error);
-      alert('❌ Error inesperado al eliminar el cliente del dropdown');
+      console.error('Error inesperado al eliminar empresa del dropdown:', error);
+      alert('❌ Error inesperado al eliminar la empresa del dropdown');
     }
   };
 
@@ -164,9 +175,9 @@ export default function Clientes() {
       const fechaHoy = obtenerFechaHoyChile();
       query = query.eq('fecha_cl', fechaHoy);
       
-      // Aplicar solo filtro de cliente si está activo
+      // Aplicar solo filtro de empresa si está activo
       if (filtros.producto && filtros.producto.trim() !== '') {
-        query = query.ilike('nombre_cliente', `%${filtros.producto.trim()}%`);
+        query = query.ilike('nombre_empresa', `%${filtros.producto.trim()}%`);
       }
 
       let { data, error } = await query.order('fecha_cl', { ascending: false });
@@ -183,9 +194,9 @@ export default function Clientes() {
         const fechaHoy = obtenerFechaHoyChile();
         fallbackQuery = fallbackQuery.eq('fecha', fechaHoy);
         
-        // Aplicar solo filtro de cliente si está activo
+        // Aplicar solo filtro de empresa si está activo
         if (filtros.producto && filtros.producto.trim() !== '') {
-          fallbackQuery = fallbackQuery.ilike('nombre_cliente', `%${filtros.producto.trim()}%`);
+          fallbackQuery = fallbackQuery.ilike('nombre_empresa', `%${filtros.producto.trim()}%`);
         }
 
         const fallbackResult = await fallbackQuery.order('fecha', { ascending: false });
@@ -240,7 +251,7 @@ export default function Clientes() {
              // Construir consulta con filtros aplicados
        let query = supabase
          .from('clientes')
-         .select('nombre_cliente, total_final, fecha_cl')
+         .select('nombre_empresa, total_final, fecha_cl')
          .eq('usuario_id', usuarioId)
          .not('total_final', 'is', null); // Solo considerar registros con total_final
 
@@ -265,7 +276,7 @@ export default function Clientes() {
       } else {
         // Aplicar filtros del resumen si están activos
         if (filtrosResumen.nombre && filtrosResumen.nombre.trim()) {
-          query = query.ilike('nombre_cliente', `%${filtrosResumen.nombre.trim()}%`);
+          query = query.ilike('nombre_empresa', `%${filtrosResumen.nombre.trim()}%`);
         }
 
         // Aplicar filtros de fecha (mes y/o año)
@@ -300,16 +311,16 @@ export default function Clientes() {
         return;
       }
 
-             // Agrupar por nombre de cliente y sumar totales
+             // Agrupar por nombre de empresa y sumar totales
        const clientesMap = new Map();
        
        data?.forEach(registro => {
-         const nombre = registro.nombre_cliente;
+         const nombre = registro.nombre_empresa;
          const total = Number(registro.total_final) || 0;
          
          if (clientesMap.has(nombre)) {
-           const clienteExistente = clientesMap.get(nombre);
-           clienteExistente.montoTotal += total;
+           const empresaExistente = clientesMap.get(nombre);
+           empresaExistente.montoTotal += total;
          } else {
            clientesMap.set(nombre, {
              nombre: nombre,
@@ -334,68 +345,89 @@ export default function Clientes() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Cargar estados de pago desde la tabla pago_clientes
-      const { data, error } = await supabase
-        .from('pago_clientes')
-        .select('nombre_cliente, estado, fecha_cl')
-        .eq('usuario_id', usuarioId)
-        .eq('estado', 'pagado'); // Solo obtener los que están marcados como pagados
+             // Cargar estados de pago desde la tabla pago_clientes
+       const { data, error } = await supabase
+         .from('pago_clientes')
+         .select('nombre_empresa, estado, fecha_cl, monto_total')
+         .eq('usuario_id', usuarioId)
+         .eq('estado', 'pagado'); // Solo obtener los que están marcados como pagados
 
       if (error) {
         console.error('Error al cargar estados de pago desde Supabase:', error);
-        // Fallback a localStorage si falla la carga desde Supabase
-        const estadosGuardados = localStorage.getItem('estados_pago_clientes');
-        const fechasGuardadas = localStorage.getItem('fechas_pago_clientes');
-        if (estadosGuardados) {
-          setEstadosPago(JSON.parse(estadosGuardados));
-        }
-        if (fechasGuardadas) {
-          setFechasPago(JSON.parse(fechasGuardadas));
-        }
+                 // Fallback a localStorage si falla la carga desde Supabase
+         const estadosGuardados = localStorage.getItem('estados_pago_clientes');
+         const fechasGuardadas = localStorage.getItem('fechas_pago_clientes');
+         const montosGuardados = localStorage.getItem('montos_pago_clientes');
+         if (estadosGuardados) {
+           setEstadosPago(JSON.parse(estadosGuardados));
+         }
+         if (fechasGuardadas) {
+           setFechasPago(JSON.parse(fechasGuardadas));
+         }
+         if (montosGuardados) {
+           setMontosPago(JSON.parse(montosGuardados));
+         }
         return;
       }
 
-      // Crear objetos de estados y fechas desde los datos de Supabase
-      const estadosDesdeSupabase = {};
-      const fechasDesdeSupabase = {};
-      data?.forEach(registro => {
-        estadosDesdeSupabase[registro.nombre_cliente] = registro.estado;
-        fechasDesdeSupabase[registro.nombre_cliente] = registro.fecha_cl;
-      });
+             // Crear objetos de estados, fechas y montos desde los datos de Supabase
+       const estadosDesdeSupabase = {};
+       const fechasDesdeSupabase = {};
+       const montosDesdeSupabase = {};
+       data?.forEach(registro => {
+         estadosDesdeSupabase[registro.nombre_empresa] = registro.estado;
+         fechasDesdeSupabase[registro.nombre_empresa] = registro.fecha_cl;
+         montosDesdeSupabase[registro.nombre_empresa] = registro.monto_total;
+       });
 
-      // Sincronizar con localStorage para UI responsive
-      localStorage.setItem('estados_pago_clientes', JSON.stringify(estadosDesdeSupabase));
-      localStorage.setItem('fechas_pago_clientes', JSON.stringify(fechasDesdeSupabase));
-      setEstadosPago(estadosDesdeSupabase);
-      setFechasPago(fechasDesdeSupabase);
+       // Sincronizar con localStorage para UI responsive
+       localStorage.setItem('estados_pago_clientes', JSON.stringify(estadosDesdeSupabase));
+       localStorage.setItem('fechas_pago_clientes', JSON.stringify(fechasDesdeSupabase));
+       localStorage.setItem('montos_pago_clientes', JSON.stringify(montosDesdeSupabase));
+       setEstadosPago(estadosDesdeSupabase);
+       setFechasPago(fechasDesdeSupabase);
+       setMontosPago(montosDesdeSupabase);
     } catch (error) {
       console.error('Error cargando estados de pago:', error);
-      // Fallback a localStorage en caso de error
-      try {
-        const estadosGuardados = localStorage.getItem('estados_pago_clientes');
-        if (estadosGuardados) {
-          setEstadosPago(JSON.parse(estadosGuardados));
-        }
-      } catch (localError) {
-        console.error('Error con fallback a localStorage:', localError);
-      }
+             // Fallback a localStorage en caso de error
+       try {
+         const estadosGuardados = localStorage.getItem('estados_pago_clientes');
+         const fechasGuardadas = localStorage.getItem('fechas_pago_clientes');
+         const montosGuardados = localStorage.getItem('montos_pago_clientes');
+         if (estadosGuardados) {
+           setEstadosPago(JSON.parse(estadosGuardados));
+         }
+         if (fechasGuardadas) {
+           setFechasPago(JSON.parse(fechasGuardadas));
+         }
+         if (montosGuardados) {
+           setMontosPago(JSON.parse(montosGuardados));
+         }
+       } catch (localError) {
+         console.error('Error con fallback a localStorage:', localError);
+       }
     }
   };
 
-  // Función para guardar estados de pago en localStorage
-  const guardarEstadosPago = (nuevosEstados, nuevasFechas = null) => {
-    try {
-      localStorage.setItem('estados_pago_clientes', JSON.stringify(nuevosEstados));
-      setEstadosPago(nuevosEstados);
-      
-      if (nuevasFechas) {
-        localStorage.setItem('fechas_pago_clientes', JSON.stringify(nuevasFechas));
-        setFechasPago(nuevasFechas);
-      }
-    } catch (error) {
-      console.error('Error guardando estados de pago:', error);
-    }
-  };
+     // Función para guardar estados de pago en localStorage
+   const guardarEstadosPago = (nuevosEstados, nuevasFechas = null, nuevosMontos = null) => {
+     try {
+       localStorage.setItem('estados_pago_clientes', JSON.stringify(nuevosEstados));
+       setEstadosPago(nuevosEstados);
+       
+       if (nuevasFechas) {
+         localStorage.setItem('fechas_pago_clientes', JSON.stringify(nuevasFechas));
+         setFechasPago(nuevasFechas);
+       }
+       
+       if (nuevosMontos) {
+         localStorage.setItem('montos_pago_clientes', JSON.stringify(nuevosMontos));
+         setMontosPago(nuevosMontos);
+       }
+     } catch (error) {
+       console.error('Error guardando estados de pago:', error);
+     }
+   };
 
   // Función para manejar cambios en los filtros del resumen
   const handleFiltroResumenChange = (e) => {
@@ -416,29 +448,58 @@ export default function Clientes() {
     });
   };
 
-  // Función para cambiar estado de pago de un cliente
-  const cambiarEstadoPago = async (nombreCliente, nuevoEstado) => {
+  
+
+    // Función para cambiar estado de pago de una empresa
+  // ⚠️ IMPORTANTE: Esta función NO interfiere con la tabla usuarios de Supabase
+  // Solo maneja estados de pago en la tabla pago_clientes
+  const cambiarEstadoPago = async (nombreEmpresa, nuevoEstado) => {
     try {
       // Obtener fecha actual en Santiago, Chile
-      const fechaActual = obtenerFechaHoyChile();
+      let fechaActual = obtenerFechaHoyChile();
       
-      // Actualizar estado local inmediatamente para UI responsive
-      const nuevosEstados = {
-        ...estadosPago,
-        [nombreCliente]: nuevoEstado
-      };
-      
-      const nuevasFechas = { ...fechasPago };
-      
-      if (nuevoEstado === 'pagado') {
-        // Agregar fecha de pago cuando se marca como pagado
-        nuevasFechas[nombreCliente] = fechaActual;
-      } else {
-        // Eliminar fecha de pago cuando se marca como pendiente
-        delete nuevasFechas[nombreCliente];
+      // Verificar que la fecha se generó correctamente
+      if (!fechaActual) {
+        console.warn('⚠️ No se pudo generar fecha con zona horaria de Chile, usando fecha local');
+        // Fallback: usar fecha local si falla la función de Chile
+        const fechaLocal = new Date();
+        fechaActual = fechaLocal.toISOString().split('T')[0]; // Formato YYYY-MM-DD
       }
       
-      guardarEstadosPago(nuevosEstados, nuevasFechas);
+      // Validación adicional: asegurar que la fecha esté en formato correcto
+      if (!fechaActual || !/^\d{4}-\d{2}-\d{2}$/.test(fechaActual)) {
+        console.error('❌ Error: Formato de fecha inválido:', fechaActual);
+        alert('❌ Error: Formato de fecha inválido');
+        return;
+      }
+      
+      
+      
+             // Actualizar estado local inmediatamente para UI responsive
+       const nuevosEstados = {
+         ...estadosPago,
+         [nombreEmpresa]: nuevoEstado
+       };
+       
+       const nuevasFechas = { ...fechasPago };
+       const nuevosMontos = { ...montosPago };
+       
+       if (nuevoEstado === 'pagado') {
+         // Agregar fecha de pago cuando se marca como pagado
+         nuevasFechas[nombreEmpresa] = fechaActual;
+         
+         // Obtener el monto total de la empresa desde el resumen
+         const empresaResumen = resumenClientes.find(emp => emp.nombre === nombreEmpresa);
+         if (empresaResumen) {
+           nuevosMontos[nombreEmpresa] = empresaResumen.montoTotal;
+         }
+       } else {
+         // Eliminar fecha de pago cuando se marca como pendiente
+         delete nuevasFechas[nombreEmpresa];
+         delete nuevosMontos[nombreEmpresa];
+       }
+       
+       guardarEstadosPago(nuevosEstados, nuevasFechas, nuevosMontos);
       
       // Si el estado es "pagado", registrar en tabla pago_clientes
       if (nuevoEstado === 'pagado') {
@@ -447,35 +508,95 @@ export default function Clientes() {
           console.error('❌ No hay usuario autenticado para registrar pago');
           return;
         }
+        
+        // Obtener el cliente_id correcto de la tabla usuarios para satisfacer la política RLS
+        const { data: usuarioData, error: usuarioError } = await supabase
+          .from('usuarios')
+          .select('cliente_id')
+          .eq('usuario_id', usuarioId)
+          .single();
 
-               // Obtener fecha actual en Santiago, Chile
-       const fechaActual = obtenerFechaHoyChile();
-       
-       // Obtener el cliente_id del usuario desde la tabla usuarios
-       const { data: usuarioData, error: usuarioError } = await supabase
-         .from('usuarios')
-         .select('cliente_id')
-         .eq('usuario_id', usuarioId)
-         .limit(1);
+        if (usuarioError || !usuarioData) {
+          console.error('Error al obtener cliente_id del usuario:', usuarioError);
+          alert('❌ Error: No se pudo obtener la información del usuario');
+          return;
+        }
 
-       if (usuarioError || !usuarioData || usuarioData.length === 0) {
-         console.error('Error al obtener cliente_id del usuario:', usuarioError);
-         alert('❌ Error: No se pudo obtener el cliente_id del usuario');
-         return;
-       }
+        const cliente_id = usuarioData.cliente_id;
 
-       const cliente_id = usuarioData[0].cliente_id;
+        // Obtener el monto total de la empresa desde el resumen
+        const empresaResumen = resumenClientes.find(emp => emp.nombre === nombreEmpresa);
+        const montoTotal = empresaResumen ? empresaResumen.montoTotal : 0;
+        
+        // Preparar datos para la tabla pago_clientes
+        // IMPORTANTE: La política RLS requiere que cliente_id coincida con usuarios.cliente_id
+        const datosRegistroPago = {
+          nombre_empresa: nombreEmpresa,
+          fecha_pago: fechaActual, // Campo obligatorio NOT NULL
+          estado: 'pagado',
+          usuario_id: usuarioId,
+          cliente_id: cliente_id, // Campo OBLIGATORIO para la política RLS
+          monto_total: montoTotal // Nuevo campo agregado a la tabla pago_clientes
+        };
 
-       // Preparar datos para la tabla pago_clientes
-       const datosRegistroPago = {
-         nombre_cliente: nombreCliente,
-         fecha_pago: fechaActual,
-         estado: 'pagado',
-         usuario_id: usuarioId,
-         cliente_id: cliente_id, // Usar el cliente_id del usuario desde la tabla usuarios
-         fecha_cl: fechaActual // Mismo valor para compatibilidad
-       };
+        // Verificar que cliente_id esté presente (requerido por la política RLS)
+        if (!cliente_id) {
+          console.error('❌ Error: cliente_id es requerido para la política RLS');
+          alert('❌ Error: No se pudo obtener el cliente_id del usuario. Verifica la configuración de la tabla usuarios.');
+          
+          // Revertir estado local
+          const estadosRevertidos = {
+            ...estadosPago,
+            [nombreEmpresa]: estadosPago[nombreEmpresa] || 'pendiente'
+          };
+          const fechasRevertidas = { ...fechasPago };
+          delete fechasRevertidas[nombreEmpresa];
+          
+          guardarEstadosPago(estadosRevertidos, fechasRevertidas);
+          return;
+        }
 
+         
+        
+        // Validación final antes de enviar a Supabase
+        if (!datosRegistroPago.fecha_pago) {
+          console.error('❌ Error: fecha_pago es null o undefined antes de enviar a Supabase');
+          alert('❌ Error: No se pudo generar la fecha de pago');
+          
+          // Revertir estado local
+          const estadosRevertidos = {
+            ...estadosPago,
+            [nombreEmpresa]: estadosPago[nombreEmpresa] || 'pendiente'
+          };
+          const fechasRevertidas = { ...fechasPago };
+          delete fechasRevertidas[nombreEmpresa];
+          
+          guardarEstadosPago(estadosRevertidos, fechasRevertidas);
+          return;
+        }
+        
+        // Validación adicional: verificar que todos los campos obligatorios estén presentes
+        const camposObligatorios = ['nombre_empresa', 'fecha_pago', 'estado', 'usuario_id'];
+        const camposFaltantes = camposObligatorios.filter(campo => !datosRegistroPago[campo]);
+        
+        if (camposFaltantes.length > 0) {
+ 
+          alert(`❌ Error: Campos obligatorios faltantes: ${camposFaltantes.join(', ')}`);
+          
+          // Revertir estado local
+          const estadosRevertidos = {
+            ...estadosPago,
+            [nombreEmpresa]: estadosPago[nombreEmpresa] || 'pendiente'
+          };
+          const fechasRevertidas = { ...fechasPago };
+          delete fechasRevertidas[nombreEmpresa];
+          
+          guardarEstadosPago(estadosRevertidos, fechasRevertidas);
+          return;
+        }
+        
+        
+        
         // Insertar en tabla pago_clientes
         const { data, error } = await supabase
           .from('pago_clientes')
@@ -483,48 +604,79 @@ export default function Clientes() {
           .select('*');
 
         if (error) {
-          console.error('❌ Error registrando pago en Supabase:', error);
+                   console.error('❌ Error registrando pago en Supabase:', error);
+          
           // Revertir estado local si falla el registro
           const estadosRevertidos = {
             ...estadosPago,
-            [nombreCliente]: estadosPago[nombreCliente] || 'pendiente'
+            [nombreEmpresa]: estadosPago[nombreEmpresa] || 'pendiente'
           };
           const fechasRevertidas = { ...fechasPago };
-          delete fechasRevertidas[nombreCliente]; // Eliminar fecha si falla el registro
+          delete fechasRevertidas[nombreEmpresa]; // Eliminar fecha si falla el registro
           
           guardarEstadosPago(estadosRevertidos, fechasRevertidas);
-          alert('❌ Error al registrar el pago en el servidor: ' + error.message);
+          
+          // Mensaje de error más específico
+          if (error.message.includes('nombre_empresa')) {
+            alert('❌ Error: La tabla pago_clientes no tiene la columna nombre_empresa. Verifica la estructura de la tabla.');
+          } else if (error.message.includes('fecha_pago')) {
+            alert('❌ Error: El campo fecha_pago es obligatorio. Verifica que se esté enviando correctamente.');
+          } else if (error.message.includes('null value')) {
+            alert('❌ Error: Hay campos obligatorios que no se están enviando. Verifica la estructura de datos.');
+          } else if (error.message.includes('violates not-null constraint')) {
+            alert('❌ Error: Violación de restricción NOT NULL. Verifica que todos los campos obligatorios estén completos.');
+          } else if (error.message.includes('column') && error.message.includes('does not exist')) {
+            alert('❌ Error: Una columna no existe en la tabla. Verifica la estructura de la tabla pago_clientes.');
+          } else {
+            alert('❌ Error al registrar el pago en el servidor: ' + error.message);
+          }
           return;
         }
 
-        alert(`✅ Pago de ${nombreCliente} registrado exitosamente`);
+        alert(`✅ Pago de ${nombreEmpresa} registrado exitosamente`);
       } else if (nuevoEstado === 'pendiente') {
         // Si el estado cambia a "pendiente", eliminar el registro de pago_clientes
         const usuarioId = await authService.getCurrentUserId();
         if (!usuarioId) return;
 
-        const { error } = await supabase
+        // Primero verificar si existe un registro para eliminar
+        const { data: registroExistente, error: errorBusqueda } = await supabase
           .from('pago_clientes')
-          .delete()
-          .eq('nombre_cliente', nombreCliente)
-          .eq('usuario_id', usuarioId);
+          .select('id')
+          .eq('nombre_empresa', nombreEmpresa)
+          .eq('usuario_id', usuarioId)
+          .eq('estado', 'pagado')
+          .single();
 
-        if (error) {
-          console.error('❌ Error eliminando registro de pago:', error);
-          // No revertir el estado local, solo mostrar warning
-          console.warn('⚠️ El estado se cambió localmente pero no se pudo eliminar de Supabase');
+        if (errorBusqueda && !errorBusqueda.message.includes('No rows found')) {
+          console.error('❌ Error buscando registro de pago:', errorBusqueda);
+          return;
+        }
+
+        // Solo eliminar si existe un registro
+        if (registroExistente) {
+          const { error } = await supabase
+            .from('pago_clientes')
+            .delete()
+            .eq('id', registroExistente.id);
+
+          if (error) {
+            console.error('❌ Error eliminando registro de pago:', error);
+            // No revertir el estado local, solo mostrar warning
+            console.warn('⚠️ El estado se cambió localmente pero no se pudo eliminar de Supabase');
+          }
         }
       }
       
     } catch (error) {
       console.error('❌ Error cambiando estado de pago:', error);
-      // Revertir estado local y fechas si hay error
-      const estadosRevertidos = {
-        ...estadosPago,
-        [nombreCliente]: estadosPago[nombreCliente] || 'pendiente'
-      };
-      const fechasRevertidas = { ...fechasPago };
-      delete fechasRevertidas[nombreCliente]; // Eliminar fecha en caso de error
+             // Revertir estado local y fechas si hay error
+       const estadosRevertidos = {
+         ...estadosPago,
+         [nombreEmpresa]: estadosPago[nombreEmpresa] || 'pendiente'
+       };
+       const fechasRevertidas = { ...fechasPago };
+       delete fechasRevertidas[nombreEmpresa]; // Eliminar fecha en caso de error
       
       guardarEstadosPago(estadosRevertidos, fechasRevertidas);
       alert('❌ Error al procesar el cambio de estado');
@@ -660,7 +812,7 @@ export default function Clientes() {
   const limpiarFormulario = () => {
     setPedidoActual({
       fecha_cl: obtenerFechaHoyChile(),
-      nombre_cliente: ''
+      nombre_empresa: ''
     });
     setProductoActual({
       producto: '',
@@ -676,12 +828,14 @@ export default function Clientes() {
   const validarPedido = (pedido, productos) => {
     const errores = [];
     if (!pedido.fecha_cl?.trim()) errores.push('Fecha requerida');
-    if (!pedido.nombre_cliente?.trim()) errores.push('Nombre del cliente requerido');
+    if (!pedido.nombre_empresa?.trim()) errores.push('Nombre de la empresa requerido');
     if (!productos || productos.length === 0) errores.push('Debe agregar al menos un producto al pedido');
     return errores;
   };
 
   // Función para guardar pedido
+  // ⚠️ IMPORTANTE: Esta función NO interfiere con la tabla usuarios de Supabase
+  // Solo inserta registros en la tabla clientes
   const guardarPedido = async (e) => {
     if (e) e.preventDefault();
     
@@ -701,51 +855,48 @@ export default function Clientes() {
         return;
       }
 
-      // Primero, asegurar que el cliente existe en la lista local
-      const clienteAgregado = await agregarClienteUnico(pedidoActual.nombre_cliente);
-      if (!clienteAgregado) {
-        alert('❌ Error al procesar el cliente');
+      // Primero, asegurar que la empresa existe en la lista local
+      const empresaAgregada = await agregarClienteUnico(pedidoActual.nombre_empresa);
+      if (!empresaAgregada) {
+        alert('❌ Error al procesar la empresa');
         return;
       }
 
-      // No necesitamos buscar cliente_id, solo usar el nombre del cliente
-      // Los nombres de clientes son texto libre, no necesitan ID único
+      // Obtener el cliente_id correcto de la tabla usuarios para satisfacer la política RLS
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('Error al obtener cliente_id del usuario:', usuarioError);
+        alert('❌ Error: No se pudo obtener la información del usuario');
+        return;
+      }
+
+      const cliente_id = usuarioData.cliente_id;
       
       // Calcular el total final del pedido completo
       const total_final = calcularTotalPedido();
       
       // Validar y formatear fecha para PostgreSQL
       const fechaFormateada = pedidoActual.fecha_cl; // Ya viene en formato YYYY-MM-DD del input date
-      
-      // Obtener el cliente_id del usuario desde la tabla usuarios
-      const { data: usuarioData, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('cliente_id')
-        .eq('usuario_id', usuarioId)
-        .limit(1);
 
-      if (usuarioError || !usuarioData || usuarioData.length === 0) {
-        console.error('Error al obtener cliente_id del usuario:', usuarioError);
-        alert('❌ Error: No se pudo obtener el cliente_id del usuario');
-        return;
-      }
-
-      const cliente_id = usuarioData[0].cliente_id;
-
-      // Preparar los datos para guardar cada producto como un registro separado
-      const productosParaGuardar = productosDelPedido.map((producto, index) => ({
-        nombre_cliente: pedidoActual.nombre_cliente,
-        producto: producto.producto,
-        cantidad: Number(producto.cantidad), // numeric
-        precio_unitario: Number(producto.precio_unitario), // numeric
-        sub_total: Number(producto.total), // numeric - Total individual del producto
-        // Solo incluir total_final en la primera fila (index === 0)
-        total_final: index === 0 ? Number(total_final) : null, // numeric - Total de todo el pedido
-        fecha: fechaFormateada, // date - Formato YYYY-MM-DD para PostgreSQL
-        usuario_id: usuarioId, // Necesario para las políticas RLS
-        cliente_id: cliente_id // Usar el cliente_id del usuario desde la tabla usuarios
-        // id, created_at y fecha_cl se generan automáticamente por SQL
-      }));
+             // Preparar los datos para guardar cada producto como un registro separado
+       const productosParaGuardar = productosDelPedido.map((producto, index) => ({
+         nombre_empresa: pedidoActual.nombre_empresa, // Solo texto para identificar a la empresa
+         producto: producto.producto,
+         cantidad: Number(producto.cantidad), // numeric
+         precio_unitario: Number(producto.precio_unitario), // numeric
+         sub_total: Number(producto.total), // numeric - Total individual del producto
+         // Solo incluir total_final en la primera fila (index === 0)
+         total_final: index === 0 ? Number(total_final) : null, // numeric - Total de todo el pedido
+         // fecha_cl se genera automáticamente por Supabase (DEFAULT)
+         usuario_id: usuarioId, // Necesario para las políticas RLS
+         cliente_id: cliente_id // Mismo valor que usuario_id para las políticas RLS
+         // id, created_at, fecha_cl se generan automáticamente por SQL
+       }));
 
 
 
@@ -776,6 +927,8 @@ export default function Clientes() {
   };
 
   // Función para eliminar un registro (solo del usuario actual)
+  // ⚠️ IMPORTANTE: Esta función NO interfiere con la tabla usuarios de Supabase
+  // Solo elimina registros de la tabla clientes
   const eliminarRegistro = async (id) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este registro? Esta acción no se puede deshacer.')) {
       return;
@@ -849,9 +1002,9 @@ export default function Clientes() {
             </button>
           </div>
           
-          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            📝 Pedidos de Clientes
-          </h1>
+                                     <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+             📝 Pedidos de Empresas
+           </h1>
 
           {/* Formulario de Pedido */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
@@ -876,89 +1029,89 @@ export default function Clientes() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                    👤 Nombre del Cliente *
-                  </label>
-                  
-                  {/* Toggle entre dropdown y input nuevo */}
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setModoNuevoCliente(false)}
-                      className={`px-3 py-1 rounded-lg text-xs transition-all duration-200 ${
-                        !modoNuevoCliente 
-                          ? 'bg-green-600 text-white' 
-                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                      }`}
-                    >
-                      📋 Seleccionar Existente
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModoNuevoCliente(true)}
-                      className={`px-3 py-1 rounded-lg text-xs transition-all duration-200 ${
-                        modoNuevoCliente 
-                          ? 'bg-green-600 text-white' 
-                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                      }`}
-                    >
-                      ➕ Nuevo Cliente
-                    </button>
-                  </div>
+                                 <div>
+                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                     🏢 Nombre de la Empresa *
+                   </label>
+                   
+                   {/* Toggle entre dropdown y input nuevo */}
+                   <div className="flex gap-2 mb-2">
+                     <button
+                       type="button"
+                       onClick={() => setModoNuevoCliente(false)}
+                       className={`px-3 py-1 rounded-lg text-xs transition-all duration-200 ${
+                         !modoNuevoCliente 
+                           ? 'bg-green-600 text-white' 
+                           : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                       }`}
+                     >
+                       📋 Seleccionar Existente
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => setModoNuevoCliente(true)}
+                       className={`px-3 py-1 rounded-lg text-xs transition-all duration-200 ${
+                         modoNuevoCliente 
+                           ? 'bg-green-600 text-white' 
+                           : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                       }`}
+                     >
+                       ➕ Nueva Empresa
+                     </button>
+                   </div>
 
-                  {modoNuevoCliente ? (
-                    /* Input para nuevo cliente */
-                  <input
-                      type="text"
-                      name="nombre_cliente"
-                      value={pedidoActual.nombre_cliente}
-                    onChange={handlePedidoChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
-                      placeholder="Nombre completo del nuevo cliente"
-                      required
-                    />
-                  ) : (
-                    /* Dropdown para clientes existentes */
-                    <div className="relative">
-                      <select
-                        name="nombre_cliente"
-                        value={pedidoActual.nombre_cliente}
-                        onChange={handlePedidoChange}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 pr-12"
-                        required
-                      >
-                        <option value="" className="bg-gray-800 text-white">
-                          Seleccionar cliente...
-                        </option>
-                        {clientesUnicos.map(cliente => (
-                          <option key={cliente.id} value={cliente.nombre} className="bg-gray-800 text-white">
-                            {cliente.nombre}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      {/* Lista de clientes con botones de eliminar */}
-                      {clientesUnicos.length > 0 && (
-                        <div className="mt-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg border border-white/10 p-2">
-                          <div className="text-white text-xs mb-2 font-medium">Clientes registrados:</div>
-                          {clientesUnicos.map(cliente => (
-                            <div key={cliente.id} className="flex items-center justify-between py-1 px-2 hover:bg-white/10 rounded transition-colors">
-                              <span className="text-white text-sm">{cliente.nombre}</span>
-                              <button
-                                type="button"
-                                onClick={() => eliminarClienteUnico(cliente.id)}
-                                className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-600/20 transition-all duration-200"
-                                title="Eliminar cliente"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                                     {modoNuevoCliente ? (
+                     /* Input para nueva empresa */
+                   <input
+                       type="text"
+                       name="nombre_empresa"
+                       value={pedidoActual.nombre_empresa}
+                     onChange={handlePedidoChange}
+                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                       placeholder="Nombre completo de la nueva empresa"
+                       required
+                     />
+                   ) : (
+                     /* Dropdown para empresas existentes */
+                     <div className="relative">
+                       <select
+                         name="nombre_empresa"
+                         value={pedidoActual.nombre_empresa}
+                         onChange={handlePedidoChange}
+                         className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 pr-12"
+                         required
+                       >
+                         <option value="" className="bg-gray-800 text-white">
+                           Seleccionar empresa...
+                         </option>
+                         {clientesUnicos.map(empresa => (
+                           <option key={empresa.id} value={empresa.nombre} className="bg-gray-800 text-white">
+                             {empresa.nombre}
+                           </option>
+                         ))}
+                       </select>
+                       
+                       {/* Lista de empresas con botones de eliminar */}
+                       {clientesUnicos.length > 0 && (
+                         <div className="mt-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg border border-white/10 p-2">
+                           <div className="text-white text-xs mb-2 font-medium">Empresas registradas:</div>
+                           {clientesUnicos.map(empresa => (
+                             <div key={empresa.id} className="flex items-center justify-between py-1 px-2 hover:bg-white/10 rounded transition-colors">
+                               <span className="text-white text-sm">{empresa.nombre}</span>
+                               <button
+                                 type="button"
+                                 onClick={() => eliminarClienteUnico(empresa.id)}
+                                 className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-600/20 transition-all duration-200"
+                                 title="Eliminar empresa"
+                               >
+                                 🗑️
+                               </button>
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                   )}
                 </div>
               </div>
 
@@ -1104,9 +1257,9 @@ export default function Clientes() {
                 📊 Registros de Pedidos
               </h2>
               {!filtros.producto && (
-                <p className="text-blue-400 text-sm">
-                  📅 Mostrando pedidos del día actual - Usa el filtro de cliente para buscar específicos
-                </p>
+                                 <p className="text-blue-400 text-sm">
+                   📅 Mostrando pedidos del día actual - Usa el filtro de empresa para buscar específicos
+                 </p>
               )}
             </div>
 
@@ -1115,19 +1268,19 @@ export default function Clientes() {
               <h3 className="text-lg font-bold text-white mb-4">🔍 Filtros de Búsqueda</h3>
               
                             <div className="grid grid-cols-1 gap-4 mb-4">
-                <div>
-                  <label className="block text-white font-medium mb-2 text-sm">
-                    👤 Buscar Cliente
-                  </label>
-                  <input
-                    type="text"
-                    name="producto"
-                    value={filtros.producto}
-                    onChange={handleFiltroChange}
-                    placeholder="Buscar cliente..."
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
-                  />
-                </div>
+                                 <div>
+                   <label className="block text-white font-medium mb-2 text-sm">
+                     🏢 Buscar Empresa
+                   </label>
+                   <input
+                     type="text"
+                     name="producto"
+                     value={filtros.producto}
+                     onChange={handleFiltroChange}
+                     placeholder="Buscar empresa..."
+                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                   />
+                 </div>
               </div>
 
                             <div className="flex gap-2 flex-wrap">
@@ -1156,27 +1309,27 @@ export default function Clientes() {
               ) : registrosPedidos.length === 0 ? (
               <div className="text-center py-8">
                   <div className="text-gray-400 text-4xl mb-4">📋</div>
-                  {filtros.producto ? (
-                    <>
-                      <p className="text-gray-300 text-lg font-bold mb-2">No hay clientes que coincidan con la búsqueda</p>
-                      <p className="text-gray-500 text-sm">Intenta ajustar el filtro de cliente</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-gray-300 text-lg font-bold mb-2">No hay pedidos registrados hoy</p>
-                      <p className="text-gray-500 text-sm">Por defecto se muestran solo los pedidos del día actual</p>
-                    </>
-                  )}
+                                     {filtros.producto ? (
+                     <>
+                       <p className="text-gray-300 text-lg font-bold mb-2">No hay empresas que coincidan con la búsqueda</p>
+                       <p className="text-gray-500 text-sm">Intenta ajustar el filtro de empresa</p>
+                     </>
+                   ) : (
+                     <>
+                       <p className="text-gray-300 text-lg font-bold mb-2">No hay pedidos registrados hoy</p>
+                       <p className="text-gray-500 text-sm">Por defecto se muestran solo los pedidos del día actual</p>
+                     </>
+                   )}
               </div>
               ) : (
                 <>
                   <div className="p-4 border-b border-white/10">
                     <p className="text-white font-medium">
-                      {filtros.producto ? (
-                        `🔍 Registros filtrados por cliente: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
-                      ) : (
-                        `📅 Registros de hoy: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
-                      )}
+                                           {filtros.producto ? (
+                       `🔍 Registros filtrados por empresa: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                     ) : (
+                       `📅 Registros de hoy: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                     )}
                     </p>
               </div>
                   
@@ -1185,7 +1338,7 @@ export default function Clientes() {
                     <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
                       <tr className="border-b border-white/20">
                           <th className="text-white font-semibold p-3 text-sm">📅 Fecha</th>
-                        <th className="text-white font-semibold p-3 text-sm">👤 Cliente</th>
+                        <th className="text-white font-semibold p-3 text-sm">🏢 Empresa</th>
                           <th className="text-white font-semibold p-3 text-sm">📦 Producto</th>
                           <th className="text-white font-semibold p-3 text-sm">🔢 Cantidad</th>
                           <th className="text-white font-semibold p-3 text-sm">💰 Precio Unit.</th>
@@ -1213,9 +1366,9 @@ export default function Clientes() {
                               });
                             })()}
                           </td>
-                          <td className="text-gray-300 p-3 text-sm">
-                            {registro.nombre_cliente}
-                          </td>
+                                                     <td className="text-gray-300 p-3 text-sm">
+                             {registro.nombre_empresa}
+                           </td>
                           <td className="text-gray-300 p-3 text-sm">
                             {registro.producto}
                           </td>
@@ -1254,9 +1407,9 @@ export default function Clientes() {
           {/* Resumen de Totales por Cliente */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <div className="text-center mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-                💰 Resumen de Totales por Cliente
-              </h2>
+                         <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+             💰 Resumen de Totales por Empresa
+           </h2>
               {!(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) && (
                 <p className="text-blue-400 text-sm">
                   📅 Mostrando acumulados del mes actual - Usa filtros para ver otros meses
@@ -1269,19 +1422,19 @@ export default function Clientes() {
               <h3 className="text-lg font-bold text-white mb-4">🔍 Filtros del Resumen</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-white font-medium mb-2 text-sm">
-                    👤 Nombre Cliente
-                  </label>
-                  <input
-                    type="text"
-                    name="nombre"
-                    value={filtrosResumen.nombre}
-                    onChange={handleFiltroResumenChange}
-                    placeholder="Buscar cliente..."
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
-                  />
-                </div>
+                                 <div>
+                   <label className="block text-white font-medium mb-2 text-sm">
+                     🏢 Nombre Empresa
+                   </label>
+                   <input
+                     type="text"
+                     name="nombre"
+                     value={filtrosResumen.nombre}
+                     onChange={handleFiltroResumenChange}
+                     placeholder="Buscar empresa..."
+                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                   />
+                 </div>
 
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
@@ -1326,23 +1479,23 @@ export default function Clientes() {
                   </select>
                 </div>
 
-                <div className="flex items-end">
-                  <button
-                    onClick={limpiarFiltrosResumen}
-                    className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 text-sm"
-                  >
-                    🗑️ Limpiar Filtros
-                  </button>
-                </div>
+                                 <div className="flex items-end gap-2">
+                   <button
+                     onClick={limpiarFiltrosResumen}
+                     className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 text-sm"
+                   >
+                     🗑️ Limpiar Filtros
+                   </button>
+                 </div>
               </div>
 
               {/* Contador de resultados */}
               {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) && (
-                <div className="text-center">
-                  <span className="inline-flex items-center px-3 py-1 bg-blue-500/30 border border-blue-500/50 rounded-full text-blue-300 text-sm font-medium">
-                    🔍 {resumenClientes.length} cliente{resumenClientes.length !== 1 ? 's' : ''} encontrado{resumenClientes.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
+                                     <div className="text-center">
+                       <span className="inline-flex items-center px-3 py-1 bg-blue-500/30 border border-blue-500/50 rounded-full text-blue-300 text-sm font-medium">
+                         🔍 {resumenClientes.length} empresa{resumenClientes.length !== 1 ? 's' : ''} encontrada{resumenClientes.length !== 1 ? 's' : ''}
+                       </span>
+                     </div>
               )}
             </div>
             
@@ -1354,66 +1507,77 @@ export default function Clientes() {
             ) : resumenClientes.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-gray-400 text-4xl mb-4">💰</div>
-                {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
-                  <>
-                    <p className="text-gray-300 text-lg font-bold mb-2">No hay clientes que coincidan con los filtros</p>
-                    <p className="text-gray-500 text-sm">Intenta ajustar los filtros de búsqueda del resumen</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-300 text-lg font-bold mb-2">No hay pedidos registrados este mes</p>
-                    <p className="text-gray-500 text-sm">Por defecto se muestran los acumulados del mes actual</p>
-                  </>
-                )}
+                                   {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
+                     <>
+                       <p className="text-gray-300 text-lg font-bold mb-2">No hay empresas que coincidan con los filtros</p>
+                       <p className="text-gray-500 text-sm">Intenta ajustar los filtros de búsqueda del resumen</p>
+                     </>
+                   ) : (
+                     <>
+                       <p className="text-gray-300 text-lg font-bold mb-2">No hay pedidos registrados este mes</p>
+                       <p className="text-gray-500 text-sm">Por defecto se muestran los acumulados del mes actual</p>
+                     </>
+                   )}
               </div>
             ) : (
               <div className="bg-white/5 rounded-xl border border-white/10">
                 <div className="p-4 border-b border-white/10">
                   <p className="text-white font-medium">
-                    {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
-                      `🔍 Clientes filtrados: ${resumenClientes.length} | 💵 Total filtrado: ${formatearNumero(resumenClientes.reduce((total, cliente) => total + cliente.montoTotal, 0))}`
-                    ) : (
-                      `📅 Clientes del mes: ${resumenClientes.length} | 💵 Total del mes: ${formatearNumero(resumenClientes.reduce((total, cliente) => total + cliente.montoTotal, 0))}`
-                    )}
+                                         {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
+                       `🔍 Empresas filtradas: ${resumenClientes.length} | 💵 Total filtrado: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
+                     ) : (
+                       `📅 Empresas del mes: ${resumenClientes.length} | 💵 Total del mes: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
+                     )}
                   </p>
                 </div>
                 
                 <div className="overflow-x-auto max-h-96 overflow-y-auto">
                   <table className="w-full">
-                    <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
-                      <tr className="border-b border-white/20">
-                        <th className="text-white font-semibold p-3 text-sm text-left">Nombre Cliente</th>
-                        <th className="text-white font-semibold p-3 text-sm text-right">Monto Total</th>
-                        <th className="text-white font-semibold p-3 text-sm text-center">Fecha de Pago</th>
-                        <th className="text-white font-semibold p-3 text-sm text-center">Estado</th>
-                      </tr>
-                    </thead>
+                                         <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                       <tr className="border-b border-white/20">
+                                                  <th className="text-white font-semibold p-3 text-sm text-left">Nombre Empresa</th>
+                         <th className="text-white font-semibold p-3 text-sm text-right">Monto Total</th>
+                         <th className="text-white font-semibold p-3 text-sm text-center">Monto Pagado</th>
+                         <th className="text-white font-semibold p-3 text-sm text-center">Fecha de Pago</th>
+                         <th className="text-white font-semibold p-3 text-sm text-center">Estado</th>
+                       </tr>
+                     </thead>
                     <tbody>
-                      {resumenClientes.map((cliente, index) => {
-                        const estadoActual = estadosPago[cliente.nombre] || 'pendiente';
-                        const fechaPago = fechasPago[cliente.nombre];
-                        
-                        return (
-                          <tr key={`${cliente.nombre}_${index}`} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                            <td className="text-white p-3 text-sm font-medium text-left">
-                              {cliente.nombre}
-                            </td>
-                            <td className="text-green-400 p-3 text-sm font-bold text-right">
-                              ${formatearNumero(cliente.montoTotal)}
-                            </td>
-                            <td className="text-gray-300 p-3 text-sm text-center">
-                              {estadoActual === 'pagado' && fechaPago ? (
-                                <span className="text-blue-300 font-medium">
-                                  📅 {formatearFechaPago(fechaPago)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-500">-</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-center">
+                                                                      {resumenClientes.map((empresa, index) => {
+                           const estadoActual = estadosPago[empresa.nombre] || 'pendiente';
+                           const fechaPago = fechasPago[empresa.nombre];
+                           const montoPagado = montosPago[empresa.nombre];
+                           
+                           return (
+                             <tr key={`${empresa.nombre}_${index}`} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                               <td className="text-white p-3 text-sm font-medium text-left">
+                                 {empresa.nombre}
+                               </td>
+                                                           <td className="text-green-400 p-3 text-sm font-bold text-right">
+                                 ${formatearNumero(empresa.montoTotal)}
+                               </td>
+                               <td className="text-blue-400 p-3 text-sm font-bold text-center">
+                                 {estadoActual === 'pagado' && montoPagado ? (
+                                   <span className="text-blue-300 font-medium">
+                                     ${formatearNumero(montoPagado)}
+                                   </span>
+                                 ) : (
+                                   <span className="text-gray-500">-</span>
+                                 )}
+                               </td>
+                               <td className="text-gray-300 p-3 text-sm text-center">
+                                 {estadoActual === 'pagado' && fechaPago ? (
+                                   <span className="text-blue-300 font-medium">
+                                     📅 {formatearFechaPago(fechaPago)}
+                                   </span>
+                                 ) : (
+                                   <span className="text-gray-500">-</span>
+                                 )}
+                               </td>
+                               <td className="p-3 text-center">
                               <div className="flex gap-2 justify-center">
                                 <button
-                                  onClick={() => cambiarEstadoPago(cliente.nombre, 'pagado')}
+                                  onClick={() => cambiarEstadoPago(empresa.nombre, 'pagado')}
                                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
                                     estadoActual === 'pagado'
                                       ? 'bg-green-600 text-white shadow-lg'
@@ -1423,7 +1587,7 @@ export default function Clientes() {
                                   ✅ Pagado
                                 </button>
                                 <button
-                                  onClick={() => cambiarEstadoPago(cliente.nombre, 'pendiente')}
+                                  onClick={() => cambiarEstadoPago(empresa.nombre, 'pendiente')}
                                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
                                     estadoActual === 'pendiente'
                                       ? 'bg-orange-600 text-white shadow-lg'
@@ -1446,7 +1610,7 @@ export default function Clientes() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div>
                       <div className="text-green-400 text-lg font-bold">
-                        {resumenClientes.filter(c => estadosPago[c.nombre] === 'pagado').length}
+                        {resumenClientes.filter(e => estadosPago[e.nombre] === 'pagado').length}
                       </div>
                       <div className="text-gray-300 text-sm">
                         {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? 
@@ -1457,10 +1621,10 @@ export default function Clientes() {
                     </div>
                     <div>
                       <div className="text-orange-400 text-lg font-bold">
-                        {resumenClientes.filter(c => !estadosPago[c.nombre] || estadosPago[c.nombre] === 'pendiente').length}
+                        {resumenClientes.filter(e => !estadosPago[e.nombre] || estadosPago[e.nombre] === 'pendiente').length}
                       </div>
                       <div className="text-gray-300 text-sm">
-                        {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? 
+                        {(filtrosResumen.mes || filtrosResumen.ano) ? 
                           'Pendientes (Filtrados)' : 
                           'Pendientes del Mes'
                         }
@@ -1470,8 +1634,8 @@ export default function Clientes() {
                       <div className="text-blue-400 text-lg font-bold">
                         ${formatearNumero(
                           resumenClientes
-                            .filter(c => estadosPago[c.nombre] === 'pagado')
-                            .reduce((total, c) => total + c.montoTotal, 0)
+                            .filter(e => estadosPago[e.nombre] === 'pagado')
+                            .reduce((total, e) => total + e.montoTotal, 0)
                         )}
                       </div>
                       <div className="text-gray-300 text-sm">
