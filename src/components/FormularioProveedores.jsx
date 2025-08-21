@@ -463,69 +463,7 @@ const FormularioProveedores = () => {
             🏢 Registro de Proveedores
           </h1>
 
-          {/* Estadísticas */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
-            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              📊 Estadísticas Generales
-            </h2>
-            
-            {/* Estadísticas reorganizadas: Cantidades a la izquierda, Montos a la derecha */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              {/* COLUMNA IZQUIERDA - SOLO CANTIDADES */}
-              <div className="space-y-3 md:space-y-4">
-                  {/* Total Registros */}
-                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
-                    <div className="text-2xl md:text-3xl font-bold text-white mb-1">
-                      {estadisticas.total}
-                    </div>
-                    <div className="text-gray-300 text-xs md:text-sm">Total</div>
-                  </div>
-                  
-                  {/* Pendientes */}
-                  <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
-                    <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-1">
-                      {estadisticas.pendientes}
-                    </div>
-                    <div className="text-yellow-300 text-xs md:text-sm">Pendientes</div>
-                  </div>
-                  
-                  {/* Pagados */}
-                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
-                    <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
-                      {estadisticas.pagados}
-                    </div>
-                    <div className="text-green-300 text-xs md:text-sm">Pagados</div>
-                  </div>
-              </div>
-              
-              {/* COLUMNA DERECHA - SOLO MONTOS */}
-              <div className="space-y-3 md:space-y-4">
-                  {/* Monto Total */}
-                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
-                    <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
-                      ${formatearNumero(estadisticas.montoTotal)}
-                    </div>
-                    <div className="text-blue-300 text-xs md:text-sm">Total</div>
-                  </div>
-                  
-                  {/* Por Pagar */}
-                  <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
-                    <div className="text-lg md:text-xl font-bold text-red-400 mb-1">
-                      ${formatearNumero(estadisticas.montoPendiente)}
-                    </div>
-                    <div className="text-red-300 text-xs md:text-sm">Por Pagar</div>
-                  </div>
-                  
-                  {/* Pagado */}
-                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
-                    <div className="text-lg md:text-xl font-bold text-green-400 mb-1">
-                      ${formatearNumero(estadisticas.montoPagado)}
-                    </div>
-                    <div className="text-green-300 text-xs md:text-sm">Pagado</div>
-                  </div>
-              </div>
-            </div>
-          </div>
+
 
           <div className="grid grid-cols-1 gap-6 md:gap-8">
             {/* Formulario de registro - Horizontal */}
@@ -829,6 +767,70 @@ const FormularioProveedores = () => {
                       </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Estadísticas */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              📊 Estadísticas Generales
+            </h2>
+            
+            {/* Estadísticas reorganizadas: Cantidades a la izquierda, Montos a la derecha */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              {/* COLUMNA IZQUIERDA - SOLO CANTIDADES */}
+              <div className="space-y-3 md:space-y-4">
+                  {/* Total Registros */}
+                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                    <div className="text-2xl md:text-3xl font-bold text-white mb-1">
+                      {estadisticas.total}
+                    </div>
+                    <div className="text-gray-300 text-xs md:text-sm">Total</div>
+                  </div>
+                  
+                  {/* Pendientes */}
+                  <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                    <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-1">
+                      {estadisticas.pendientes}
+                    </div>
+                    <div className="text-yellow-300 text-xs md:text-sm">Pendientes</div>
+                  </div>
+                  
+                  {/* Pagados */}
+                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                    <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
+                      {estadisticas.pagados}
+                    </div>
+                    <div className="text-green-300 text-xs md:text-sm">Pagados</div>
+                  </div>
+              </div>
+              
+              {/* COLUMNA DERECHA - SOLO MONTOS */}
+              <div className="space-y-3 md:space-y-4">
+                  {/* Monto Total */}
+                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                    <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
+                      ${formatearNumero(estadisticas.montoTotal)}
+                    </div>
+                    <div className="text-blue-300 text-xs md:text-sm">Total</div>
+                  </div>
+                  
+                  {/* Por Pagar */}
+                  <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                    <div className="text-lg md:text-xl font-bold text-red-400 mb-1">
+                      ${formatearNumero(estadisticas.montoPendiente)}
+                    </div>
+                    <div className="text-blue-300 text-xs md:text-sm">Por Pagar</div>
+                  </div>
+                  
+                  {/* Pagado */}
+                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                    <div className="text-lg md:text-xl font-bold text-green-400 mb-1">
+                      ${formatearNumero(estadisticas.montoPagado)}
+                    </div>
+                    <div className="text-green-300 text-xs md:text-sm">Pagado</div>
+                  </div>
               </div>
             </div>
           </div>
