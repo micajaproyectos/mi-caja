@@ -936,7 +936,7 @@ export default function RegistroVenta() {
               </div>
               
               {/* Campos del producto */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
                 <div>
                   <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Unidad</label>
                   <select
@@ -967,7 +967,7 @@ export default function RegistroVenta() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 xl:col-span-1">
+                <div>
                   <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Precio</label>
                   <input
                     type="number"
@@ -979,17 +979,16 @@ export default function RegistroVenta() {
                     placeholder="0.00"
                   />
                 </div>
-              </div>
 
-              {/* Botón para agregar producto */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={agregarProducto}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-lg transition-all duration-300 text-base md:text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  ➕ Agregar Producto
-                </button>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={agregarProducto}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    ➕ Agregar
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -999,29 +998,63 @@ export default function RegistroVenta() {
                 <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">🛒</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Productos en la Venta</h3>
               </div>
-              <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10">
-                {productosVenta.length === 0 ? (
-                  <p className="text-gray-400 text-center text-sm md:text-base">No hay productos agregados</p>
-                ) : (
-                  <div className="space-y-2 md:space-y-3">
-                    {productosVenta.map((producto, index) => (
-                      <div key={producto.id} className="flex items-center justify-between bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium text-sm md:text-base truncate">{producto.producto}</p>
-                          <p className="text-gray-300 text-xs md:text-sm">
-                            {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => eliminarProducto(producto.id)}
-                          className="text-red-400 hover:text-red-300 text-lg md:text-xl font-bold ml-2 flex-shrink-0 px-2 py-1 rounded hover:bg-red-600/20 transition-colors"
-                        >
-                          🗑️
-                        </button>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                {/* Lista de productos - ocupa 2/3 del espacio */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10">
+                    {productosVenta.length === 0 ? (
+                      <p className="text-gray-400 text-center text-sm md:text-base">No hay productos agregados</p>
+                    ) : (
+                      <div className="space-y-2 md:space-y-3">
+                        {productosVenta.map((producto, index) => (
+                          <div key={producto.id} className="flex items-center justify-between bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-medium text-sm md:text-base truncate">{producto.producto}</p>
+                              <p className="text-gray-300 text-xs md:text-sm">
+                                {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 md:gap-3">
+                              <div className="text-right">
+                                <div className="text-green-300 text-xs md:text-sm font-medium">Subtotal</div>
+                                <div className="text-green-400 text-sm md:text-base font-bold">${parseFloat(producto.subtotal).toLocaleString()}</div>
+                              </div>
+                              <button
+                                onClick={() => eliminarProducto(producto.id)}
+                                className="text-red-400 hover:text-red-300 text-lg md:text-xl font-bold flex-shrink-0 px-2 py-1 rounded hover:bg-red-600/20 transition-colors"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
+                </div>
+                
+                {/* Cuadro del total - ocupa 1/3 del espacio */}
+                <div className="lg:col-span-1">
+                  <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-md rounded-xl p-4 md:p-6 border-2 border-green-500/30 shadow-xl h-full">
+                    <div className="text-center mb-4">
+                      <div className="text-green-300 text-lg md:text-xl font-bold mb-2">💰 Total de la Venta</div>
+                      <div className="text-green-100 text-sm md:text-base">Resumen de productos</div>
+                    </div>
+                    
+                    <div className="space-y-3 md:space-y-4">
+                                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                         <div className="text-green-200 text-sm md:text-base font-medium mb-1">Cantidad de Items</div>
+                         <div className="text-green-300 text-xl md:text-2xl font-bold">{productosVenta.length}</div>
+                       </div>
+                      
+                                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                         <div className="text-green-200 text-sm md:text-base font-medium mb-1">Total a Pagar</div>
+                         <div className="text-green-300 text-2xl md:text-3xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
               
@@ -1101,12 +1134,7 @@ export default function RegistroVenta() {
               document.body
             )}
 
-            {/* Sección de total */}
-            <div className="mb-6 md:mb-8">
-              <div className="bg-green-600 rounded-lg p-6 text-center">
-                <p className="text-white font-bold text-2xl">Total: ${calcularTotalVenta().toLocaleString()}</p>
-              </div>
-            </div>
+
 
             {/* Sección de tipo de pago */}
             <div className="mb-6 md:mb-8">

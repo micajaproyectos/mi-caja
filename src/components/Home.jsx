@@ -130,7 +130,7 @@ export default function Home() {
       {/* Panel inferior con iconos - Neumorfismo */}
       <div className="relative z-10 py-12" style={{ backgroundColor: '#1f4a1f' }}>
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
             {menuItems.map((item) => (
               <button
                 key={item.id}
