@@ -472,7 +472,7 @@ const FormularioProveedores = () => {
                 📝 Registrar Proveedor
               </h2>
               
-              <form onSubmit={registrarProveedor} className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+              <form onSubmit={registrarProveedor} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
                 {/* Nombre del proveedor */}
                 <div>
                   <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -483,7 +483,7 @@ const FormularioProveedores = () => {
                     name="nombre_proveedor"
                     value={proveedor.nombre_proveedor}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                     placeholder="Ingresa el nombre del proveedor"
                     required
                   />
@@ -501,7 +501,7 @@ const FormularioProveedores = () => {
                     onChange={handleChange}
                     min="0"
                     step="1"
-                    className="w-full px-3 md:px-4 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                     placeholder="Ingresa el monto"
                     required
                   />
@@ -516,7 +516,7 @@ const FormularioProveedores = () => {
                     name="estado"
                     value={proveedor.estado}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                   >
                     {opcionesEstado.map(opcion => (
                       <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
@@ -568,7 +568,7 @@ const FormularioProveedores = () => {
                   🔍 Filtros y Búsqueda
                 </h3>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4 mb-4">
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
                       🔍 Buscar Proveedor
@@ -577,7 +577,7 @@ const FormularioProveedores = () => {
                       type="text"
                       value={busquedaProveedor}
                       onChange={(e) => setBusquedaProveedor(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                       placeholder="Buscar por nombre..."
                     />
                   </div>
@@ -590,7 +590,7 @@ const FormularioProveedores = () => {
                       type="date"
                       value={filtroFecha}
                       onChange={(e) => setFiltroFecha(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     />
                   </div>
                   

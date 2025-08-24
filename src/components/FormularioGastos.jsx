@@ -310,9 +310,9 @@ const FormularioGastos = () => {
             )}
 
             <form onSubmit={registrarGasto} className="space-y-4 md:space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 lg:gap-6">
                 {/* Fecha */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     📅 Fecha
                   </label>
@@ -321,13 +321,13 @@ const FormularioGastos = () => {
                     name="fecha"
                     value={gasto.fecha}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                     required
                   />
                 </div>
 
                 {/* Tipo de Gasto */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     🏷️ Tipo de Gasto
                   </label>
@@ -335,7 +335,7 @@ const FormularioGastos = () => {
                     name="tipo_gasto"
                     value={gasto.tipo_gasto}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                     required
                   >
                     <option value="">Seleccionar tipo</option>
@@ -348,7 +348,7 @@ const FormularioGastos = () => {
                 </div>
 
                 {/* Forma de Pago */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     💳 Forma de Pago
                   </label>
@@ -356,7 +356,7 @@ const FormularioGastos = () => {
                     name="forma_pago"
                     value={gasto.forma_pago}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                     required
                   >
                     <option value="">Seleccionar método</option>
@@ -424,9 +424,9 @@ const FormularioGastos = () => {
                 🔍 Filtros de Búsqueda
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4 lg:gap-6 mb-4">
                 {/* Búsqueda por detalle */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     🔍 Buscar por detalle
                   </label>
@@ -435,12 +435,12 @@ const FormularioGastos = () => {
                     value={busquedaDetalle}
                     onChange={(e) => setBusquedaDetalle(e.target.value)}
                     placeholder="Buscar en detalles..."
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   />
                 </div>
 
                 {/* Filtro por fecha */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     📅 Filtrar por fecha
                   </label>
@@ -448,19 +448,19 @@ const FormularioGastos = () => {
                     type="date"
                     value={filtroFecha}
                     onChange={(e) => setFiltroFecha(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   />
                 </div>
 
                 {/* Filtro por mes */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     📆 Filtrar por mes
                   </label>
                   <select
                     value={filtroMes}
                     onChange={(e) => setFiltroMes(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los meses</option>
                     {obtenerMesesUnicos().map(mes => (
@@ -472,14 +472,14 @@ const FormularioGastos = () => {
                 </div>
 
                 {/* Filtro por año */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     📅 Filtrar por año
                   </label>
                   <select
                     value={filtroAnio}
                     onChange={(e) => setFiltroAnio(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los años</option>
                     {obtenerAniosUnicosLocal().map(anio => (
@@ -491,14 +491,14 @@ const FormularioGastos = () => {
                 </div>
 
                 {/* Filtro por tipo de gasto */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     🏷️ Tipo de gasto
                   </label>
                   <select
                     value={filtroTipoGasto}
                     onChange={(e) => setFiltroTipoGasto(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los tipos</option>
                     {opcionesTipoGasto.map(opcion => (
@@ -510,14 +510,14 @@ const FormularioGastos = () => {
                 </div>
 
                 {/* Filtro por forma de pago */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
                     💳 Forma de pago
                   </label>
                   <select
                     value={filtroFormaPago}
                     onChange={(e) => setFiltroFormaPago(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los métodos</option>
                     {opcionesFormaPago.map(opcion => (

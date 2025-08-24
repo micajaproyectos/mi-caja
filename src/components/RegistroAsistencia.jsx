@@ -1029,7 +1029,7 @@ export default function RegistroAsistencia() {
                 🔍 Filtros y Controles
               </h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
                     📅 Filtrar por Fecha
