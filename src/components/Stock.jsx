@@ -17,6 +17,9 @@ export default function Stock() {
   
   // Estado para indicar actualización automática
   const [actualizandoAutomaticamente, setActualizandoAutomaticamente] = useState(false);
+  
+  // Estado para controlar cuántos productos mostrar
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   // Referencias para limpiar intervalos y suscripciones
   const intervalRef = useRef(null);
@@ -26,6 +29,9 @@ export default function Stock() {
   const productosFiltrados = stockData.filter(item =>
     item.producto?.toLowerCase().includes(busquedaProducto.toLowerCase())
   );
+  
+  // Obtener productos a mostrar (50 inicialmente o todos si mostrarTodos es true)
+  const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 50);
 
   // Función para cargar datos del stock desde la vista stock_view
   const cargarStock = async () => {
@@ -337,7 +343,7 @@ export default function Stock() {
                     </div>
                     {busquedaProducto && (
                       <div className="mt-2 text-sm text-gray-300">
-                        Mostrando {productosFiltrados.length} de {stockData.length} productos
+                        Mostrando {productosAMostrar.length} de {productosFiltrados.length} productos
                       </div>
                     )}
                   </div>
@@ -364,7 +370,7 @@ export default function Stock() {
                         </tr>
                       </thead>
                       <tbody>
-                        {productosFiltrados.map((item, index) => (
+                        {productosAMostrar.map((item, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                             <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                               {item.producto || 'Sin nombre'}
@@ -387,6 +393,18 @@ export default function Stock() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+                
+                {/* Botón Mostrar Todo */}
+                {!mostrarTodos && productosFiltrados.length > 50 && (
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => setMostrarTodos(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm md:text-base"
+                    >
+                      Mostrar todo
+                    </button>
                   </div>
                 )}
               </>
