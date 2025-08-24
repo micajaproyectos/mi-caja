@@ -125,8 +125,8 @@ const RegistroInventario = () => {
   const productosFiltrados = inventarioRegistrado.filter(item => {
     const coincideNombre = item.producto.toLowerCase().includes(busquedaProducto.toLowerCase());
     
-    // Usar fecha_cl para filtros (fallback a fecha_ingreso)
-    const fechaFiltro = item.fecha_cl || extraerFechaSinZonaHoraria(item.fecha_ingreso);
+    // Usar fecha_ingreso para filtros (fecha seleccionada por el usuario)
+    const fechaFiltro = extraerFechaSinZonaHoraria(item.fecha_ingreso);
     
     // Filtro por fecha específica
     const coincideFecha = !filtroFecha || fechaFiltro === filtroFecha;
@@ -196,7 +196,7 @@ const RegistroInventario = () => {
         .from('inventario')
         .select('id, fecha_ingreso, fecha_cl, producto, cantidad, unidad, costo_total, precio_unitario, precio_venta, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
-        .order('fecha_cl', { ascending: false })
+        .order('fecha_ingreso', { ascending: false })
         .order('created_at', { ascending: false });
 
       console.log('📊 Respuesta de Supabase:', { data, error });
@@ -735,7 +735,7 @@ const RegistroInventario = () => {
                 <table className="w-full text-xs md:text-sm">
                   <thead>
                     <tr className="bg-white/10 backdrop-blur-sm">
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">📅 Fecha</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">📅 Fecha de Ingreso</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">📦 Producto</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">⚖️ Cantidad</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">🏷️ Unidad</th>
@@ -749,7 +749,7 @@ const RegistroInventario = () => {
                     {productosAMostrar.map((item, index) => (
                       <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                                                  <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                           {formatearFechaCortaChile(item.fecha_cl || item.fecha_ingreso)}
+                           {formatearFechaCortaChile(item.fecha_ingreso)}
                          </td>
                         <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
                           {item.producto}

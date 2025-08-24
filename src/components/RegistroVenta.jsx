@@ -911,11 +911,11 @@ export default function RegistroVenta() {
           </h1>
           
           {/* Nuevo diseño del formulario de venta */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
-            {/* Sección de búsqueda de productos */}
-            <div className="mb-6 md:mb-8">
-              <div className="flex items-center mb-3 md:mb-4">
-                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">🔍</span>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20 mb-4 md:mb-6">
+            {/* Sección de búsqueda y agregar producto - Ultra Compacta */}
+            <div className="mb-2 md:mb-3">
+              <div className="flex items-center mb-1">
+                <span className="text-blue-400 text-lg md:text-xl mr-2">🔍</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Buscar Producto</h3>
               </div>
               <input
@@ -923,27 +923,19 @@ export default function RegistroVenta() {
                 type="text"
                 value={busquedaProducto}
                 onChange={handleBusquedaProducto}
-                className="w-full px-3 md:px-4 py-3 md:py-4 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base transition-all duration-200"
+                className="w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base transition-all duration-200 mb-2"
                 placeholder="🔍 Escribe el nombre del producto..."
               />
-            </div>
-
-            {/* Sección de agregar producto */}
-            <div className="mb-6 md:mb-8">
-              <div className="flex items-center mb-3 md:mb-4">
-                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">➕</span>
-                <h3 className="text-green-400 text-lg md:text-xl font-bold">Agregar Producto</h3>
-              </div>
               
-              {/* Campos del producto */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
+              {/* Campos del producto - Responsive y adaptativo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
                 <div>
-                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Unidad</label>
+                  <label className="block text-white font-medium mb-1 text-xs md:text-sm">Unidad</label>
                   <select
                     name="unidad"
                     value={productoActual.unidad}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    className="w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base"
                   >
                     <option value="">Seleccione unidad</option>
                     {opcionesUnidad.map(opcion => (
@@ -955,27 +947,27 @@ export default function RegistroVenta() {
                 </div>
 
                 <div>
-                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Cantidad</label>
+                  <label className="block text-white font-medium mb-1 text-xs md:text-sm">Cantidad</label>
                   <input
                     type="number"
                     step="0.01"
                     name="cantidad"
                     value={productoActual.cantidad}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    className="w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white font-medium mb-1 md:mb-2 text-sm md:text-base">Precio</label>
+                  <label className="block text-white font-medium mb-1 text-xs md:text-sm">Precio</label>
                   <input
                     type="number"
                     step="0.01"
                     name="precio_unitario"
                     value={productoActual.precio_unitario}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    className="w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base"
                     placeholder="0.00"
                   />
                 </div>
@@ -984,7 +976,7 @@ export default function RegistroVenta() {
                   <button
                     type="button"
                     onClick={agregarProducto}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-2.5 px-3 md:px-4 lg:px-6 rounded-lg transition-all duration-300 text-xs md:text-sm lg:text-base shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     ➕ Agregar
                   </button>
@@ -992,37 +984,57 @@ export default function RegistroVenta() {
               </div>
             </div>
 
-            {/* Sección de productos en la venta */}
-            <div className="mb-6 md:mb-8">
-              <div className="flex items-center mb-3 md:mb-4">
-                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">🛒</span>
+            {/* Sección de productos en la venta - Compacta y horizontal */}
+            <div className="mb-4 md:mb-6">
+              <div className="flex items-center mb-2">
+                <span className="text-blue-400 text-lg md:text-xl mr-2">🛒</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Productos en la Venta</h3>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                {/* Lista de productos - ocupa 2/3 del espacio */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+                {/* Lista de productos - Responsive y adaptativo */}
                 <div className="lg:col-span-2">
-                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10">
+                  <div className="rounded-lg p-2 md:p-3">
                     {productosVenta.length === 0 ? (
-                      <p className="text-gray-400 text-center text-sm md:text-base">No hay productos agregados</p>
+                      <p className="text-gray-400 text-center text-xs md:text-sm">No hay productos agregados</p>
                     ) : (
-                      <div className="space-y-2 md:space-y-3">
+                      <div className="space-y-1 md:space-y-1.5">
                         {productosVenta.map((producto, index) => (
-                          <div key={producto.id} className="flex items-center justify-between bg-white/5 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/10">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white font-medium text-sm md:text-base truncate">{producto.producto}</p>
-                              <p className="text-gray-300 text-xs md:text-sm">
-                                {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 md:gap-3">
-                              <div className="text-right">
-                                <div className="text-green-300 text-xs md:text-sm font-medium">Subtotal</div>
-                                <div className="text-green-400 text-sm md:text-base font-bold">${parseFloat(producto.subtotal).toLocaleString()}</div>
+                          <div key={producto.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 backdrop-blur-sm rounded p-2 md:p-2.5 border border-white/10 hover:bg-white/10 transition-colors gap-2 sm:gap-3">
+                            {/* Información del producto - Responsive */}
+                            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                              {/* Nombre del producto */}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white font-medium text-xs md:text-sm truncate" title={producto.producto}>
+                                  {producto.producto}
+                                </p>
                               </div>
+                              
+                              {/* Cantidad y unidad */}
+                              <div className="flex items-center gap-1 text-gray-300 text-xs md:text-sm">
+                                <span className="font-medium">{producto.cantidad}</span>
+                                <span className="opacity-75">{producto.unidad}</span>
+                              </div>
+                              
+                              {/* Precio unitario */}
+                              <div className="text-gray-300 text-xs md:text-sm">
+                                <span className="font-medium">${parseFloat(producto.precio_unitario).toLocaleString()}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Subtotal y botón eliminar - Responsive */}
+                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+                              {/* Subtotal */}
+                              <div className="text-left sm:text-right">
+                                <div className="text-green-300 text-xs font-medium opacity-75">Subtotal</div>
+                                <div className="text-green-400 text-xs md:text-sm font-bold">${parseFloat(producto.subtotal).toLocaleString()}</div>
+                              </div>
+                              
+                              {/* Botón eliminar */}
                               <button
                                 onClick={() => eliminarProducto(producto.id)}
-                                className="text-red-400 hover:text-red-300 text-lg md:text-xl font-bold flex-shrink-0 px-2 py-1 rounded hover:bg-red-600/20 transition-colors"
+                                className="text-red-400 hover:text-red-300 text-xs md:text-sm font-bold flex-shrink-0 px-2 py-1 md:px-2.5 md:py-1.5 rounded hover:bg-red-600/20 transition-colors"
+                                title="Eliminar producto"
                               >
                                 🗑️
                               </button>
@@ -1036,22 +1048,22 @@ export default function RegistroVenta() {
                 
                 {/* Cuadro del total - ocupa 1/3 del espacio */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-md rounded-xl p-4 md:p-6 border-2 border-green-500/30 shadow-xl h-full">
-                    <div className="text-center mb-4">
-                      <div className="text-green-300 text-lg md:text-xl font-bold mb-2">💰 Total de la Venta</div>
-                      <div className="text-green-100 text-sm md:text-base">Resumen de productos</div>
+                  <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-md rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
+                    <div className="text-center mb-3">
+                      <div className="text-green-300 text-lg md:text-xl font-bold mb-1">💰 Total de la Venta</div>
+                      <div className="text-green-100 text-sm">Resumen de productos</div>
                     </div>
                     
-                    <div className="space-y-3 md:space-y-4">
-                                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                         <div className="text-green-200 text-sm md:text-base font-medium mb-1">Cantidad de Items</div>
-                         <div className="text-green-300 text-xl md:text-2xl font-bold">{productosVenta.length}</div>
-                       </div>
+                    <div className="space-y-2">
+                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                        <div className="text-green-200 text-sm font-medium mb-1">Cantidad de Items</div>
+                        <div className="text-green-300 text-xl font-bold">{productosVenta.length}</div>
+                      </div>
                       
-                                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                         <div className="text-green-200 text-sm md:text-base font-medium mb-1">Total a Pagar</div>
-                         <div className="text-green-300 text-2xl md:text-3xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
-                       </div>
+                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                        <div className="text-green-200 text-sm font-medium mb-1">Total a Pagar</div>
+                        <div className="text-green-300 text-2xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1136,84 +1148,85 @@ export default function RegistroVenta() {
 
 
 
-            {/* Sección de tipo de pago */}
-            <div className="mb-6 md:mb-8">
-              <div className="flex items-center mb-3 md:mb-4">
-                <span className="text-blue-400 text-lg md:text-xl mr-2 md:mr-3">💳</span>
+            {/* Sección de tipo de pago - Compacta */}
+            <div className="mb-3 md:mb-4">
+              <div className="flex items-center mb-2">
+                <span className="text-blue-400 text-lg md:text-xl mr-2">💳</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Tipo de Pago</h3>
               </div>
-              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'efectivo'})}
-                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'efectivo' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-green-400 text-xl md:text-2xl mb-1 md:mb-2">💵</div>
-                    <p className="font-medium text-xs md:text-sm">Efectivo</p>
+                    <div className="text-green-400 text-base md:text-lg lg:text-xl mb-1">💵</div>
+                    <p className="font-medium text-xs md:text-sm lg:text-base">Efectivo</p>
                   </div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'debito'})}
-                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'debito' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-blue-400 text-xl md:text-2xl mb-1 md:mb-2">💳</div>
-                    <p className="font-medium text-xs md:text-sm">Débito</p>
+                    <div className="text-blue-400 text-base md:text-lg lg:text-xl mb-1">💳</div>
+                    <p className="font-medium text-xs md:text-sm lg:text-base">Débito</p>
                   </div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'credito'})}
-                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'credito' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-orange-400 text-xl md:text-2xl mb-1 md:mb-2">💳</div>
-                    <p className="font-medium text-xs md:text-sm">Crédito</p>
+                    <div className="text-orange-400 text-base md:text-lg lg:text-xl mb-1">💳</div>
+                    <p className="font-medium text-xs md:text-sm lg:text-base">Crédito</p>
                   </div>
                 </button>
                 
                 <button
                   type="button"
                   onClick={() => setVenta({...venta, tipo_pago: 'transferencia'})}
-                  className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'transferencia' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-purple-400 text-xl md:text-2xl mb-1 md:mb-2">📱</div>
-                    <p className="font-medium text-xs md:text-sm">Transferencia</p>
+                    <div className="text-purple-400 text-base md:text-lg lg:text-xl mb-1">📱</div>
+                    <p className="font-medium text-xs md:text-sm lg:text-base">Transferencia</p>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* Botón procesar venta */}
+            {/* Botón procesar venta - Responsive */}
             <div className="text-center">
               <button
                 type="button"
                 onClick={registrarVenta}
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-4 md:py-5 px-8 md:px-12 rounded-xl transition-all duration-300 transform hover:scale-105 text-lg md:text-2xl shadow-2xl hover:shadow-green-500/25"
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 md:py-3 lg:py-4 px-4 md:px-6 lg:px-10 rounded-lg md:rounded-xl transition-all duration-300 transform hover:scale-105 text-sm md:text-lg lg:text-xl shadow-lg md:shadow-2xl hover:shadow-green-500/25"
               >
-                <span className="text-yellow-400 mr-2">💰</span>
-                Procesar Venta
+                <span className="text-yellow-400 mr-1 md:mr-2">💰</span>
+                <span className="hidden sm:inline">Procesar Venta</span>
+                <span className="sm:hidden">Procesar</span>
               </button>
             </div>
           </div>
@@ -1223,13 +1236,13 @@ export default function RegistroVenta() {
 
 
           {/* Sección de Ventas Registradas */}
-          <div className="mt-8 md:mt-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-white text-center drop-shadow-lg mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <div className="mt-6 md:mt-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-white text-center drop-shadow-lg mb-3 md:mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Ventas Registradas
             </h2>
             
             {/* Filtros de fecha */}
-            <div className="mb-4 md:mb-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="mb-3 md:mb-4 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
               <h3 className="text-lg md:text-xl font-semibold text-white mb-3 md:mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Filtros de Fecha
               </h3>
@@ -1351,7 +1364,7 @@ export default function RegistroVenta() {
             
 
             
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
               {loading ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-white"></div>

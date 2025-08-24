@@ -1,21 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabaseClient';
-import { authService } from '../lib/authService.js';
-import { 
-  obtenerFechaHoyChile, 
-  formatearFechaChile,
-  formatearFechaCortaChile,
-  obtenerAniosUnicos
-} from '../lib/dateUtils.js';
+// import { supabase } from '../lib/supabaseClient';
+// import { authService } from '../lib/authService.js';
+// import { 
+//   obtenerFechaHoyChile, 
+//   formatearFechaChile,
+//   formatearFechaCortaChile,
+//   obtenerAniosUnicos
+// } from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 const FormularioGastos = () => {
   const navigate = useNavigate();
   
+  console.log('🔍 FormularioGastos: Componente iniciando...');
+  
+  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  const obtenerFechaActual = () => {
+    const fecha = new Date();
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   // Estado del formulario
   const [gasto, setGasto] = useState({
-    fecha: obtenerFechaHoyChile(), // Inicializar con fecha actual de Chile
+    fecha: obtenerFechaActual(), // Inicializar con fecha actual
     tipo_gasto: '',
     detalle: '',
     monto: '',
@@ -25,7 +36,7 @@ const FormularioGastos = () => {
   // Estados para la gestión de datos
   const [gastosRegistrados, setGastosRegistrados] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingDatos, setLoadingDatos] = useState(true);
+  const [loadingDatos, setLoadingDatos] = useState(false); // Cambiado a false para testing
   const [error, setError] = useState(null);
 
   // Estados para filtros
@@ -48,15 +59,6 @@ const FormularioGastos = () => {
     { value: 'Transferencia', label: 'Transferencia' }
   ];
 
-  // Función para obtener la fecha actual en formato YYYY-MM-DD
-  const obtenerFechaActual = () => {
-    const fecha = new Date();
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   // Función para formatear números
   const formatearNumero = (numero) => {
     return Number(numero).toLocaleString('es-ES', {
@@ -77,76 +79,51 @@ const FormularioGastos = () => {
 
   // Función para obtener meses únicos
   const obtenerMesesUnicos = () => {
-    const meses = gastosRegistrados.map(gasto => {
-      const fecha = new Date(gasto.fecha);
-      return {
-        value: fecha.getUTCMonth() + 1,
-        label: fecha.toLocaleDateString('es-ES', { month: 'long' })
-      };
-    });
-
-    // Eliminar duplicados y ordenar
-    const mesesUnicos = [...new Set(meses.map(m => m.value))].sort((a, b) => a - b);
-    return mesesUnicos.map(mes => {
-      const fechaTemp = new Date(2024, mes - 1, 1);
-      return {
-        value: mes,
-        label: fechaTemp.toLocaleDateString('es-ES', { month: 'long' })
-      };
-    });
+    return [
+      { value: 1, label: 'Enero' },
+      { value: 2, label: 'Febrero' },
+      { value: 3, label: 'Marzo' },
+      { value: 4, label: 'Abril' },
+      { value: 5, label: 'Mayo' },
+      { value: 6, label: 'Junio' },
+      { value: 7, label: 'Julio' },
+      { value: 8, label: 'Agosto' },
+      { value: 9, label: 'Septiembre' },
+      { value: 10, label: 'Octubre' },
+      { value: 11, label: 'Noviembre' },
+      { value: 12, label: 'Diciembre' }
+    ];
   };
 
-  // Función para obtener años únicos usando fecha_cl
+  // Función para obtener años únicos
   const obtenerAniosUnicosLocal = () => {
-    const fechas = gastosRegistrados.map(gasto => gasto.fecha_cl || gasto.fecha).filter(Boolean);
-    return obtenerAniosUnicos(fechas);
+    const currentYear = new Date().getFullYear();
+    return [currentYear - 1, currentYear, currentYear + 1];
   };
 
   // Función para cargar gastos registrados filtrados por usuario
   const cargarGastos = async () => {
+    console.log('🔍 cargarGastos: Función llamada');
     try {
       setLoadingDatos(true);
       setError(null);
-
-      // Obtener el usuario_id del usuario autenticado
-      const usuarioId = await authService.getCurrentUserId();
-      if (!usuarioId) {
-        console.error('❌ No hay usuario autenticado');
-        setGastosRegistrados([]);
-        return;
-      }
-
-      // Intentar consulta con fecha_cl primero, fallback a fecha
-      let { data, error } = await supabase
-        .from('gasto')
-        .select('id, fecha, fecha_cl, tipo_gasto, detalle, monto, forma_pago, usuario_id, created_at')
-        .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
-        .order('fecha_cl', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      // Si hay error con fecha_cl, usar consulta sin fecha_cl
-      if (error && error.message?.includes('fecha_cl')) {
-        console.warn('⚠️ Columna fecha_cl no existe en gasto, usando fecha');
-        const fallbackQuery = await supabase
-          .from('gasto')
-          .select('id, fecha, tipo_gasto, detalle, monto, forma_pago, usuario_id, created_at')
-          .eq('usuario_id', usuarioId)
-          .order('fecha', { ascending: false })
-          .order('created_at', { ascending: false });
-        
-        data = fallbackQuery.data;
-        error = fallbackQuery.error;
-      }
-
-      if (error) {
-        console.error('Error al cargar gastos:', error);
-        setError('Error al cargar los gastos registrados');
-        setGastosRegistrados([]);
-        return;
-      }
-
-      setGastosRegistrados(data || []);
-      console.log(`✅ Gastos cargados para usuario ${usuarioId}:`, data?.length || 0);
+      
+      // Simular datos para testing
+      const datosSimulados = [
+        {
+          id: 1,
+          fecha: '2024-01-15',
+          fecha_cl: '2024-01-15',
+          tipo_gasto: 'Fijo',
+          detalle: 'Alquiler oficina',
+          monto: 150000,
+          forma_pago: 'Transferencia',
+          usuario_id: 'test-user'
+        }
+      ];
+      
+      setGastosRegistrados(datosSimulados);
+      console.log('✅ Gastos simulados cargados:', datosSimulados.length);
     } catch (error) {
       console.error('Error inesperado al cargar gastos:', error);
       setError('Error inesperado al cargar los datos');
@@ -167,6 +144,7 @@ const FormularioGastos = () => {
   // Función para registrar un nuevo gasto
   const registrarGasto = async (e) => {
     e.preventDefault();
+    console.log('🔍 registrarGasto: Función llamada');
     
     // Validaciones
     if (!gasto.fecha || !gasto.tipo_gasto || !gasto.detalle || !gasto.monto || !gasto.forma_pago) {
@@ -183,38 +161,19 @@ const FormularioGastos = () => {
       setLoading(true);
       setError(null);
 
-      // Obtener el usuario_id del usuario autenticado
-      const usuarioId = await authService.getCurrentUserId();
-      if (!usuarioId) {
-        setError('Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
-        setLoading(false);
-        return;
-      }
+      console.log('💰 Registrando gasto:', gasto);
 
-      const gastoParaInsertar = {
-        fecha: gasto.fecha,
-        // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
-        tipo_gasto: gasto.tipo_gasto,
-        detalle: gasto.detalle.trim(),
+      // Simular registro exitoso
+      const nuevoGasto = {
+        id: Date.now(),
+        ...gasto,
         monto: Number(gasto.monto),
-        forma_pago: gasto.forma_pago,
-        usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
+        usuario_id: 'test-user'
       };
 
-      console.log('💰 Registrando gasto:', gastoParaInsertar);
+      setGastosRegistrados(prev => [nuevoGasto, ...prev]);
 
-      const { data, error } = await supabase
-        .from('gasto')
-        .insert([gastoParaInsertar])
-        .select();
-
-      if (error) {
-        console.error('Error al registrar gasto:', error);
-        setError('Error al registrar el gasto');
-        return;
-      }
-
-      console.log('✅ Gasto registrado exitosamente:', data);
+      console.log('✅ Gasto registrado exitosamente:', nuevoGasto);
 
       // Limpiar formulario
       setGasto({
@@ -224,9 +183,6 @@ const FormularioGastos = () => {
         monto: '',
         forma_pago: ''
       });
-
-      // Recargar datos
-      await cargarGastos();
 
     } catch (error) {
       console.error('Error inesperado al registrar gasto:', error);
@@ -246,19 +202,8 @@ const FormularioGastos = () => {
       setLoading(true);
       setError(null);
 
-      const { error } = await supabase
-        .from('gasto')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error al eliminar gasto:', error);
-        setError('Error al eliminar el gasto');
-        return;
-      }
-
+      setGastosRegistrados(prev => prev.filter(g => g.id !== id));
       console.log('✅ Gasto eliminado exitosamente');
-      await cargarGastos();
 
     } catch (error) {
       console.error('Error inesperado al eliminar gasto:', error);
@@ -268,22 +213,19 @@ const FormularioGastos = () => {
     }
   };
 
-  // Filtrar gastos usando fecha_cl
+  // Filtrar gastos
   const gastosFiltrados = gastosRegistrados.filter(item => {
     const coincideDetalle = item.detalle?.toLowerCase().includes(busquedaDetalle.toLowerCase());
     
-    // Usar fecha_cl para filtros (fallback a fecha)
     const fechaFiltro = item.fecha_cl || item.fecha;
     const coincideFecha = !filtroFecha || fechaFiltro === filtroFecha;
     
-    // Filtro por mes
     const coincideMes = !filtroMes || (() => {
       if (!fechaFiltro) return false;
       const [year, month] = fechaFiltro.split('-');
       return parseInt(month) === Number(filtroMes);
     })();
     
-    // Filtro por año
     const coincideAnio = !filtroAnio || (() => {
       if (!fechaFiltro) return false;
       const year = fechaFiltro.split('-')[0];
@@ -307,6 +249,7 @@ const FormularioGastos = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
+    console.log('🔍 useEffect: Componente montado');
     cargarGastos();
     // Establecer fecha actual por defecto
     setGasto(prev => ({
@@ -314,6 +257,8 @@ const FormularioGastos = () => {
       fecha: obtenerFechaActual()
     }));
   }, []);
+
+  console.log('🔍 FormularioGastos: Renderizando componente...');
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -402,26 +347,26 @@ const FormularioGastos = () => {
                   </select>
                 </div>
 
-                                 {/* Forma de Pago */}
-                 <div>
-                   <label className="block text-white text-sm font-medium mb-2">
-                     💳 Forma de Pago
-                   </label>
-                   <select
-                     name="forma_pago"
-                     value={gasto.forma_pago}
-                     onChange={handleChange}
-                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
-                     required
-                   >
-                     <option value="">Seleccionar método</option>
-                     {opcionesFormaPago.map(opcion => (
-                       <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
-                         {opcion.label}
-                       </option>
-                     ))}
-                   </select>
-                 </div>
+                {/* Forma de Pago */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    💳 Forma de Pago
+                  </label>
+                  <select
+                    name="forma_pago"
+                    value={gasto.forma_pago}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    required
+                  >
+                    <option value="">Seleccionar método</option>
+                    {opcionesFormaPago.map(opcion => (
+                      <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
+                        {opcion.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Detalle */}
@@ -564,28 +509,28 @@ const FormularioGastos = () => {
                   </select>
                 </div>
 
-                                 {/* Filtro por forma de pago */}
-                 <div>
-                   <label className="block text-white text-sm font-medium mb-2">
-                     💳 Forma de pago
-                   </label>
-                   <select
-                     value={filtroFormaPago}
-                     onChange={(e) => setFiltroFormaPago(e.target.value)}
-                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
-                   >
-                     <option value="">Todos los métodos</option>
-                     {opcionesFormaPago.map(opcion => (
-                       <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
-                         {opcion.label}
-                       </option>
-                     ))}
-                   </select>
-                 </div>
+                {/* Filtro por forma de pago */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    💳 Forma de pago
+                  </label>
+                  <select
+                    value={filtroFormaPago}
+                    onChange={(e) => setFiltroFormaPago(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                  >
+                    <option value="">Todos los métodos</option>
+                    {opcionesFormaPago.map(opcion => (
+                      <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
+                        {opcion.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-                             {/* Filtros activos */}
-               {(busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) && (
+              {/* Filtros activos */}
+              {(busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) && (
                 <div className="mb-4">
                   <p className="text-gray-300 text-sm mb-2">Filtros activos:</p>
                   <div className="flex flex-wrap gap-2">
@@ -619,12 +564,12 @@ const FormularioGastos = () => {
                         <button onClick={() => setFiltroTipoGasto('')} className="text-indigo-400 hover:text-white">✕</button>
                       </span>
                     )}
-                                         {filtroFormaPago && (
-                       <span className="inline-flex items-center gap-1 bg-orange-500/20 text-orange-300 px-2 py-1 rounded-full text-xs">
-                         <span>💳 {filtroFormaPago}</span>
-                         <button onClick={() => setFiltroFormaPago('')} className="text-orange-400 hover:text-white">✕</button>
-                       </span>
-                     )}
+                    {filtroFormaPago && (
+                      <span className="inline-flex items-center gap-1 bg-orange-500/20 text-orange-300 px-2 py-1 rounded-full text-xs">
+                        <span>💳 {filtroFormaPago}</span>
+                        <button onClick={() => setFiltroFormaPago('')} className="text-orange-400 hover:text-white">✕</button>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -673,7 +618,7 @@ const FormularioGastos = () => {
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                     <div className="text-center">
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Gastos Variables</p>
-                      <p className="text-orange-300 text-lg md:text-xl font-bold">
+                      <p className="text-green-300 text-lg md:text-xl font-bold">
                         ${formatearNumero(totalGastosVariables)}
                       </p>
                     </div>
@@ -705,7 +650,7 @@ const FormularioGastos = () => {
                       {gastosFiltrados.map((item, index) => (
                         <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                            {formatearFechaCortaChile(item.fecha_cl || item.fecha)}
+                            {formatearFechaMostrar(item.fecha_cl || item.fecha)}
                           </td>
                           <td className="p-2 md:p-4">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -722,17 +667,17 @@ const FormularioGastos = () => {
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm font-semibold">
                             ${formatearNumero(item.monto)}
                           </td>
-                                                     <td className="p-2 md:p-4">
-                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                               item.forma_pago === 'Efectivo' 
-                                 ? 'bg-green-100 text-green-800'
-                                 : item.forma_pago === 'Débito'
-                                 ? 'bg-blue-100 text-blue-800'
-                                 : 'bg-purple-100 text-purple-800'
-                             }`}>
-                               {item.forma_pago}
-                             </span>
-                           </td>
+                          <td className="p-2 md:p-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              item.forma_pago === 'Efectivo' 
+                                ? 'bg-green-100 text-green-800'
+                                : item.forma_pago === 'Débito'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {item.forma_pago}
+                            </span>
+                          </td>
                           <td className="p-2 md:p-4">
                             <button
                               onClick={() => eliminarGasto(item.id)}
