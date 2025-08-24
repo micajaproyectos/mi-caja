@@ -171,11 +171,55 @@ export default function Clientes() {
         .select('*')
         .eq('usuario_id', usuarioId); // ✅ FILTRO CRÍTICO POR USUARIO
 
-      // Siempre mostrar solo registros del día actual
-      const fechaHoy = obtenerFechaHoyChile();
-      query = query.eq('fecha_cl', fechaHoy);
+      // Determinar si hay filtros de fecha activos
+      const hayFiltrosFechaActivos = filtros.fecha_especifica || filtros.mes || filtros.ano;
       
-      // Aplicar solo filtro de empresa si está activo
+      // Si no hay filtros de fecha, mostrar registros del mes actual
+      if (!hayFiltrosFechaActivos) {
+        const fechaActual = new Date();
+        const anoActual = fechaActual.getFullYear();
+        const mesActual = fechaActual.getMonth() + 1; // getMonth() retorna 0-11
+        
+        const mesStr = mesActual.toString().padStart(2, '0');
+        const fechaInicio = `${anoActual}-${mesStr}-01`;
+        
+        // Calcular el último día del mes actual
+        const ultimoDiaDelMes = new Date(anoActual, mesActual, 0).getDate();
+        const fechaFin = `${anoActual}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
+        
+        query = query.gte('fecha_cl', fechaInicio);
+        query = query.lte('fecha_cl', fechaFin);
+      } else {
+        // Aplicar filtros de fecha si están activos
+        if (filtros.fecha_especifica) {
+          query = query.eq('fecha_cl', filtros.fecha_especifica);
+        }
+
+        if (filtros.mes || filtros.ano) {
+          const anoParaFiltro = filtros.ano || new Date().getFullYear().toString();
+          
+          if (filtros.mes) {
+            // Filtro por mes específico
+            const mesStr = filtros.mes.toString().padStart(2, '0');
+            const fechaInicio = `${anoParaFiltro}-${mesStr}-01`;
+            
+            // Calcular el último día del mes
+            const ultimoDiaDelMes = new Date(parseInt(anoParaFiltro), parseInt(filtros.mes), 0).getDate();
+            const fechaFin = `${anoParaFiltro}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
+            
+            query = query.gte('fecha_cl', fechaInicio);
+            query = query.lte('fecha_cl', fechaFin);
+          } else if (filtros.ano) {
+            // Filtro solo por año
+            const fechaInicio = `${filtros.ano}-01-01`;
+            const fechaFin = `${filtros.ano}-12-31`;
+            query = query.gte('fecha_cl', fechaInicio);
+            query = query.lte('fecha_cl', fechaFin);
+          }
+        }
+      }
+      
+      // Aplicar filtro de empresa si está activo
       if (filtros.producto && filtros.producto.trim() !== '') {
         query = query.ilike('nombre_empresa', `%${filtros.producto.trim()}%`);
       }
@@ -190,11 +234,47 @@ export default function Clientes() {
           .select('*')
           .eq('usuario_id', usuarioId); // ✅ FILTRO CRÍTICO POR USUARIO en fallback
 
-        // Siempre mostrar solo registros del día actual (fallback)
-        const fechaHoy = obtenerFechaHoyChile();
-        fallbackQuery = fallbackQuery.eq('fecha', fechaHoy);
+        // Aplicar los mismos filtros de fecha en el fallback
+        if (!hayFiltrosFechaActivos) {
+          const fechaActual = new Date();
+          const anoActual = fechaActual.getFullYear();
+          const mesActual = fechaActual.getMonth() + 1;
+          
+          const mesStr = mesActual.toString().padStart(2, '0');
+          const fechaInicio = `${anoActual}-${mesStr}-01`;
+          
+          const ultimoDiaDelMes = new Date(anoActual, mesActual, 0).getDate();
+          const fechaFin = `${anoActual}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
+          
+          fallbackQuery = fallbackQuery.gte('fecha', fechaInicio);
+          fallbackQuery = fallbackQuery.lte('fecha', fechaFin);
+        } else {
+          if (filtros.fecha_especifica) {
+            fallbackQuery = fallbackQuery.eq('fecha', filtros.fecha_especifica);
+          }
+
+          if (filtros.mes || filtros.ano) {
+            const anoParaFiltro = filtros.ano || new Date().getFullYear().toString();
+            
+            if (filtros.mes) {
+              const mesStr = filtros.mes.toString().padStart(2, '0');
+              const fechaInicio = `${anoParaFiltro}-${mesStr}-01`;
+              
+              const ultimoDiaDelMes = new Date(parseInt(anoParaFiltro), parseInt(filtros.mes), 0).getDate();
+              const fechaFin = `${anoParaFiltro}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
+              
+              fallbackQuery = fallbackQuery.gte('fecha', fechaInicio);
+              fallbackQuery = fallbackQuery.lte('fecha', fechaFin);
+            } else if (filtros.ano) {
+              const fechaInicio = `${filtros.ano}-01-01`;
+              const fechaFin = `${filtros.ano}-12-31`;
+              fallbackQuery = fallbackQuery.gte('fecha', fechaInicio);
+              fallbackQuery = fallbackQuery.lte('fecha', fechaFin);
+            }
+          }
+        }
         
-        // Aplicar solo filtro de empresa si está activo
+        // Aplicar filtro de empresa en fallback
         if (filtros.producto && filtros.producto.trim() !== '') {
           fallbackQuery = fallbackQuery.ilike('nombre_empresa', `%${filtros.producto.trim()}%`);
         }
@@ -230,7 +310,7 @@ export default function Clientes() {
     }));
   };
 
-  // Función para limpiar filtros de la tabla de pedidos (solo producto)
+  // Función para limpiar filtros de la tabla de pedidos
   const limpiarFiltros = () => {
     setFiltros({
       fecha_especifica: '',
@@ -1256,10 +1336,10 @@ export default function Clientes() {
               <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
                 📊 Registros de Pedidos
               </h2>
-              {!filtros.producto && (
-                                 <p className="text-blue-400 text-sm">
-                   📅 Mostrando pedidos del día actual - Usa el filtro de empresa para buscar específicos
-                 </p>
+              {!(filtros.producto || filtros.fecha_especifica || filtros.mes || filtros.ano) && (
+                <p className="text-blue-400 text-sm">
+                  📅 Mostrando pedidos del mes actual - Usa los filtros para buscar específicos
+                </p>
               )}
             </div>
 
@@ -1267,20 +1347,90 @@ export default function Clientes() {
             <div className="bg-white/5 rounded-xl p-4 mb-6 border border-white/10">
               <h3 className="text-lg font-bold text-white mb-4">🔍 Filtros de Búsqueda</h3>
               
-                            <div className="grid grid-cols-1 gap-4 mb-4">
-                                 <div>
-                   <label className="block text-white font-medium mb-2 text-sm">
-                     🏢 Buscar Empresa
-                   </label>
-                   <input
-                     type="text"
-                     name="producto"
-                     value={filtros.producto}
-                     onChange={handleFiltroChange}
-                     placeholder="Buscar empresa..."
-                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
-                   />
-                 </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {/* Filtro por empresa */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm">
+                    🏢 Buscar Empresa
+                  </label>
+                  <input
+                    type="text"
+                    name="producto"
+                    value={filtros.producto}
+                    onChange={handleFiltroChange}
+                    placeholder="Buscar empresa..."
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                  />
+                </div>
+
+                {/* Filtro por fecha específica */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm">
+                    📅 Fecha Específica
+                  </label>
+                  <input
+                    type="date"
+                    name="fecha_especifica"
+                    value={filtros.fecha_especifica}
+                    onChange={handleFiltroChange}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                  />
+                </div>
+
+                {/* Filtro por mes */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm">
+                    📆 Mes
+                  </label>
+                  <select
+                    name="mes"
+                    value={filtros.mes}
+                    onChange={handleFiltroChange}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                  >
+                    <option value="" className="bg-gray-800 text-white">Todos los meses</option>
+                    <option value="1" className="bg-gray-800 text-white">Enero</option>
+                    <option value="2" className="bg-gray-800 text-white">Febrero</option>
+                    <option value="3" className="bg-gray-800 text-white">Marzo</option>
+                    <option value="4" className="bg-gray-800 text-white">Abril</option>
+                    <option value="5" className="bg-gray-800 text-white">Mayo</option>
+                    <option value="6" className="bg-gray-800 text-white">Junio</option>
+                    <option value="7" className="bg-gray-800 text-white">Julio</option>
+                    <option value="8" className="bg-gray-800 text-white">Agosto</option>
+                    <option value="9" className="bg-gray-800 text-white">Septiembre</option>
+                    <option value="10" className="bg-gray-800 text-white">Octubre</option>
+                    <option value="11" className="bg-gray-800 text-white">Noviembre</option>
+                    <option value="12" className="bg-gray-800 text-white">Diciembre</option>
+                  </select>
+                </div>
+
+                {/* Filtro por año */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm">
+                    📅 Año
+                  </label>
+                  <select
+                    name="ano"
+                    value={filtros.ano}
+                    onChange={handleFiltroChange}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                  >
+                    <option value="" className="bg-gray-800 text-white">Todos los años</option>
+                    {(() => {
+                      const anoActual = new Date().getFullYear();
+                      const anos = [];
+                      // Generar opciones para el año actual y los próximos 2 años
+                      for (let i = anoActual; i <= anoActual + 2; i++) {
+                        anos.push(
+                          <option key={i} value={i.toString()} className="bg-gray-800 text-white">
+                            {i}
+                          </option>
+                        );
+                      }
+                      return anos;
+                    })()}
+                  </select>
+                </div>
               </div>
 
                             <div className="flex gap-2 flex-wrap">
@@ -1316,8 +1466,8 @@ export default function Clientes() {
                      </>
                    ) : (
                      <>
-                       <p className="text-gray-300 text-lg font-bold mb-2">No hay pedidos registrados hoy</p>
-                       <p className="text-gray-500 text-sm">Por defecto se muestran solo los pedidos del día actual</p>
+                       <p className="text-gray-300 text-lg font-bold mb-2">No hay pedidos registrados este mes</p>
+                       <p className="text-gray-500 text-sm">Por defecto se muestran los pedidos del mes actual</p>
                      </>
                    )}
               </div>
@@ -1325,10 +1475,10 @@ export default function Clientes() {
                 <>
                   <div className="p-4 border-b border-white/10">
                     <p className="text-white font-medium">
-                                           {filtros.producto ? (
-                       `🔍 Registros filtrados por empresa: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                                           {(filtros.producto || filtros.fecha_especifica || filtros.mes || filtros.ano) ? (
+                       `🔍 Registros filtrados: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
                      ) : (
-                       `📅 Registros de hoy: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                       `📅 Registros del mes: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
                      )}
                     </p>
               </div>

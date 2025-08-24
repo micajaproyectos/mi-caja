@@ -39,11 +39,8 @@ const RegistroInventario = () => {
   const normalizarFecha = (fechaString) => {
     if (!fechaString) return '';
     
-    console.log('🔄 Normalizando fecha:', fechaString);
-    
     // Si la fecha ya está en formato YYYY-MM-DD, retornarla directamente
     if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
-      console.log('✅ Fecha ya en formato correcto:', fechaString);
       return fechaString;
     }
     
@@ -54,7 +51,6 @@ const RegistroInventario = () => {
       if (partes.length === 3) {
         const [year, month, day] = partes;
         const fechaNormalizada = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        console.log('✅ Fecha normalizada desde input:', fechaNormalizada);
         return fechaNormalizada;
       }
     }
@@ -73,7 +69,6 @@ const RegistroInventario = () => {
       const day = String(fecha.getDate()).padStart(2, '0');
       const resultado = `${year}-${month}-${day}`;
       
-      console.log('✅ Fecha normalizada con Date:', resultado);
       return resultado;
     } catch (error) {
       console.error('❌ Error al normalizar fecha:', error);
@@ -94,7 +89,6 @@ const RegistroInventario = () => {
     // Crear fecha ISO con offset local
     const fechaLocal = new Date(fecha.getTime() - (offset * 60 * 1000));
     
-    console.log('🌍 Fecha con zona horaria local:', fechaLocal.toISOString());
     return fechaLocal.toISOString();
   };
 
@@ -107,7 +101,6 @@ const RegistroInventario = () => {
     // getUTCMonth() devuelve 0-11, necesitamos 1-12 para comparar con input type="month"
     const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
     const resultado = `${year}-${month}`;
-    console.log('🔍 Debug filtro mes:', { fechaString, resultado });
     return resultado;
   };
 
@@ -135,16 +128,7 @@ const RegistroInventario = () => {
     const anioMesItem = fechaFiltro ? fechaFiltro.substring(0, 7) : obtenerAnioMes(item.fecha_ingreso);
     const coincideMes = !filtroMes || anioMesItem === filtroMes;
     
-    // Debug del filtro por mes
-    if (filtroMes) {
-      console.log('🔍 Debug filtro mes:', {
-        producto: item.producto,
-        fecha_ingreso: item.fecha_ingreso,
-        anioMesItem,
-        filtroMes,
-        coincideMes
-      });
-    }
+
     
     return coincideNombre && coincideFecha && coincideMes;
   });
@@ -154,7 +138,6 @@ const RegistroInventario = () => {
 
   // Función para recargar datos
   const recargarDatos = useCallback(() => {
-    console.log('🔄 RegistroInventario: Recargando datos...');
     cargarInventario();
   }, []);
 
@@ -180,11 +163,8 @@ const RegistroInventario = () => {
 
   const cargarInventario = async () => {
     try {
-      console.log('🔄 Iniciando carga de inventario...');
-      
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
-      console.log('👤 Usuario ID obtenido:', usuarioId);
       
       if (!usuarioId) {
         console.error('❌ No hay usuario autenticado');
@@ -199,20 +179,14 @@ const RegistroInventario = () => {
         .order('fecha_ingreso', { ascending: false })
         .order('created_at', { ascending: false });
 
-      console.log('📊 Respuesta de Supabase:', { data, error });
-
       if (error) {
         console.error('❌ Error en consulta Supabase:', error);
-        console.error('❌ Mensaje de error:', error.message);
-        console.error('❌ Detalles del error:', error.details);
         alert(`Error al cargar el inventario: ${error.message}`);
         setInventarioRegistrado([]);
         return;
       }
 
-      console.log('✅ Inventario cargado exitosamente:', data?.length || 0, 'registros');
       setInventarioRegistrado(data || []);
-      console.log(`✅ Inventario cargado para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error inesperado al cargar inventario:', error);
       alert('Error inesperado al cargar el inventario');
@@ -279,10 +253,6 @@ const RegistroInventario = () => {
       // Crear fecha con zona horaria local para evitar desfases
       const fechaConZonaHoraria = crearFechaConZonaHoraria(inventario.fecha_ingreso);
       
-      console.log('🔍 Debug de fechas:');
-      console.log('  - Fecha original del formulario:', inventario.fecha_ingreso);
-      console.log('  - Fecha con zona horaria local:', fechaConZonaHoraria);
-      
       const inventarioParaInsertar = {
         fecha_ingreso: fechaConZonaHoraria,
         // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
@@ -295,8 +265,6 @@ const RegistroInventario = () => {
         usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
       };
 
-      console.log('📦 Registrando inventario:', inventarioParaInsertar);
-
       const { error } = await supabase
         .from('inventario')
         .insert([inventarioParaInsertar]);
@@ -307,7 +275,6 @@ const RegistroInventario = () => {
         return;
       }
 
-      console.log('✅ Inventario registrado exitosamente');
       alert('Inventario registrado exitosamente');
 
       // Limpiar formulario
@@ -348,7 +315,6 @@ const RegistroInventario = () => {
         return;
       }
 
-      console.log('✅ Producto eliminado del inventario');
       alert('Producto eliminado del inventario');
       await cargarInventario();
 
