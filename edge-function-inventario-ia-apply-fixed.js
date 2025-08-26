@@ -36,7 +36,8 @@ function toNumberStrict(value) {
 // ===== CORS =====
 const allowedOrigins = [
   "https://mi-caja.vercel.app",
-  "https://www.appmicaja.cl",
+  "https://micajaempresa.cl",
+  "https://www.micajaempresa.cl",
   "http://localhost:5173",
   "http://localhost:5177"
 ];
