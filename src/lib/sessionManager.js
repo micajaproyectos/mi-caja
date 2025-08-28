@@ -2,49 +2,102 @@ import { supabase } from './supabaseClient.js';
 import { generarClaveCacheFecha } from './dateUtils.js';
 
 /**
- * Gestor de sesión mejorado para evitar mezcla de datos entre usuarios
+ * Gestor de sesión optimizado para evitar mezcla de datos entre usuarios
  * Incluye gestión de cache específico por usuario y fecha
+ * Optimizado para evitar logs repetitivos y bucles de recarga
  */
 export class SessionManager {
   constructor() {
     this.listeners = new Set();
     this.currentUserId = null;
     this.cachePrefix = 'cache_data_';
+    this.authListener = null;
+    this.lastEvent = null;
+    this.lastEventTime = 0;
+    this.debounceTimeout = null;
+    this.isProduction = process.env.NODE_ENV === 'production';
     this.setupAuthListener();
   }
 
   /**
-   * Configurar listener de cambios de autenticación
+   * Configurar listener de cambios de autenticación (idempotente)
    */
   setupAuthListener() {
-    supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state change:', event, session?.user?.id);
-      
-      const newUserId = session?.user?.id || null;
-      const previousUserId = this.currentUserId;
-      
-      // Si cambió el usuario o se cerró sesión, limpiar datos
-      if (previousUserId && previousUserId !== newUserId) {
-        console.log('🧹 Usuario cambió, limpiando datos del usuario anterior:', previousUserId);
-        this.clearUserData(previousUserId);
-      }
-      
-      // Actualizar usuario actual
-      this.currentUserId = newUserId;
-      
-      // Notificar a los listeners
-      this.notifyListeners(event, session, { previousUserId, newUserId });
-      
-      // Si se cerró sesión, limpiar todo
-      if (event === 'SIGNED_OUT') {
-        this.clearAllData();
-      }
-      
-      // Si se inició sesión, invalidar datos
-      if (event === 'SIGNED_IN' && newUserId) {
-        this.invalidateUserData(newUserId);
-      }
+    // Solo configurar si no existe ya
+    if (this.authListener) {
+      return;
+    }
+
+    this.authListener = supabase.auth.onAuthStateChange((event, session) => {
+      this.handleAuthChange(event, session);
     });
+  }
+
+  /**
+   * Manejar cambios de autenticación con debounce y coalescing
+   */
+  handleAuthChange(event, session) {
+    const newUserId = session?.user?.id || null;
+    const previousUserId = this.currentUserId;
+    const now = Date.now();
+    
+    // Coalesce SIGNED_IN/INITIAL_SESSION: procesa uno y omite el otro en ±300ms
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && 
+        (this.lastEvent === 'SIGNED_IN' || this.lastEvent === 'INITIAL_SESSION') &&
+        (now - this.lastEventTime) < 300) {
+      if (!this.isProduction) {
+        console.log('🔄 Auth event coalesced:', event, '→', this.lastEvent);
+      }
+      return;
+    }
+
+    // Debounce de eventos de sesión (300ms)
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+    }
+
+    this.debounceTimeout = setTimeout(() => {
+      this.processAuthChange(event, session, previousUserId, newUserId);
+    }, 300);
+
+    // Actualizar estado inmediato
+    this.lastEvent = event;
+    this.lastEventTime = now;
+  }
+
+  /**
+   * Procesar cambio de autenticación
+   */
+  processAuthChange(event, session, previousUserId, newUserId) {
+    if (!this.isProduction) {
+              console.log('Auth state change:', event, newUserId);
+    }
+    
+    // Si cambió el usuario o se cerró sesión, limpiar datos
+    if (previousUserId && previousUserId !== newUserId) {
+      if (!this.isProduction) {
+        console.log('🧹 Usuario cambió, limpiando datos del usuario anterior:', previousUserId);
+      }
+      this.clearUserData(previousUserId);
+    }
+    
+    // Actualizar usuario actual
+    this.currentUserId = newUserId;
+    
+    // Notificar a los listeners solo si hay cambio real
+    if (previousUserId !== newUserId || event === 'SIGNED_OUT') {
+      this.notifyListeners(event, session, { previousUserId, newUserId });
+    }
+    
+    // Si se cerró sesión, limpiar todo
+    if (event === 'SIGNED_OUT') {
+      this.clearAllData();
+    }
+    
+    // Si se inició sesión, invalidar datos (solo si no está ya marcado)
+    if (event === 'SIGNED_IN' && newUserId && !this.needsRefresh(newUserId)) {
+      this.invalidateUserData(newUserId);
+    }
   }
 
   /**
@@ -95,14 +148,18 @@ export class SessionManager {
   setUserData(key, data, userId = null) {
     const targetUserId = userId || this.currentUserId;
     if (!targetUserId) {
-      console.warn('No se puede guardar datos sin usuario autenticado');
+      if (!this.isProduction) {
+        console.warn('⚠️ No se puede guardar datos sin usuario autenticado');
+      }
       return;
     }
     
     const userKey = this.getUserKey(targetUserId, key);
     try {
       localStorage.setItem(userKey, JSON.stringify(data));
-      console.log(`💾 Datos guardados para usuario ${targetUserId}:`, userKey);
+      if (!this.isProduction) {
+        console.log(`💾 Datos guardados para usuario ${targetUserId}:`, userKey);
+      }
     } catch (error) {
       console.error('Error guardando datos del usuario:', error);
     }
@@ -114,7 +171,9 @@ export class SessionManager {
   getUserData(key, userId = null) {
     const targetUserId = userId || this.currentUserId;
     if (!targetUserId) {
-      console.warn('No se puede obtener datos sin usuario autenticado');
+      if (!this.isProduction) {
+        console.warn('⚠️ No se puede obtener datos sin usuario autenticado');
+      }
       return null;
     }
     
@@ -139,7 +198,9 @@ export class SessionManager {
     
     const userKey = this.getUserKey(targetUserId, key);
     localStorage.removeItem(userKey);
-    console.log(`🗑️ Datos eliminados para usuario ${targetUserId}:`, userKey);
+    if (!this.isProduction) {
+      console.log(`🗑️ Datos eliminados para usuario ${targetUserId}:`, userKey);
+    }
   }
 
   /**
@@ -160,10 +221,11 @@ export class SessionManager {
     // Eliminar todas las claves del usuario
     keysToRemove.forEach(key => {
       localStorage.removeItem(key);
-      console.log(`🗑️ Eliminado:`, key);
     });
     
-    console.log(`🧹 Limpiados ${keysToRemove.length} elementos del usuario ${userId}`);
+    if (!this.isProduction) {
+      console.log(`🧹 Limpiados ${keysToRemove.length} elementos del usuario ${userId}`);
+    }
   }
 
   /**
@@ -192,14 +254,19 @@ export class SessionManager {
     // Limpiar sessionStorage también
     sessionStorage.clear();
     
-    console.log(`🧹 Limpieza completa (incluye cache): ${keysToRemove.length} elementos eliminados`);
+    if (!this.isProduction) {
+      console.log(`🧹 Limpieza completa (incluye cache): ${keysToRemove.length} elementos eliminados`);
+    }
   }
 
   /**
-   * Invalidar datos del usuario tras login
+   * Invalidar datos del usuario tras login (evita bucles)
    */
   invalidateUserData(userId) {
-    console.log(`🔄 Invalidando datos para usuario ${userId}`);
+    // No marcar needs_refresh si ya está marcado
+    if (this.needsRefresh(userId)) {
+      return;
+    }
     
     // Aquí puedes agregar lógica para invalidar caches específicos
     // Por ejemplo, eliminar datos temporales o flags de cache
@@ -236,8 +303,23 @@ export class SessionManager {
    * Forzar recarga completa de la aplicación (útil para logout)
    */
   forceReload() {
-    console.log('🔄 Forzando recarga completa de la aplicación');
+    if (!this.isProduction) {
+      console.log('🔄 Forzando recarga completa de la aplicación');
+    }
     window.location.reload();
+  }
+
+  /**
+   * Cleanup del listener de autenticación
+   */
+  cleanup() {
+    if (this.authListener && this.authListener.data) {
+      this.authListener.data.subscription.unsubscribe();
+      this.authListener = null;
+    }
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+    }
   }
 
   // ===== MÉTODOS DE CACHE ESPECÍFICOS POR USUARIO Y FECHA =====
@@ -262,7 +344,9 @@ export class SessionManager {
    */
   setCacheData(userId, tipo, data, fecha = null) {
     if (!userId || !tipo) {
-      console.warn('⚠️ No se puede guardar cache sin userId o tipo');
+      if (!this.isProduction) {
+        console.warn('⚠️ No se puede guardar cache sin userId o tipo');
+      }
       return;
     }
 
@@ -279,7 +363,9 @@ export class SessionManager {
       };
       
       localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
-      console.log(`💾 Cache guardado: ${cacheKey}`);
+      if (!this.isProduction) {
+        console.log(`💾 Cache guardado: ${cacheKey}`);
+      }
     } catch (error) {
       console.error('❌ Error al guardar cache:', error);
     }
@@ -295,7 +381,9 @@ export class SessionManager {
    */
   getCacheData(userId, tipo, fecha = null, maxAge = 5 * 60 * 1000) {
     if (!userId || !tipo) {
-      console.warn('⚠️ No se puede obtener cache sin userId o tipo');
+      if (!this.isProduction) {
+        console.warn('⚠️ No se puede obtener cache sin userId o tipo');
+      }
       return null;
     }
 
@@ -310,7 +398,9 @@ export class SessionManager {
       
       // Verificar si el cache es del usuario correcto
       if (cacheItem.userId !== userId) {
-        console.warn('⚠️ Cache de usuario diferente, eliminando');
+        if (!this.isProduction) {
+          console.warn('⚠️ Cache de usuario diferente, eliminando');
+        }
         localStorage.removeItem(cacheKey);
         return null;
       }
@@ -318,12 +408,16 @@ export class SessionManager {
       // Verificar edad del cache
       const age = Date.now() - cacheItem.timestamp;
       if (age > maxAge) {
-        console.log(`⏰ Cache expirado (${Math.round(age/1000)}s), eliminando: ${cacheKey}`);
+        if (!this.isProduction) {
+          console.log(`⏰ Cache expirado (${Math.round(age/1000)}s), eliminando: ${cacheKey}`);
+        }
         localStorage.removeItem(cacheKey);
         return null;
       }
 
-      console.log(`🎯 Cache válido encontrado: ${cacheKey}`);
+      if (!this.isProduction) {
+        console.log(`🎯 Cache válido encontrado: ${cacheKey}`);
+      }
       return cacheItem.data;
     } catch (error) {
       console.error('❌ Error al leer cache:', error);
@@ -339,7 +433,9 @@ export class SessionManager {
    */
   clearUserCache(userId, tipo = null) {
     if (!userId) {
-      console.warn('⚠️ No se puede limpiar cache sin userId');
+      if (!this.isProduction) {
+        console.warn('⚠️ No se puede limpiar cache sin userId');
+      }
       return;
     }
 
@@ -379,7 +475,9 @@ export class SessionManager {
       }
     });
 
-    console.log(`🧹 Cache limpiado para usuario ${userId}: ${removedCount} items`);
+    if (!this.isProduction) {
+      console.log(`🧹 Cache limpiado para usuario ${userId}: ${removedCount} items`);
+    }
   }
 
   /**
@@ -395,7 +493,9 @@ export class SessionManager {
       }
     });
 
-    console.log(`🧹 Todo el cache limpiado: ${removedCount} items`);
+    if (!this.isProduction) {
+      console.log(`🧹 Todo el cache limpiado: ${removedCount} items`);
+    }
   }
 
   /**

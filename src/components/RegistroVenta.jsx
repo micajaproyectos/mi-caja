@@ -14,6 +14,7 @@ import {
   validarFechaISO,
   generarClaveCacheFecha
 } from '../lib/dateUtils.js';
+import { scaleService } from '../lib/ScaleService.js';
 import Footer from './Footer';
 
 export default function RegistroVenta() {
@@ -123,7 +124,6 @@ export default function RegistroVenta() {
       }
 
       setProductosInventario(data || []);
-      console.log(`✅ Productos del inventario cargados para usuario ${usuarioId}:`, data?.length || 0);
     } catch (error) {
       console.error('Error inesperado al cargar productos del inventario:', error);
       setProductosInventario([]);
@@ -222,6 +222,15 @@ export default function RegistroVenta() {
     };
 
     setProductosVenta([...productosVenta, nuevoProducto]);
+    
+    // 5.2 Handler "Agregar" - stopSampling() + disconnect()
+    if (scaleService.isSampling()) {
+      scaleService.stopSampling();
+    }
+    
+    if (scaleService.isConnected()) {
+      scaleService.disconnect();
+    }
     
     // Limpiar el formulario de producto
     setProductoActual({
@@ -583,7 +592,6 @@ export default function RegistroVenta() {
         console.error('❌ Error al cargar ventas:', error);
         setVentasRegistradas([]);
       } else {
-        console.log(`📊 Cargadas ${data?.length || 0} ventas para usuario ${usuarioId}`);
         setVentasRegistradas(data || []);
       }
     } catch (error) {
@@ -596,17 +604,15 @@ export default function RegistroVenta() {
 
   // Función para recargar todos los datos
   const recargarDatos = useCallback(() => {
-    console.log('🔄 RegistroVenta: Recargando datos...');
     cargarVentas();
     cargarProductosInventario();
   }, []);
 
   // Hook para gestionar cambios de sesión
-  useSessionData(recargarDatos, 'RegistroVenta');
+  useSessionData(recargarDatos, 'RegistroVenta', 'ventas');
 
   // Cargar ventas y productos del inventario al montar el componente
   useEffect(() => {
-    console.log('🚀 Componente montado, cargando ventas y productos del inventario...');
     recargarDatos();
   }, [recargarDatos]);
 
@@ -626,7 +632,6 @@ export default function RegistroVenta() {
       
       // Si la fecha actual es diferente a la fecha de la venta, actualizar
       if (fechaActual !== fechaVenta) {
-        console.log('📅 Cambio de fecha detectado, actualizando datos...');
         setVenta(prevVenta => ({
           ...prevVenta,
           fecha: fechaActual
@@ -689,35 +694,114 @@ export default function RegistroVenta() {
     };
   }, [mostrarDropdown]);
 
-  // Log del estado actual
+  // Log del estado actual (solo en desarrollo y solo cambios significativos)
   useEffect(() => {
-    console.log('📋 Estado actual de ventas:', ventasRegistradas);
-    console.log('⏳ Estado de loading:', loading);
-  }, [ventasRegistradas, loading]);
+    if (process.env.NODE_ENV !== 'production' && ventasRegistradas.length > 0) {
+      console.log('📋 Estado actual de ventas:', ventasRegistradas.length, 'ventas');
+    }
+  }, [ventasRegistradas.length]);
 
-  // Función de prueba para verificar conexión
+  // Cleanup: cerrar puerto al salir del componente
+  useEffect(() => {
+    return () => {
+      if (scaleService.isConnected()) {
+        console.log('[scale] component-unmount: closing port');
+        scaleService.disconnect();
+      }
+    };
+  }, []);
 
+  // 5.1 Enlazar el callback del motor a RegistroVenta
+  const handleStableWeightRef = useRef(null);
+  
+  useEffect(() => {
+      const handleStableWeight = (kg) => {
+    // Este callback no escribe nada si productoActual.unidad !== 'kg' o si ScaleService.isSampling() === false
+    if (productoActual.unidad !== 'kg' || !scaleService.isSampling()) {
+      return;
+    }
+
+    // Aplicar umbral ≥ 0.1 (revalidar por seguridad)
+    if (kg < 0.1) {
+      return;
+    }
+
+    // Formatear a 1 decimal con punto
+    const formattedKg = kg.toFixed(1);
+    
+    // Actualizar productoActual.cantidad
+    setProductoActual(prev => {
+      // Calcular subtotal automáticamente (misma lógica que handleChange)
+      const cantidad = parseFloat(formattedKg) || 0;
+      const precio = parseFloat(prev.precio_unitario) || 0;
+      const subtotal = +(cantidad * precio).toFixed(2);
+      
+      return {
+        ...prev,
+        cantidad: formattedKg,
+        subtotal: subtotal
+      };
+    });
+
+    // Log esencial: solo cuando se actualiza la cantidad
+    console.log(`[scale] ✅ cantidad:set ${formattedKg}`);
+  };
+
+    // No re-registrar handleStableWeight si la referencia no cambió
+    if (handleStableWeightRef.current !== handleStableWeight) {
+      scaleService.setOnStable(handleStableWeight);
+      handleStableWeightRef.current = handleStableWeight;
+    }
+
+    // Cleanup del callback al desmontar
+    return () => {
+      scaleService.setOnStable(null);
+      handleStableWeightRef.current = null;
+    };
+  }, [productoActual.unidad]);
+
+  // 4.2 Detectar cambios de unidad y detener sampling si es necesario
+  useEffect(() => {
+    if (productoActual.unidad !== 'kg' && scaleService.isSampling()) {
+      scaleService.stopSampling();
+    }
+  }, [productoActual.unidad]);
 
   // Función para validar formato de fecha
-  const validarFecha = (fechaString) => {
-    console.log('🔍 Validando fecha:', fechaString);
+
+  // Handler para el botón de balanza
+  const onClickBalanza = () => {
+    console.log('[scale] button:balanza:click');
     
+    // Verificar soporte de Web Serial
+    if (!navigator.serial) {
+      console.log('[scale] web-serial-not-supported');
+      return;
+    }
+    
+    // 5.3 Gate por unidad (se mantiene)
+    if (productoActual.unidad !== 'kg') {
+      console.log('[scale] unit:not-kg');
+      return;
+    }
+    
+    // 5.3 Reconexión silenciosa (solo al pulsar Balanza)
+    scaleService.startSampling();
+  };
+  const validarFecha = (fechaString) => {
     if (!fechaString) {
-      console.log('❌ Fecha vacía');
       return false;
     }
     
     // Verificar formato YYYY-MM-DD
     const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!fechaRegex.test(fechaString)) {
-      console.log('❌ Formato de fecha incorrecto. Esperado: YYYY-MM-DD');
       return false;
     }
     
     // Verificar que sea una fecha válida
     const fecha = new Date(fechaString);
     if (isNaN(fecha.getTime())) {
-      console.log('❌ Fecha inválida');
       return false;
     }
     
@@ -725,11 +809,9 @@ export default function RegistroVenta() {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     if (fecha > hoy) {
-      console.log('⚠️ Fecha futura detectada:', fechaString);
       // No retornamos false aquí, solo un warning
     }
     
-    console.log('✅ Fecha válida:', fechaString);
     return true;
   };
 
@@ -737,10 +819,6 @@ export default function RegistroVenta() {
     if (e) {
       e.preventDefault();
     }
-    
-    console.log('🔍 Iniciando registro de venta...');
-    console.log('🔍 Estado de venta:', venta);
-    console.log('🔍 Productos en venta:', productosVenta);
     
     // Validar fecha primero
     if (!validarFecha(venta.fecha)) {
@@ -751,7 +829,6 @@ export default function RegistroVenta() {
     // Validar que todos los campos requeridos estén llenos
     if (!venta.fecha || !venta.tipo_pago) {
       alert('❌ Por favor completa la fecha y tipo de pago');
-      console.log('❌ Fecha:', venta.fecha, 'Tipo pago:', venta.tipo_pago);
       return;
     }
 
@@ -946,17 +1023,42 @@ export default function RegistroVenta() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-white font-medium mb-1 text-xs md:text-sm">Cantidad</label>
+                                                 <div>
+                   <label className="block text-white font-medium mb-1 text-xs md:text-sm">
+                     Cantidad
+                     {scaleService.isSampling() && productoActual.unidad === 'kg' && (
+                       <span className="ml-2 text-green-400 text-xs">🟢 Escuchando balanza</span>
+                     )}
+                   </label>
                   <input
                     type="number"
                     step="0.01"
                     name="cantidad"
                     value={productoActual.cantidad}
                     onChange={handleChange}
-                    className="w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base"
+                     readOnly={scaleService.isSampling() && productoActual.unidad === 'kg'}
+                     className={`w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base ${
+                       scaleService.isSampling() && productoActual.unidad === 'kg' 
+                         ? 'bg-gray-800 cursor-not-allowed' 
+                         : 'bg-gray-700'
+                     }`}
                     placeholder="0.00"
                   />
+                                     <button
+                     type="button"
+                     onClick={onClickBalanza}
+                     disabled={productoActual.unidad !== 'kg'}
+                     className={`w-full mt-2 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 text-xs md:text-sm shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                       scaleService.isSampling() ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'
+                     }`}
+                   >
+                     {scaleService.isSampling() ? '🟢 Escuchando...' : '⚖️ Balanza'}
+                   </button>
+                  
+                  {/* Estado simple de la balanza */}
+                  <div className="text-xs text-gray-400 mt-2 text-center">
+                    {scaleService.isConnected() ? '🔌 Balanza conectada' : '❌ Balanza desconectada'}
+                  </div>
                 </div>
 
                 <div>

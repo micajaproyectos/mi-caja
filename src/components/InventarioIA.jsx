@@ -11,14 +11,6 @@ import { obtenerFechaHoyChile } from '../lib/dateUtils.js';
 // Configurar el worker de PDF.js para react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
-// Log de depuración para verificar que react-pdf esté disponible
-console.log('🔍 Debug react-pdf:', {
-  Document: typeof Document,
-  Page: typeof Page,
-  pdfjs: typeof pdfjs,
-  workerSrc: pdfjs.GlobalWorkerOptions.workerSrc
-});
-
 // Constantes para cálculos
 const GANANCIA_GLOBAL_DEFAULT = 0.30; // 30% por defecto
 
@@ -90,17 +82,17 @@ const InventarioIA = () => {
     'rollo', 'metro', 'pieza'       // Otros
   ], []);
 
-  // Debug temporal para verificar unidadesValidas
-  if (DEBUG) console.log('🔍 [EFFECT] Debug unidadesValidas:', unidadesValidas);
+  // Debug temporal para verificar unidadesValidas (solo en desarrollo)
+  if (DEBUG && process.env.NODE_ENV !== 'production') console.log('🔍 [EFFECT] Debug unidadesValidas:', unidadesValidas);
   const supabaseUrl = 'https://pvgahmommdbfzphyywut.supabase.co';
 
   // Derivados estables para gating del botón
   const esPdfMemo = useMemo(() => selectedFile?.type === 'application/pdf', [selectedFile?.type]);
   const hasCroppedMemo = useMemo(() => Boolean(croppedFile?.path), [croppedFile?.path]);
 
-  // Log del estado del botón (solo cuando cambien los valores relevantes)
+  // Log del estado del botón (solo cuando cambien los valores relevantes y en desarrollo)
   useEffect(() => {
-    if (!DEBUG) return;
+    if (!DEBUG || process.env.NODE_ENV === 'production') return;
     console.log('🔍 [EFFECT] Debug Botón Procesar IA:', {
       esPdf: esPdfMemo,
       hasCropped: hasCroppedMemo,
@@ -147,18 +139,22 @@ const InventarioIA = () => {
     const fileName = `${Date.now()}.${ext}`;
     const previewPath = `${userId}/previews/${fileName}`;
 
-    console.log('📤 Subiendo a previews:', {
-      path: previewPath,
-      type,
-      isBlob: archivo instanceof Blob,
-      size: archivo.size
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📤 Subiendo a previews:', {
+        path: previewPath,
+        type,
+        isBlob: archivo instanceof Blob,
+        size: archivo.size
+      });
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(previewPath, archivo, { upsert: true, contentType: type });
     if (uploadError) throw new Error(`Upload previews falló: ${uploadError.message}`);
-    console.log('✅ Subido a previews:', previewPath);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Subido a previews:', previewPath);
+    }
     return { previewPath, type };
   }, [currentUser, normalizarMimeType]);
 
@@ -199,7 +195,7 @@ const InventarioIA = () => {
       errores.push('Unidad requerida');
     } else {
       const unidadNormalizada = item.unidad.toLowerCase().trim();
-      if (DEBUG) {
+      if (DEBUG && process.env.NODE_ENV !== 'production') {
         console.log('🔍 Debug validación unidad:', {
           unidadOriginal: item.unidad,
           unidadNormalizada,
@@ -384,10 +380,14 @@ const InventarioIA = () => {
         
         getRequest.onsuccess = () => {
           if (getRequest.result) {
-            console.log('✅ SchemaHints cargados desde IndexedDB');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('✅ SchemaHints cargados desde IndexedDB');
+            }
             setSchemaHints(getRequest.result.hints);
           } else {
-            console.log('📝 No hay schemaHints guardados, usando defaults');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('📝 No hay schemaHints guardados, usando defaults');
+            }
             setSchemaHints(DEFAULT_HINTS);
           }
         };
@@ -445,8 +445,10 @@ const InventarioIA = () => {
               hints: schemaHints,
               updatedAt: new Date().toISOString()
             });
+                      if (process.env.NODE_ENV !== 'production') {
             console.log('✅ SchemaHints guardados en nuevo object store');
-          };
+          }
+        };
           newRequest.onerror = () => {
             console.warn('⚠️ Error creando object store para guardar schemaHints');
           };
@@ -458,7 +460,9 @@ const InventarioIA = () => {
             hints: schemaHints,
             updatedAt: new Date().toISOString()
           });
-          console.log('✅ SchemaHints guardados en IndexedDB');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('✅ SchemaHints guardados en IndexedDB');
+          }
         }
       };
     } catch (error) {
@@ -522,29 +526,37 @@ const InventarioIA = () => {
   }, []);
 
     const procesarConIA = useCallback(async () => {
-    console.log('🚀 procesarConIA: Handler ejecutado');
-    
-    // LOG del estado actual dentro del handler
-    console.log('📊 Estado en handler:', {
-      croppedFile,
-      croppedFilePath: croppedFile?.path,
-      croppedFileKeys: croppedFile ? Object.keys(croppedFile) : null,
-      selectedFileType: selectedFile?.type,
-      esPdf: selectedFile?.type === 'application/pdf'
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🚀 procesarConIA: Handler ejecutado');
+      
+      // LOG del estado actual dentro del handler
+      console.log('📊 Estado en handler:', {
+        croppedFile,
+        croppedFilePath: croppedFile?.path,
+        croppedFileKeys: croppedFile ? Object.keys(croppedFile) : null,
+        selectedFileType: selectedFile?.type,
+        esPdf: selectedFile?.type === 'application/pdf'
+      });
+    }
     
     // Antirrebote: evitar doble click en "Procesar IA"
     if (isProcessing) {
-      console.log('⚠️ Guard: isProcessing ya es true, ignorando click adicional');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('⚠️ Guard: isProcessing ya es true, ignorando click adicional');
+      }
       return;
     }
     
     // Marcar como procesando INMEDIATAMENTE
     setIsProcessing(true);
-    console.log('✅ isProcessing: ON');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ isProcessing: ON');
+    }
     
     if (!selectedFile) {
-      console.log('❌ Guard: No hay archivo seleccionado');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('❌ Guard: No hay archivo seleccionado');
+      }
       mostrarMensaje('error', 'Debe seleccionar un archivo');
       setIsProcessing(false);
       return;
@@ -554,26 +566,32 @@ const InventarioIA = () => {
     const esPdf = selectedFile.type === 'application/pdf';
     const tienePath = Boolean(croppedFile?.path);
     
-    console.log('🔍 Guard check:', { esPdf, tienePath, path: croppedFile?.path });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Guard check:', { esPdf, tienePath, path: croppedFile?.path });
+    }
     
     if (esPdf && !tienePath) {
-      console.log('❌ Guard: PDF sin croppedFile.path');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('❌ Guard: PDF sin croppedFile.path');
+      }
       mostrarMensaje('error', 'Para procesar PDFs, primero aplica un recorte usando "Aplicar Encuadre"');
       setIsProcessing(false);
       return;
     }
 
-    console.log('🚀 Procesando archivo:', {
-      name: selectedFile.name,
-      type: selectedFile.type,
-      size: selectedFile.size,
-      sizeKB: (selectedFile.size / 1024).toFixed(2)
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🚀 Procesando archivo:', {
+        name: selectedFile.name,
+        type: selectedFile.type,
+        size: selectedFile.size,
+        sizeKB: (selectedFile.size / 1024).toFixed(2)
+      });
 
-    // Log de schemaHints que se envían
-    const normalizedHints = normalizarSchemaHints();
-    console.log('🎯 SchemaHints normalizados que se envían:', normalizedHints);
-    console.log('🎯 SchemaHints originales:', schemaHints);
+      // Log de schemaHints que se envían
+      const normalizedHints = normalizarSchemaHints();
+      console.log('🎯 SchemaHints normalizados que se envían:', normalizedHints);
+      console.log('🎯 SchemaHints originales:', schemaHints);
+    }
 
     let response;
     const ac = new AbortController(); // AbortController para cancelar fetch al cambiar de vista
@@ -587,12 +605,16 @@ const InventarioIA = () => {
       
       // Caso recorte (PDF recortado o imagen recortada)
       if (croppedFile?.path) {
-        console.log('📋 Procesando archivo con recorte aplicado, path existente:', croppedFile.path);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('📋 Procesando archivo con recorte aplicado, path existente:', croppedFile.path);
+        }
         
         // Generar signedUrl justo antes del fetch (no reutilizar del estado)
         const userId = currentUser?.id;
         if (!userId) {
-          console.log('❌ Guard: No hay currentUser.id');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('❌ Guard: No hay currentUser.id');
+          }
           mostrarMensaje('error', 'Debe iniciar sesión para procesar recortes');
           setIsProcessing(false);
           return;
@@ -602,7 +624,9 @@ const InventarioIA = () => {
         
         // Usar el path existente de croppedFile
         const previewPath = croppedFile.path;
-        console.log('🔑 Firmando path existente:', previewPath);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔑 Firmando path existente:', previewPath);
+        }
         
         // Generar signedUrl justo antes del fetch
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -620,10 +644,12 @@ const InventarioIA = () => {
         fileType = croppedFile.type === 'image/jpg' ? 'image/jpeg' : croppedFile.type;
         mode = 'imageSignedUrl';
         
-        console.log('🎯 Procesando con recorte aplicado:', { mode, fileType, path: previewPath });
-        
-        // Log seguro de firma
-        console.log('✅ Firma de recorte OK', { ttl: SIGNED_URL_TTL, hasSignedUrl: Boolean(url) });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🎯 Procesando con recorte aplicado:', { mode, fileType, path: previewPath });
+          
+          // Log seguro de firma
+          console.log('✅ Firma de recorte OK', { ttl: SIGNED_URL_TTL, hasSignedUrl: Boolean(url) });
+        }
         
       } else if (selectedFile.type.startsWith('image/')) {
         // Imagen: se procesará más abajo firmando previews/ (sin subir aquí)
@@ -635,13 +661,15 @@ const InventarioIA = () => {
         return;
       }
       
-      // ✅ LOG: Verificar estado de croppedFile antes de procesar
-      console.log('🔍 Estado de croppedFile antes de procesar:', {
-        croppedFile,
-        hasPath: !!croppedFile?.path,
-        path: croppedFile?.path,
-        keys: croppedFile ? Object.keys(croppedFile) : null
-      });
+      // ✅ LOG: Verificar estado de croppedFile antes de procesar (solo en desarrollo)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔍 Estado de croppedFile antes de procesar:', {
+          croppedFile,
+          hasPath: !!croppedFile?.path,
+          path: croppedFile?.path,
+          keys: croppedFile ? Object.keys(croppedFile) : null
+        });
+      }
       
       // Usar archivo recortado si está disponible, sino el original
       const fileToProcess = croppedFile?.path ? croppedFile : selectedFile;
@@ -659,28 +687,30 @@ const InventarioIA = () => {
           return;
         }
         
-        console.log('✅ Bbox válido:', croppedFile.cropMetadata.bbox);
-        
-        // Log de tamaño útil del recorte
-        const cropArea = croppedFile.cropMetadata?.bbox;
-        if (cropArea) {
-          const cropAreaPx = cropArea.w * cropArea.h;
-          const cropW = Math.round(cropArea.w * (pdfPageDimensions?.width || 1000));
-          const cropH = Math.round(cropArea.h * (pdfPageDimensions?.height || 1000));
-          const areaPx = cropW * cropH;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Bbox válido:', croppedFile.cropMetadata.bbox);
           
-          console.log('📐 Tamaño útil del recorte:', {
-            cropW: `${cropW}px`,
-            cropH: `${cropH}px`,
-            areaPx: `${areaPx.toLocaleString()}px²`,
-            blobSize: `${(croppedFile.size / 1024).toFixed(1)}KB`,
-            meetsMinSize: cropW >= 600 && cropH >= 200,
-            meetsMinArea: areaPx >= 120000,
-            meetsMinBlob: croppedFile.size > 10240
-          });
-          
-          if (!(cropW >= 600 && cropH >= 200) || !(areaPx >= 120000) || !(croppedFile.size > 10240)) {
-            console.warn('⚠️ Recorte puede ser muy pequeño para OCR efectivo');
+          // Log de tamaño útil del recorte
+          const cropArea = croppedFile.cropMetadata?.bbox;
+          if (cropArea) {
+            const cropAreaPx = cropArea.w * cropArea.h;
+            const cropW = Math.round(cropArea.w * (pdfPageDimensions?.width || 1000));
+            const cropH = Math.round(cropArea.h * (pdfPageDimensions?.height || 1000));
+            const areaPx = cropW * cropH;
+            
+            console.log('📐 Tamaño útil del recorte:', {
+              cropW: `${cropW}px`,
+              cropH: `${cropH}px`,
+              areaPx: `${areaPx.toLocaleString()}px²`,
+              blobSize: `${(croppedFile.size / 1024).toFixed(1)}KB`,
+              meetsMinSize: cropW >= 600 && cropH >= 200,
+              meetsMinArea: areaPx >= 120000,
+              meetsMinBlob: croppedFile.size > 10240
+            });
+            
+            if (!(cropW >= 600 && cropH >= 200) || !(areaPx >= 120000) || !(croppedFile.size > 10240)) {
+              console.warn('⚠️ Recorte puede ser muy pequeño para OCR efectivo');
+            }
           }
         }
       }
@@ -726,23 +756,31 @@ const InventarioIA = () => {
         debug: true 
       };
       
-      // Log de sanity antes del fetch
-      console.log('Payload sanity', {
-        mode: payload.mode,
-        hasUrl: Boolean(payload.url),
-        fileType: payload.fileType,
-        hasText: 'text' in payload // Debe ser false
-      });
+      // Log de sanity antes del fetch (solo en desarrollo)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Payload sanity', {
+          mode: payload.mode,
+          hasUrl: Boolean(payload.url),
+          fileType: payload.fileType,
+          hasText: 'text' in payload // Debe ser false
+        });
+      }
       
       // Obtener token de sesión para la autorización
-      console.log('🔐 Obteniendo sesión...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔐 Obteniendo sesión...');
+      }
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
-        console.log('❌ Guard: No hay session.access_token');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('❌ Guard: No hay session.access_token');
+        }
         throw new Error('No se pudo obtener token de acceso');
       }
-      console.log('✅ Token obtenido');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Token obtenido');
+      }
       
       // Fetch común para todos los casos
       response = await fetch(`${supabaseUrl}/functions/v1/inventario-ia-process`, {
@@ -757,26 +795,30 @@ const InventarioIA = () => {
 
                 // Obtener el texto de la respuesta UNA SOLA VEZ
           const responseText = await response.text();
-          console.log('📡 Respuesta raw de la Edge Function:', responseText);
-          console.log('📡 Status:', response.status);
-          console.log('📡 Headers:', Object.fromEntries(response.headers.entries()));
           
-          // Logs específicos de Edge Function para debugging
-          console.log('🔧 Logs de Edge Function esperados:', {
-            bytesLength: '> 0 (archivo recibido)',
-            decodificacion: 'width × height del archivo',
-            textoOCR: '> 0 (legibilidad suficiente)',
-            mode: payload?.mode, // Debe ser 'signedUrl' o 'imageSignedUrl'
-            fileType: payload?.fileType // Debe ser 'application/pdf' o 'image/jpeg'|'image/png'
-          });
-          
-          // Verificar HTTP 200 en Network
-          console.log('🌐 Verificando respuesta HTTP:', {
-            status: response?.status,
-            statusText: response?.statusText,
-            ok: response?.ok,
-            expectedStatus: 200
-          });
+          // Logs de respuesta (solo en desarrollo)
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('📡 Respuesta raw de la Edge Function:', responseText);
+            console.log('📡 Status:', response.status);
+            console.log('📡 Headers:', Object.fromEntries(response.headers.entries()));
+            
+            // Logs específicos de Edge Function para debugging
+            console.log('🔧 Logs de Edge Function esperados:', {
+              bytesLength: '> 0 (archivo recibido)',
+              decodificacion: 'width × height del archivo',
+              textoOCR: '> 0 (legibilidad suficiente)',
+              mode: payload?.mode, // Debe ser 'signedUrl' o 'imageSignedUrl'
+              fileType: payload?.fileType // Debe ser 'application/pdf' o 'image/jpeg'|'image/png'
+            });
+            
+            // Verificar HTTP 200 en Network
+            console.log('🌐 Verificando respuesta HTTP:', {
+              status: response?.status,
+              statusText: response?.statusText,
+              ok: response?.ok,
+              expectedStatus: 200
+            });
+          }
           
           // Si no es HTTP 200, loguear res.text() cuando no sea JSON
           if (!response?.ok) {
@@ -814,16 +856,20 @@ const InventarioIA = () => {
 
       try {
         result = parseJsonFromMarkdown(responseText);
-        console.log('🔍 Respuesta parseada:', result);
-        console.log('🔍 Tipo de result:', typeof result);
-        console.log('🔍 response.draft:', result.draft);
-        console.log('🔍 Es array?', Array.isArray(result.draft));
         
-        // Log de diagnostics si existe
-        if (result?.diagnostics) {
-          console.log('🔍 Diagnostics:', result.diagnostics);
-          if (result.diagnostics?.header_map) {
-            console.log('🔍 Header map detectado:', result.diagnostics.header_map);
+        // Logs de respuesta parseada (solo en desarrollo)
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔍 Respuesta parseada:', result);
+          console.log('🔍 Tipo de result:', typeof result);
+          console.log('🔍 response.draft:', result.draft);
+          console.log('🔍 Es array?', Array.isArray(result.draft));
+          
+          // Log de diagnostics si existe
+          if (result?.diagnostics) {
+            console.log('🔍 Diagnostics:', result.diagnostics);
+            if (result.diagnostics?.header_map) {
+              console.log('🔍 Header map detectado:', result.diagnostics.header_map);
+            }
           }
         }
         
@@ -856,8 +902,10 @@ const InventarioIA = () => {
           };
         });
         
-        console.log('✅ Draft procesado desde response.draft:', itemsConIds);
-        console.log('📊 Alimentando tabla con', itemsConIds.length, 'ítems del draft');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Draft procesado desde response.draft:', itemsConIds);
+          console.log('📊 Alimentando tabla con', itemsConIds.length, 'ítems del draft');
+        }
         setDraft({ items: itemsConIds });
         setHaProcesado(true);
         
@@ -870,32 +918,34 @@ const InventarioIA = () => {
           mostrarMensaje('success', mensajeExito);
         }
       } else {
-        console.warn('⚠️ No se encontró draft válido en response.draft:', result);
-        
-        // Mostrar información de depuración detallada
-        if (result?.diagnostics) {
-          console.warn('⚠️ Diagnostics disponibles:', result.diagnostics);
-          if (result.diagnostics?.header_map) {
-            console.warn('⚠️ Headers detectados:', result.diagnostics.header_map);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('⚠️ No se encontró draft válido en response.draft:', result);
+          
+          // Mostrar información de depuración detallada
+          if (result?.diagnostics) {
+            console.warn('⚠️ Diagnostics disponibles:', result.diagnostics);
+            if (result.diagnostics?.header_map) {
+              console.warn('⚠️ Headers detectados:', result.diagnostics.header_map);
+            }
+            if (result.diagnostics?.extracted_text) {
+              console.warn('⚠️ Texto extraído (primeras 500 chars):', result.diagnostics.extracted_text.substring(0, 500));
+            }
+            if (result.diagnostics?.schema_hints_used) {
+              console.warn('⚠️ Schema hints utilizados:', result.diagnostics.schema_hints_used);
+            }
           }
-          if (result.diagnostics?.extracted_text) {
-            console.warn('⚠️ Texto extraído (primeras 500 chars):', result.diagnostics.extracted_text.substring(0, 500));
-          }
-          if (result.diagnostics?.schema_hints_used) {
-            console.warn('⚠️ Schema hints utilizados:', result.diagnostics.schema_hints_used);
-          }
+          
+          // Mostrar información del archivo procesado
+          console.warn('📄 Información del archivo procesado:', {
+            nombre: selectedFile?.name,
+            tipo: selectedFile?.type,
+            tamaño: selectedFile?.size,
+            tamañoKB: selectedFile ? (selectedFile.size / 1024).toFixed(2) : 'N/A'
+          });
+          
+          // Mostrar schema hints que se enviaron
+          console.warn('🎯 Schema hints enviados:', normalizarSchemaHints());
         }
-        
-        // Mostrar información del archivo procesado
-        console.warn('📄 Información del archivo procesado:', {
-          nombre: selectedFile?.name,
-          tipo: selectedFile?.type,
-          tamaño: selectedFile?.size,
-          tamañoKB: selectedFile ? (selectedFile.size / 1024).toFixed(2) : 'N/A'
-        });
-        
-        // Mostrar schema hints que se enviaron
-        console.warn('🎯 Schema hints enviados:', normalizarSchemaHints());
         
         setDraft({ items: [] });
         setHaProcesado(true);
@@ -911,12 +961,16 @@ const InventarioIA = () => {
       }
 
     } catch (error) {
-      console.log('❌ ERROR en procesarConIA:', error.message);
-      console.log('❌ Stack:', error.stack);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('❌ ERROR en procesarConIA:', error.message);
+        console.log('❌ Stack:', error.stack);
+      }
       
       // Ignorar AbortError (cambio de vista)
       if (error.name === 'AbortError') {
-        console.log('🔄 Fetch cancelado por cambio de vista');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔄 Fetch cancelado por cambio de vista');
+        }
         return;
       }
       
@@ -1047,42 +1101,44 @@ const aplicarAInventario = useCallback(async () => {
       })),
     };
 
-    // Log de depuración: verificar qué se está enviando
-    console.log('🚀 Aplicando a inventario:', {
-      fechaIngreso,
-      gananciaGlobal,
-      itemsCount: itemsValidos.length,
-      payload,
-      itemsRechazados: draft.items.length - itemsValidos.length
-    });
-
-    // Log detallado de cada ítem para verificar valores
-    console.log('🔍 Valores detallados de cada ítem:');
-    itemsValidos.forEach((item, index) => {
-      console.log(`Ítem ${index + 1} - ${item.producto}:`, {
-        cantidad: {
-          original: item.cantidad,
-          tipo: typeof item.cantidad,
-          parseado: parseFloat(item.cantidad)
-        },
-        costo_total: {
-          original: item.costo_total,
-          tipo: typeof item.costo_total,
-          parseado: parseFloat(item.costo_total)
-        },
-        precio_unitario: {
-          original: item.precio_unitario,
-          tipo: typeof item.precio_unitario,
-          formateado: formatearPrecioCLP(item.precio_unitario || 0)
-        },
-        precio_venta: {
-          original: item.precio_venta,
-          tipo: typeof item.precio_venta,
-          formateado: formatearPrecioCLP(item.precio_venta || 0),
-          redondeado: item.precio_venta ? Math.round(item.precio_venta) : null
-        }
+    // Log de depuración: verificar qué se está enviando (solo en desarrollo)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🚀 Aplicando a inventario:', {
+        fechaIngreso,
+        gananciaGlobal,
+        itemsCount: itemsValidos.length,
+        payload,
+        itemsRechazados: draft.items.length - itemsValidos.length
       });
-    });
+
+      // Log detallado de cada ítem para verificar valores
+      console.log('🔍 Valores detallados de cada ítem:');
+      itemsValidos.forEach((item, index) => {
+        console.log(`Ítem ${index + 1} - ${item.producto}:`, {
+          cantidad: {
+            original: item.cantidad,
+            tipo: typeof item.cantidad,
+            parseado: parseFloat(item.cantidad)
+          },
+          costo_total: {
+            original: item.costo_total,
+            tipo: typeof item.costo_total,
+            parseado: parseFloat(item.costo_total)
+          },
+          precio_unitario: {
+            original: item.precio_unitario,
+            tipo: typeof item.precio_unitario,
+            formateado: formatearPrecioCLP(item.precio_unitario || 0)
+          },
+          precio_venta: {
+            original: item.precio_venta,
+            tipo: typeof item.precio_venta,
+            formateado: formatearPrecioCLP(item.precio_venta || 0),
+            redondeado: item.precio_venta ? Math.round(item.precio_venta) : null
+          }
+        });
+      });
+    }
 
     const res = await fetch(`${supabaseUrl}/functions/v1/inventario-ia-apply`, {
       method: "POST",
@@ -1174,71 +1230,82 @@ const aplicarAInventario = useCallback(async () => {
   // Función para manejar selección de archivo
   const handleFileSelect = useCallback((event) => {
     const file = event.target.files[0];
-    if (file) {
-      console.log('🔍 Archivo seleccionado:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        sizeKB: (file.size / 1024).toFixed(2)
-      });
+          if (file) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔍 Archivo seleccionado:', {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            sizeKB: (file.size / 1024).toFixed(2)
+          });
+          
+          // Solo aceptar PDF, PNG y JPEG
+          const validTypes = ['application/pdf', 'image/png', 'image/jpeg'];
+          const maxSize = 10 * 1024 * 1024; // 10MB
+          
+          const isValidType = validTypes.includes(file.type);
+          const isValidSize = file.size <= maxSize;
+          
+          console.log('🔍 Validación:', {
+            isValidType,
+            isValidSize,
+            validTypes,
+            fileType: file.type
+          });
+        }
       
-      // Solo aceptar PDF, PNG y JPEG
-      const validTypes = ['application/pdf', 'image/png', 'image/jpeg'];
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      
-      const isValidType = validTypes.includes(file.type);
-      const isValidSize = file.size <= maxSize;
-      
-      console.log('🔍 Validación:', {
-        isValidType,
-        isValidSize,
-        validTypes,
-        fileType: file.type
-      });
-      
-      if (!isValidType) {
-        mostrarMensaje('error', 'Solo se permiten archivos PNG, JPEG o PDF');
-        return;
+              // Solo aceptar PDF, PNG y JPEG
+        const validTypes = ['application/pdf', 'image/png', 'image/jpeg'];
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        
+        const isValidType = validTypes.includes(file.type);
+        const isValidSize = file.size <= maxSize;
+        
+        if (!isValidType) {
+          mostrarMensaje('error', 'Solo se permiten archivos PNG, JPEG o PDF');
+          return;
+        }
+        if (!isValidSize) {
+          mostrarMensaje('error', 'Archivo demasiado grande (máx 10MB)');
+          return;
+        }
+        
+        setSelectedFile(file);
+        setHasCropSignedUrl(false);
+        setCroppedFile(null);
+        setIsProcessing(false);
+        setPageReady(false);
+        setImageReady(false);
       }
-      if (!isValidSize) {
-        mostrarMensaje('error', 'Archivo demasiado grande (máx 10MB)');
-        return;
-      }
-      
-      setSelectedFile(file);
-      setHasCropSignedUrl(false);
-      setCroppedFile(null);
-      setIsProcessing(false);
-      setPageReady(false);
-      setImageReady(false);
-    }
-  }, [mostrarMensaje]);
+    }, [mostrarMensaje]);
 
   // Función para manejar drop de archivos
   const handleDrop = useCallback((event) => {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
     if (file) {
-      console.log('🔍 Archivo drop:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        sizeKB: (file.size / 1024).toFixed(2)
-      });
-      
-      // Solo aceptar PDF, PNG y JPEG
-      const validTypes = ['application/pdf', 'image/png', 'image/jpeg'];
-      const maxSize = 10 * 1024 * 1024;
-      
-      const isValidType = validTypes.includes(file.type);
-      const isValidSize = file.size <= maxSize;
-      
-      console.log('🔍 Validación drop:', {
-        isValidType,
-        isValidSize,
-        validTypes,
-        fileType: file.type
-      });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔍 Archivo drop:', {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          sizeKB: (file.size / 1024).toFixed(2)
+        });
+        
+        // Solo aceptar PDF, PNG y JPEG
+        const validTypes = ['application/pdf', 'image/png', 'image/jpeg'];
+        const maxSize = 10 * 1024 * 1024;
+        
+        const isValidType = validTypes.includes(file.type);
+        const isValidSize = file.size <= maxSize;
+        
+        console.log('🔍 Validación drop:', {
+          isValidType,
+          isValidSize,
+          validTypes,
+          fileType: file.type
+        });
+      }
       
       if (isValidType && isValidSize) {
         setSelectedFile(file);
@@ -1265,7 +1332,9 @@ const aplicarAInventario = useCallback(async () => {
     if (!file) return;
     
     try {
-      console.log('🔄 Generando previsualización para:', file.name, file.type);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔄 Generando previsualización para:', file.name, file.type);
+      }
       
       // Resetear estados de PDF e imagen
       setPageReady(false);
@@ -1274,7 +1343,9 @@ const aplicarAInventario = useCallback(async () => {
       imageCanvasRef.current = null;
       
       if (file.type === 'application/pdf') {
-        console.log('📄 Procesando PDF...');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('📄 Procesando PDF...');
+        }
         
         // Crear URL del archivo para react-pdf
         const pdfUrl = URL.createObjectURL(file);
@@ -1286,53 +1357,64 @@ const aplicarAInventario = useCallback(async () => {
         pageCanvasRef.current = null;
         setCurrentPage(1);
         
-        console.log('✅ URL de PDF generada para react-pdf');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ URL de PDF generada para react-pdf');
+        }
         
       } else if (file.type.startsWith('image/')) {
-        console.log('🖼️ Procesando imagen...');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🖼️ Procesando imagen...');
+        }
         // Para imágenes, crear URL de previsualización
         const url = URL.createObjectURL(file);
         
         // Crear una imagen temporal para obtener dimensiones reales
         const img = new Image();
         img.onload = () => {
+                  // Calcular dimensiones de visualización (máximo 500px de alto)
+        const maxHeight = 500;
+        const scale = Math.min(1, maxHeight / img.naturalHeight);
+        const displayWidth = img.naturalWidth * scale;
+        const displayHeight = img.naturalHeight * scale;
+        
+        if (process.env.NODE_ENV !== 'production') {
           console.log('📐 Dimensiones reales de la imagen:', img.naturalWidth, 'x', img.naturalHeight);
-          
-          // Calcular dimensiones de visualización (máximo 500px de alto)
-          const maxHeight = 500;
-          const scale = Math.min(1, maxHeight / img.naturalHeight);
-          const displayWidth = img.naturalWidth * scale;
-          const displayHeight = img.naturalHeight * scale;
-          
           console.log('📐 Dimensiones de visualización:', displayWidth, 'x', displayHeight);
-          
-          // Inicializar área de encuadre proporcional a la visualización
-          const cropArea = {
-            x: Math.max(0, displayWidth * 0.1),
-            y: Math.max(0, displayHeight * 0.1),
-            width: Math.max(100, displayWidth * 0.8),
-            height: Math.max(100, displayHeight * 0.8)
-          };
-          
-          setCropArea(cropArea);
-          
-          // Guardar dimensiones reales para uso posterior en recorte
-          setPdfPageDimensions({
-            width: img.naturalWidth,
-            height: img.naturalHeight
-          });
-          
+        }
+        
+        // Inicializar área de encuadre proporcional a la visualización
+        const cropArea = {
+          x: Math.max(0, displayWidth * 0.1),
+          y: Math.max(0, displayHeight * 0.1),
+          width: Math.max(100, displayWidth * 0.8),
+          height: Math.max(100, displayHeight * 0.8)
+        };
+        
+        setCropArea(cropArea);
+        
+        // Guardar dimensiones reales para uso posterior en recorte
+        setPdfPageDimensions({
+          width: img.naturalWidth,
+          height: img.naturalHeight
+        });
+        
+        if (process.env.NODE_ENV !== 'production') {
           console.log('🎯 Área de encuadre para imagen inicializada:', cropArea);
           console.log('📐 Dimensiones reales guardadas:', img.naturalWidth, 'x', img.naturalHeight);
+        }
         };
         
         img.src = url;
         setPreviewUrl(url);
         setShowPreview(true);
-        console.log('✅ URL de imagen generada');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ URL de imagen generada');
+        }
       }
       
-      console.log('✅ Previsualización generada exitosamente');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Previsualización generada exitosamente');
+      }
     } catch (error) {
       console.error('❌ Error generando previsualización:', error);
       mostrarMensaje('error', 'Error generando previsualización del archivo');
@@ -1366,11 +1448,13 @@ const aplicarAInventario = useCallback(async () => {
           return;
         }
         
-        console.log('🎯 Aplicando encuadre para PDF:', {
-          originalCropArea: cropArea,
-          normalizedCoords,
-          pageDimensions: pdfPageDimensions
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🎯 Aplicando encuadre para PDF:', {
+            originalCropArea: cropArea,
+            normalizedCoords,
+            pageDimensions: pdfPageDimensions
+          });
+        }
         
         // Obtener el canvas renderizado del preview
         if (!pageReady || !pageCanvasRef.current) {
@@ -1381,11 +1465,13 @@ const aplicarAInventario = useCallback(async () => {
         if (!sourceCanvas) {
           throw new Error('No se encontró el canvas para recortar');
         }
-        console.log('🎯 Canvas disponible para recorte:', {
-          width: sourceCanvas.width,
-          height: sourceCanvas.height,
-          ready: pageReady
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🎯 Canvas disponible para recorte:', {
+            width: sourceCanvas.width,
+            height: sourceCanvas.height,
+            ready: pageReady
+          });
+        }
         
         // Recortar desde el canvas usando coordenadas normalizadas
         const croppedBlob = await cropFromRenderedCanvas(
@@ -1414,11 +1500,13 @@ const aplicarAInventario = useCallback(async () => {
           pageDimensions: pdfPageDimensions
         };
         
-        console.log('✅ PDF recortado exitosamente:', {
-          originalSize: selectedFile.size,
-          croppedSize: croppedFile.size,
-          compression: ((1 - croppedFile.size / selectedFile.size) * 100).toFixed(1) + '%'
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ PDF recortado exitosamente:', {
+            originalSize: selectedFile.size,
+            croppedSize: croppedFile.size,
+            compression: ((1 - croppedFile.size / selectedFile.size) * 100).toFixed(1) + '%'
+          });
+        }
 
         // Subir inmediatamente el recorte al bucket para habilitar el gating por path
         const userId = currentUser?.id;
@@ -1442,7 +1530,9 @@ const aplicarAInventario = useCallback(async () => {
           mostrarMensaje('error', `Error subiendo recorte: ${uploadError.message}`);
           return;
         }
-        console.log('✅ Recorte subido al bucket:', { bucket: bucketName, path: previewPath });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Recorte subido al bucket:', { bucket: bucketName, path: previewPath });
+        }
 
         const croppedWithPath = {
           name: `cropped_${selectedFile.name.replace('.pdf', '.jpg')}`,
@@ -1453,11 +1543,13 @@ const aplicarAInventario = useCallback(async () => {
         };
         setCroppedFile(croppedWithPath);
         setHasCropSignedUrl(true);
-        console.log('🔍 Estado tras setCroppedFile (post-upload):', {
-          keys: Object.keys(croppedWithPath),
-          hasPath: !!croppedWithPath.path,
-          path: croppedWithPath.path
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔍 Estado tras setCroppedFile (post-upload):', {
+            keys: Object.keys(croppedWithPath),
+            hasPath: !!croppedWithPath.path,
+            path: croppedWithPath.path
+          });
+        }
         
         mostrarMensaje('success', `PDF recortado exitosamente: ${(normalizedCoords.w * 100).toFixed(1)}% × ${(normalizedCoords.h * 100).toFixed(1)}% de la página`);
       } else {
@@ -1498,13 +1590,15 @@ const aplicarAInventario = useCallback(async () => {
           const realWidth = Math.round(cropArea.width * scaleX);
           const realHeight = Math.round(cropArea.height * scaleY);
           
-          console.log('🔍 Aplicando encuadre para imagen:', {
-            display: cropArea,
-            displayDimensions: { width: displayWidth, height: displayHeight },
-            real: { x: realX, y: realY, width: realWidth, height: realHeight },
-            natural: { width: naturalWidth, height: naturalHeight },
-            scale: { x: scaleX, y: scaleY }
-          });
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('🔍 Aplicando encuadre para imagen:', {
+              display: cropArea,
+              displayDimensions: { width: displayWidth, height: displayHeight },
+              real: { x: realX, y: realY, width: realWidth, height: realHeight },
+              natural: { width: naturalWidth, height: naturalHeight },
+              scale: { x: scaleX, y: scaleY }
+            });
+          }
           
           // Configurar canvas con dimensiones reales del recorte
           canvas.width = realWidth;
@@ -1620,6 +1714,18 @@ const aplicarAInventario = useCallback(async () => {
     cargarSchemaHints();
   }, [cargarSchemaHints]);
   
+  // Log de depuración para verificar que react-pdf esté disponible (solo cuando se monte el componente)
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Debug react-pdf:', {
+        Document: typeof Document,
+        Page: typeof Page,
+        pdfjs: typeof pdfjs,
+        workerSrc: pdfjs.GlobalWorkerOptions.workerSrc
+      });
+    }
+  }, []);
+  
   // Cargar usuario autenticado al montar el componente
   const userInitRef = useRef(false);
   useEffect(() => {
@@ -1652,9 +1758,9 @@ const aplicarAInventario = useCallback(async () => {
   
   // Listener de autenticación eliminado: se gestiona globalmente en sessionManager
 
-  // Debug: monitorear cambios en estados de previsualización (silenciado salvo DEBUG)
+  // Debug: monitorear cambios en estados de previsualización (solo en desarrollo)
   useEffect(() => {
-    if (!DEBUG) return;
+    if (!DEBUG || process.env.NODE_ENV === 'production') return;
     console.log('🔍 [EFFECT] Estados de previsualización cambiaron:', {
       previewUrl: !!previewUrl,
       showPreview,
@@ -1670,9 +1776,9 @@ const aplicarAInventario = useCallback(async () => {
     });
   }, [previewUrl, showPreview, cropArea, isCropping, DEBUG]);
 
-  // Depuración rápida: verificar estado del draft y alimentación de la tabla
+  // Depuración rápida: verificar estado del draft y alimentación de la tabla (solo en desarrollo)
   useEffect(() => {
-    if (!DEBUG) return;
+    if (!DEBUG || process.env.NODE_ENV === 'production') return;
     console.log('🔍 [EFFECT] Debug Draft State:', {
       draft: draft,
       itemsCount: draft.items?.length || 0,
@@ -1845,18 +1951,20 @@ const aplicarAInventario = useCallback(async () => {
       normalized.h = 1 - normalized.y;
     }
     
-    console.log('🔍 Coordenadas normalizadas:', {
-      original: cropArea,
-      pageDimensions,
-      normalized,
-      validation: {
-        xInRange: normalized.x >= 0 && normalized.x <= 1,
-        yInRange: normalized.y >= 0 && normalized.y <= 1,
-        wInRange: normalized.w >= 0 && normalized.w <= 1,
-        hInRange: normalized.h >= 0 && normalized.h <= 1,
-        withinBounds: (normalized.x + normalized.w) <= 1 && (normalized.y + normalized.h) <= 1
-      }
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Coordenadas normalizadas:', {
+        original: cropArea,
+        pageDimensions,
+        normalized,
+        validation: {
+          xInRange: normalized.x >= 0 && normalized.x <= 1,
+          yInRange: normalized.y >= 0 && normalized.y <= 1,
+          wInRange: normalized.w >= 0 && normalized.w <= 1,
+          hInRange: normalized.h >= 0 && normalized.h <= 1,
+          withinBounds: (normalized.x + normalized.w) <= 1 && (normalized.y + normalized.h) <= 1
+        }
+      });
+    }
     
     return normalized;
   }, []);
@@ -1885,11 +1993,13 @@ const aplicarAInventario = useCallback(async () => {
   // Función para recortar desde canvas renderizado (client-side)
   const cropFromRenderedCanvas = useCallback(async (pageCanvas, sel, outW = null, outH = null) => {
     try {
-      console.log('🔍 Recortando desde canvas:', {
-        canvasSize: { width: pageCanvas.width, height: pageCanvas.height },
-        selection: sel,
-        outputSize: { width: outW, height: outH }
-      });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔍 Recortando desde canvas:', {
+          canvasSize: { width: pageCanvas.width, height: pageCanvas.height },
+          selection: sel,
+          outputSize: { width: outW, height: outH }
+        });
+      }
       
       // Convertir coordenadas normalizadas a píxeles del canvas
       const sx = Math.round(sel.x * pageCanvas.width);
@@ -1897,20 +2007,26 @@ const aplicarAInventario = useCallback(async () => {
       const sw = Math.round(sel.w * pageCanvas.width);
       const sh = Math.round(sel.h * pageCanvas.height);
       
-      console.log('📐 Coordenadas de recorte en píxeles:', { sx, sy, sw, sh });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📐 Coordenadas de recorte en píxeles:', { sx, sy, sw, sh });
+      }
       
       // Validar dimensiones del recorte como enteros > 0
       const w = Math.max(1, Math.round(outW ?? sw));
       const h = Math.max(1, Math.round(outH ?? Math.round((sh / sw) * w)));
       
-      console.log('📐 Dimensiones validadas del recorte:', { w, h, originalSw: sw, originalSh: sh });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📐 Dimensiones validadas del recorte:', { w, h, originalSw: sw, originalSh: sh });
+      }
       
       // Crear canvas de recorte con dimensiones validadas
       const crop = document.createElement('canvas');
       crop.width = w;
       crop.height = h;
       
-      console.log('📐 Dimensiones del recorte:', { width: crop.width, height: crop.height });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📐 Dimensiones del recorte:', { width: crop.width, height: crop.height });
+      }
       
       // Contexto del canvas con optimización para lectura frecuente
       const ctx = crop.getContext('2d', { willReadFrequently: true });
@@ -1928,11 +2044,13 @@ const aplicarAInventario = useCallback(async () => {
         crop.toBlob(
           (blob) => {
             if (blob) {
-              console.log('✅ Recorte generado:', {
-                size: blob.size,
-                type: blob.type,
-                dimensions: { width: crop.width, height: crop.height }
-              });
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('✅ Recorte generado:', {
+                  size: blob.size,
+                  type: blob.type,
+                  dimensions: { width: crop.width, height: crop.height }
+                });
+              }
               resolve(blob);
             } else {
               reject(new Error('Error generando blob del recorte'));
@@ -2014,17 +2132,21 @@ const aplicarAInventario = useCallback(async () => {
 
   // Función para detectar cuando el canvas del PDF esté listo
   const onPageRender = useCallback(() => {
-    console.log('🔍 onPageRender ejecutado, buscando canvas...');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 onPageRender ejecutado, buscando canvas...');
+    }
     
     // Buscar el canvas dentro de pageContainerRef usando el selector de react-pdf
     const canvas = pageContainerRef.current?.querySelector('canvas.react-pdf__Page__canvas');
     
     if (canvas) {
-      console.log('✅ Canvas encontrado:', {
-        width: canvas.width,
-        height: canvas.height,
-        element: canvas
-      });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Canvas encontrado:', {
+          width: canvas.width,
+          height: canvas.height,
+          element: canvas
+        });
+      }
       
       pageCanvasRef.current = canvas;
       setPageReady(true);
@@ -2044,17 +2166,23 @@ const aplicarAInventario = useCallback(async () => {
         height: canvas.height
       });
       
-      console.log('🎯 Estado pageReady actualizado a true');
-      console.log('🎯 Área de encuadre inicializada:', cropArea);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🎯 Estado pageReady actualizado a true');
+        console.log('🎯 Área de encuadre inicializada:', cropArea);
+      }
     } else {
-      console.log('⚠️ Canvas no encontrado aún, pageReady permanece false');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('⚠️ Canvas no encontrado aún, pageReady permanece false');
+      }
       setPageReady(false);
     }
   }, []);
 
   // Función para manejar cuando se carga el documento PDF completo
   const onDocumentLoadSuccess = useCallback(({ numPages }) => {
-    console.log('📊 Documento PDF cargado, páginas:', numPages);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📊 Documento PDF cargado, páginas:', numPages);
+    }
     setNumPages(numPages);
     
     // Resetear estado del canvas al cambiar documento
@@ -2317,15 +2445,17 @@ const aplicarAInventario = useCallback(async () => {
                     
                     {/* Botón de debug temporal */}
                     <button
-                      onClick={() => {
+                                          onClick={() => {
+                      if (process.env.NODE_ENV !== 'production') {
                         console.log('🔍 Debug completo del estado actual:', {
                           selectedFile,
                           schemaHints: normalizarSchemaHints(),
                           draft,
                           haProcesado
                         });
-                        mostrarMensaje('info', 'Información de debug enviada a la consola');
-                      }}
+                      }
+                      mostrarMensaje('info', 'Información de debug enviada a la consola');
+                    }}
                       className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       🐛 Debug
@@ -2335,51 +2465,53 @@ const aplicarAInventario = useCallback(async () => {
                     <button
                       onClick={async () => {
                         try {
-                          console.log('🔍 Debug de Supabase...');
-                          
-                          // Verificar usuario actual del estado local
-                          console.log('🔑 Usuario:', currentUser ? 'Autenticado' : 'No autenticado');
-                          
-                          if (currentUser) {
-                            console.log('👤 Usuario:', currentUser.email);
-                            console.log('🆔 User ID:', currentUser?.id);
-                            console.log('👤 Nombre:', currentUser?.nombre);
-                            console.log('🔑 Rol:', currentUser?.rol);
-                          }
-                          
-                          // Verificar sesión de Supabase para token
-                          const { data: { session } } = await supabase.auth.getSession();
-                          console.log('🔑 Access Token:', session?.access_token ? 'Presente' : 'Ausente');
-                          
-                          // Verificar acceso al bucket inventario-ia
-                          console.log('🔐 Verificando acceso al bucket inventario-ia...');
-                          
-                          try {
-                            // Intentar listar archivos del usuario en el bucket
-                            const userId = currentUser?.id;
-                            const userFolder = userId ? `${userId}/` : 'test/';
-                            const { data: files, error: listError } = await supabase.storage
-                              .from('inventario-ia')
-                              .list(userFolder, { limit: 1 });
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.log('🔍 Debug de Supabase...');
                             
-                            if (listError) {
-                              console.log(`⚠️ Error accediendo al bucket inventario-ia:`, listError.message);
-                              
-                              if (listError.message.includes('row-level security policy')) {
-                                console.log('🔒 Problema de RLS detectado. Verifica las políticas en Supabase Dashboard');
-                              }
-                            } else {
-                              console.log(`✅ Acceso al bucket inventario-ia: OK`);
-                              console.log(`📁 Archivos en carpeta ${userFolder}:`, files?.length || 0);
+                            // Verificar usuario actual del estado local
+                            console.log('🔑 Usuario:', currentUser ? 'Autenticado' : 'No autenticado');
+                            
+                            if (currentUser) {
+                              console.log('👤 Usuario:', currentUser.email);
+                              console.log('🆔 User ID:', currentUser?.id);
+                              console.log('👤 Nombre:', currentUser?.nombre);
+                              console.log('🔑 Rol:', currentUser?.rol);
                             }
-                          } catch (bucketError) {
-                            console.log(`❌ Error verificando bucket:`, bucketError.message);
+                            
+                            // Verificar sesión de Supabase para token
+                            const { data: { session } } = await supabase.auth.getSession();
+                            console.log('🔑 Access Token:', session?.access_token ? 'Presente' : 'Ausente');
+                            
+                            // Verificar acceso al bucket inventario-ia
+                            console.log('🔐 Verificando acceso al bucket inventario-ia...');
+                            
+                            try {
+                              // Intentar listar archivos del usuario en el bucket
+                              const userId = currentUser?.id;
+                              const userFolder = userId ? `${userId}/` : 'test/';
+                              const { data: files, error: listError } = await supabase.storage
+                                .from('inventario-ia')
+                                .list(userFolder, { limit: 1 });
+                              
+                              if (listError) {
+                                console.log(`⚠️ Error accediendo al bucket inventario-ia:`, listError.message);
+                                
+                                if (listError.message.includes('row-level security policy')) {
+                                  console.log('🔒 Problema de RLS detectado. Verifica las políticas en Supabase Dashboard');
+                                }
+                              } else {
+                                console.log(`✅ Acceso al bucket inventario-ia: OK`);
+                                console.log(`📁 Archivos en carpeta ${userFolder}:`, files?.length || 0);
+                              }
+                            } catch (bucketError) {
+                              console.log(`❌ Error verificando bucket:`, bucketError.message);
+                            }
+                            
+                            // Verificar configuración de la Edge Function
+                            console.log('🔧 Verificando configuración de Edge Function...');
+                            console.log('🌐 Supabase URL:', supabaseUrl);
+                            console.log('🔑 Edge Function: inventario-ia-process');
                           }
-                          
-                          // Verificar configuración de la Edge Function
-                          console.log('🔧 Verificando configuración de Edge Function...');
-                          console.log('🌐 Supabase URL:', supabaseUrl);
-                          console.log('🔑 Edge Function: inventario-ia-process');
                           
                           mostrarMensaje('info', 'Debug de Supabase enviado a consola');
                         } catch (error) {
@@ -2444,10 +2576,12 @@ const aplicarAInventario = useCallback(async () => {
                             const ctx = canvas.getContext('2d');
                             correctImageOrientation(img, canvas, ctx);
                             
-                            // Asignar canvas a imageCanvasRef y marcar como listo
-                            imageCanvasRef.current = canvas;
-                            setImageReady(true);
-                            console.log('✅ Canvas de imagen creado y listo para recorte');
+                                    // Asignar canvas a imageCanvasRef y marcar como listo
+        imageCanvasRef.current = canvas;
+        setImageReady(true);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Canvas de imagen creado y listo para recorte');
+        }
                           };
                           img.src = previewUrl;
                         }
@@ -3025,18 +3159,24 @@ const aplicarAInventario = useCallback(async () => {
             
             <button
               type="button"
-              onClick={(e) => {
+                          onClick={(e) => {
+              if (process.env.NODE_ENV !== 'production') {
                 console.log('🎯 Click en botón detectado, disabled:', getButtonState().isDisabled);
                 console.log('📊 Estado actual en onClick:', {
                   croppedFile,
                   croppedFilePath: croppedFile?.path,
                   selectedFileType: selectedFile?.type
                 });
-                if (!getButtonState().isDisabled) {
-                  procesarConIA();
-                }
-              }}
-              onMouseDown={() => console.log('🖱️ MouseDown en botón')}
+              }
+              if (!getButtonState().isDisabled) {
+                procesarConIA();
+              }
+            }}
+            onMouseDown={() => {
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('🖱️ MouseDown en botón');
+              }
+            }}
               disabled={getButtonState().isDisabled}
               style={{ position: 'relative', zIndex: 50 }}
               className={`w-full py-4 px-8 rounded-2xl font-bold text-white text-lg transition-all duration-300 shadow-lg ${
@@ -3090,12 +3230,14 @@ const aplicarAInventario = useCallback(async () => {
                   </button>
                   <button
                     onClick={() => {
-                      console.log('🔍 Debug completo del estado actual:', {
-                        selectedFile,
-                        schemaHints: normalizarSchemaHints(),
-                        draft,
-                        haProcesado
-                      });
+                      if (process.env.NODE_ENV !== 'production') {
+                        console.log('🔍 Debug completo del estado actual:', {
+                          selectedFile,
+                          schemaHints: normalizarSchemaHints(),
+                          draft,
+                          haProcesado
+                        });
+                      }
                       mostrarMensaje('info', 'Información de debug enviada a la consola');
                     }}
                     className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"

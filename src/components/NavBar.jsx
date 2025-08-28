@@ -67,15 +67,17 @@ const NavBar = () => {
     };
     loadBasicUserInfo();
 
-    // Suscribirse a cambios de sesión
+    // Suscribirse SOLO a cambios de perfil (no a datos de ventas/inventario)
     const unsubscribe = sessionManager.subscribe((event, session, extra) => {
-      console.log('🔄 NavBar: Cambio de sesión detectado:', event);
+      const { previousUserId, newUserId } = extra || {};
       
+      // Solo procesar cambios de perfil del usuario actual
       if (event === 'SIGNED_OUT') {
         setUserInfo({ nombre: '', email: '' });
-        console.log('🧹 NavBar: Datos de usuario limpiados tras logout');
-      } else if (event === 'SIGNED_IN') {
-        console.log('🔄 NavBar: Recargando perfil tras login');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🧹 NavBar: Datos de usuario limpiados tras logout');
+        }
+      } else if (event === 'SIGNED_IN' && newUserId && newUserId !== previousUserId) {
         loadBasicUserInfo();
       }
     });
