@@ -70,6 +70,12 @@ export default function Home() {
       icon: '👥',
       label: 'Clientes',
       route: '/clientes'
+    },
+    {
+      id: 'seguimiento',
+      icon: '📊',
+      label: 'Seguimiento',
+      route: '/seguimiento'
     }
   ], []);
 

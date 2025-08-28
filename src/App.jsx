@@ -12,6 +12,7 @@ import RutaPrivada from './components/RutaPrivada';
 import NavBar from './components/NavBar';
 import InventarioIA from './components/InventarioIA';
 import Clientes from './components/Clientes';
+import Seguimiento from './components/Seguimiento';
 
 // Componentes placeholder para las otras secciones
 const Inventario = () => {
@@ -87,6 +88,11 @@ function App() {
           <Route path="/clientes" element={
             <RutaPrivada>
               <Clientes />
+            </RutaPrivada>
+          } />
+          <Route path="/seguimiento" element={
+            <RutaPrivada>
+              <Seguimiento />
             </RutaPrivada>
           } />
         </Routes>

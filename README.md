@@ -2,7 +2,7 @@
 
 ## 📋 Descripción
 
-**Mi Caja** es una aplicación web completa para la gestión de negocios comerciales, desarrollada con React y Supabase. Permite el control de ventas, inventario, gastos, proveedores y asistencia de empleados.
+**Mi Caja** es una aplicación web completa para la gestión de negocios comerciales, desarrollada con React y Supabase. Permite el control de ventas, inventario, gastos, proveedores, asistencia de empleados y seguimiento de ventas acumuladas.
 
 ## ✨ Funcionalidades Principales
 
@@ -12,12 +12,14 @@
 - 🏢 **Gestión de Proveedores** - Control de pagos y estados
 - 👥 **Asistencia de Empleados** - Registro de entradas y salidas
 - 📊 **Reportes y Estadísticas** - Exportación CSV y análisis de datos
+- 📈 **Seguimiento de Ventas** - Gráfico de ventas acumuladas mensuales por cliente
 
 ## 🚀 Tecnologías Utilizadas
 
 - **Frontend**: React 18 + Vite + Tailwind CSS
 - **Backend**: Supabase (PostgreSQL)
 - **Autenticación**: Supabase Auth
+- **Gráficos**: Recharts
 - **Despliegue**: Vercel
 - **Funciones Edge**: Vercel Edge Functions
 
@@ -50,6 +52,7 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima
 
 4. **Configurar base de datos**
 - Ejecutar los scripts SQL en Supabase (ver `SUPABASE_SETUP.md`)
+- Configurar la vista `ventas_mensual_acum_v2` para el gráfico de seguimiento
 - Configurar políticas RLS según sea necesario
 
 5. **Ejecutar en desarrollo**
@@ -65,6 +68,7 @@ Para ver todos los cambios, mejoras y correcciones implementadas, consulta:
 
 ### 🔧 Configuración de Base de Datos
 - [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) - Configuración principal
+- [`ventas_mensual_acum_v2.sql`](./ventas_mensual_acum_v2.sql) - Vista para ventas acumuladas
 - Scripts SQL para cada tabla en la raíz del proyecto
 
 ### 📱 Características Técnicas
@@ -73,6 +77,7 @@ Para ver todos los cambios, mejoras y correcciones implementadas, consulta:
 - **Offline** - Almacenamiento local con IndexedDB
 - **Seguridad** - Políticas RLS configuradas
 - **Performance** - Optimizado para velocidad
+- **Gráficos Interactivos** - Visualización de datos con Recharts
 
 ## 🎯 Scripts Disponibles
 
@@ -89,6 +94,25 @@ La aplicación está configurada para desplegarse en Vercel con:
 - Configuración automática de funciones edge
 - Optimización de assets
 - Configuración de CORS
+
+## 📊 Componentes Principales
+
+### **Seguimiento.jsx**
+- Gráfico de ventas acumuladas mensuales
+- Filtros por año independientes
+- Tarjetas de resumen con totales mensuales
+- Integración con vista `ventas_mensual_acum_v2`
+
+### **Ventas.jsx**
+- Gestión completa de ventas
+- Filtros por fecha y cliente
+- Exportación a CSV
+- Cálculo automático de totales
+
+### **InventarioIA.jsx**
+- Gestión inteligente de inventario
+- Cálculo automático de ganancias
+- Control de stock
 
 ## 📞 Soporte
 
