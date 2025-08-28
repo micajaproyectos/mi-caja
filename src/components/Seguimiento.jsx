@@ -893,12 +893,58 @@ export default function Seguimiento() {
           {/* Gráfico Circular de Tipos de Pago */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
             <div className="text-center mb-6">
-              <h3 className="text-xl md:text-2xl font-bold text-white">
-                💳 Distribución por Tipo de Pago
-              </h3>
-              <p className="text-green-200 text-sm md:text-base">
-                Ventas del mes {obtenerNombreMesSeleccionado(filtroMes)} del {anioGrafico}
-              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                <h3 className="text-xl md:text-2xl font-bold text-white">
+                  💳 Distribución por Tipo de Pago
+                </h3>
+                {/* Filtros para el gráfico circular */}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Filtro de mes */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-white font-medium text-sm md:text-base">
+                      Mes:
+                    </label>
+                    <select
+                      value={filtroMes}
+                      onChange={(e) => setFiltroMes(parseInt(e.target.value))}
+                      className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      <option value="1" className="bg-gray-800 text-white">Enero</option>
+                      <option value="2" className="bg-gray-800 text-white">Febrero</option>
+                      <option value="3" className="bg-gray-800 text-white">Marzo</option>
+                      <option value="4" className="bg-gray-800 text-white">Abril</option>
+                      <option value="5" className="bg-gray-800 text-white">Mayo</option>
+                      <option value="6" className="bg-gray-800 text-white">Junio</option>
+                      <option value="7" className="bg-gray-800 text-white">Julio</option>
+                      <option value="8" className="bg-gray-800 text-white">Agosto</option>
+                      <option value="9" className="bg-gray-800 text-white">Septiembre</option>
+                      <option value="10" className="bg-gray-800 text-white">Octubre</option>
+                      <option value="11" className="bg-gray-800 text-white">Noviembre</option>
+                      <option value="12" className="bg-gray-800 text-white">Diciembre</option>
+                    </select>
+                  </div>
+
+                  {/* Filtro de año */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-white font-medium text-sm md:text-base">
+                      Año:
+                    </label>
+                    <select
+                      value={filtroAnio}
+                      onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
+                      className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      {aniosDisponibles.map(anio => (
+                        <option key={anio} value={anio} className="bg-gray-800 text-white">
+                          {anio}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {loadingTiposPago ? (
