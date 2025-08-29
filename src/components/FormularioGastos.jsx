@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { supabase } from '../lib/supabaseClient';
-// import { authService } from '../lib/authService.js';
-// import { 
-//   obtenerFechaHoyChile, 
-//   formatearFechaChile,
-//   formatearFechaCortaChile,
-//   obtenerAniosUnicos
-// } from '../lib/dateUtils.js';
+import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
+import { 
+  obtenerFechaHoyChile, 
+  formatearFechaChile,
+  formatearFechaCortaChile,
+  obtenerAniosUnicos
+} from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 const FormularioGastos = () => {
@@ -108,22 +108,33 @@ const FormularioGastos = () => {
       setLoadingDatos(true);
       setError(null);
       
-      // Simular datos para testing
-      const datosSimulados = [
-        {
-          id: 1,
-          fecha: '2024-01-15',
-          fecha_cl: '2024-01-15',
-          tipo_gasto: 'Fijo',
-          detalle: 'Alquiler oficina',
-          monto: 150000,
-          forma_pago: 'Transferencia',
-          usuario_id: 'test-user'
-        }
-      ];
+      // Obtener usuario autenticado
+      const usuario = await authService.getCurrentUser();
+      if (!usuario) {
+        console.log('🔍 No hay usuario autenticado');
+        setGastosRegistrados([]);
+        return;
+      }
+
+      console.log('🔍 Usuario autenticado:', usuario.id);
       
-      setGastosRegistrados(datosSimulados);
-      console.log('✅ Gastos simulados cargados:', datosSimulados.length);
+      // Consultar gastos desde Supabase
+      const { data: gastos, error } = await supabase
+        .from('gasto')
+        .select('*')
+        .eq('usuario_id', usuario.id)
+        .order('fecha_cl', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error al cargar gastos desde Supabase:', error);
+        setError('Error al cargar los gastos desde la base de datos');
+        return;
+      }
+
+      console.log('✅ Gastos cargados desde Supabase:', gastos?.length || 0);
+      setGastosRegistrados(gastos || []);
+      
     } catch (error) {
       console.error('Error inesperado al cargar gastos:', error);
       setError('Error inesperado al cargar los datos');
@@ -163,17 +174,41 @@ const FormularioGastos = () => {
 
       console.log('💰 Registrando gasto:', gasto);
 
-      // Simular registro exitoso
-      const nuevoGasto = {
-        id: Date.now(),
-        ...gasto,
+      // Obtener usuario autenticado
+      const usuario = await authService.getCurrentUser();
+      if (!usuario) {
+        setError('No hay usuario autenticado');
+        return;
+      }
+
+      // Preparar datos para insertar en Supabase
+      const datosGasto = {
+        fecha: gasto.fecha,
+        fecha_cl: gasto.fecha, // Por ahora usar la misma fecha
+        tipo_gasto: gasto.tipo_gasto,
+        detalle: gasto.detalle,
         monto: Number(gasto.monto),
-        usuario_id: 'test-user'
+        forma_pago: gasto.forma_pago,
+        usuario_id: usuario.id
       };
 
+      // Insertar en Supabase
+      const { data: nuevoGasto, error } = await supabase
+        .from('gasto')
+        .insert(datosGasto)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error al insertar gasto en Supabase:', error);
+        setError('Error al registrar el gasto en la base de datos');
+        return;
+      }
+
+      // Actualizar estado local
       setGastosRegistrados(prev => [nuevoGasto, ...prev]);
 
-      console.log('✅ Gasto registrado exitosamente:', nuevoGasto);
+      console.log('✅ Gasto registrado exitosamente en Supabase:', nuevoGasto);
 
       // Limpiar formulario
       setGasto({
@@ -202,8 +237,21 @@ const FormularioGastos = () => {
       setLoading(true);
       setError(null);
 
+      // Eliminar de Supabase
+      const { error } = await supabase
+        .from('gasto')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error al eliminar gasto de Supabase:', error);
+        setError('Error al eliminar el gasto de la base de datos');
+        return;
+      }
+
+      // Actualizar estado local
       setGastosRegistrados(prev => prev.filter(g => g.id !== id));
-      console.log('✅ Gasto eliminado exitosamente');
+      console.log('✅ Gasto eliminado exitosamente de Supabase');
 
     } catch (error) {
       console.error('Error inesperado al eliminar gasto:', error);
@@ -213,30 +261,67 @@ const FormularioGastos = () => {
     }
   };
 
+  // Función para limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setBusquedaDetalle('');
+    setFiltroFecha('');
+    setFiltroMes('');
+    setFiltroAnio('');
+    setFiltroTipoGasto('');
+    setFiltroFormaPago('');
+  };
+
   // Filtrar gastos
   const gastosFiltrados = gastosRegistrados.filter(item => {
-    const coincideDetalle = item.detalle?.toLowerCase().includes(busquedaDetalle.toLowerCase());
+    // Filtro por detalle (búsqueda de texto)
+    const coincideDetalle = !busquedaDetalle || 
+      item.detalle?.toLowerCase().includes(busquedaDetalle.toLowerCase());
     
+    // Obtener fecha para filtros (priorizar fecha_cl, fallback a fecha)
     const fechaFiltro = item.fecha_cl || item.fecha;
+    
+    // Filtro por fecha específica
     const coincideFecha = !filtroFecha || fechaFiltro === filtroFecha;
     
+    // Filtro por mes
     const coincideMes = !filtroMes || (() => {
       if (!fechaFiltro) return false;
       const [year, month] = fechaFiltro.split('-');
-      return parseInt(month) === Number(filtroMes);
+      return parseInt(month) === parseInt(filtroMes);
     })();
     
+    // Filtro por año
     const coincideAnio = !filtroAnio || (() => {
       if (!fechaFiltro) return false;
       const year = fechaFiltro.split('-')[0];
-      return parseInt(year) === Number(filtroAnio);
+      return parseInt(year) === parseInt(filtroAnio);
     })();
     
+    // Filtro por tipo de gasto
     const coincideTipoGasto = !filtroTipoGasto || item.tipo_gasto === filtroTipoGasto;
+    
+    // Filtro por forma de pago
     const coincideFormaPago = !filtroFormaPago || item.forma_pago === filtroFormaPago;
     
+    // Todos los filtros deben coincidir
     return coincideDetalle && coincideFecha && coincideMes && coincideAnio && coincideTipoGasto && coincideFormaPago;
   });
+
+  // Log de debugging para filtros (solo en desarrollo)
+  if (process.env.NODE_ENV !== 'production' && (filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago)) {
+    console.log('🔍 Estado de filtros:', {
+      filtros: { filtroMes, filtroAnio, filtroTipoGasto, filtroFormaPago },
+      totalRegistros: gastosRegistrados.length,
+      totalFiltrados: gastosFiltrados.length,
+      gastosFiltrados: gastosFiltrados.map(g => ({
+        id: g.id,
+        detalle: g.detalle,
+        fecha: g.fecha_cl || g.fecha,
+        tipo_gasto: g.tipo_gasto,
+        forma_pago: g.forma_pago
+      }))
+    });
+  }
 
   // Calcular totales
   const totalGastos = gastosFiltrados.reduce((sum, item) => sum + (Number(item.monto) || 0), 0);
@@ -257,6 +342,20 @@ const FormularioGastos = () => {
       fecha: obtenerFechaActual()
     }));
   }, []);
+
+  // Log cuando cambien los filtros (solo en desarrollo)
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 Filtros actualizados:', {
+        busquedaDetalle,
+        filtroFecha,
+        filtroMes,
+        filtroAnio,
+        filtroTipoGasto,
+        filtroFormaPago
+      });
+    }
+  }, [busquedaDetalle, filtroFecha, filtroMes, filtroAnio, filtroTipoGasto, filtroFormaPago]);
 
   console.log('🔍 FormularioGastos: Renderizando componente...');
 
@@ -571,6 +670,16 @@ const FormularioGastos = () => {
                       </span>
                     )}
                   </div>
+                  
+                  {/* Botón para limpiar todos los filtros */}
+                  <div className="mt-3 text-center">
+                    <button
+                      onClick={limpiarFiltros}
+                      className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      🧹 Limpiar Todos los Filtros
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -597,6 +706,22 @@ const FormularioGastos = () => {
               </div>
             ) : (
               <>
+                {/* Información de filtros aplicados */}
+                {(busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) && (
+                  <div className="mb-4 p-3 bg-blue-600/20 backdrop-blur-sm rounded-lg border border-blue-500/30">
+                    <p className="text-blue-200 text-sm text-center">
+                      <strong>Filtros aplicados:</strong> 
+                      {busquedaDetalle && ` Búsqueda: "${busquedaDetalle}"`}
+                      {filtroFecha && ` Fecha: ${formatearFechaMostrar(filtroFecha)}`}
+                      {filtroMes && ` Mes: ${obtenerMesesUnicos().find(m => m.value === parseInt(filtroMes))?.label}`}
+                      {filtroAnio && ` Año: ${filtroAnio}`}
+                      {filtroTipoGasto && ` Tipo: ${filtroTipoGasto}`}
+                      {filtroFormaPago && ` Pago: ${filtroFormaPago}`}
+                      {` | Mostrando ${gastosFiltrados.length} de ${gastosRegistrados.length} registros totales`}
+                    </p>
+                  </div>
+                )}
+
                 {/* Estadísticas */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 md:gap-6 mb-6">
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
@@ -633,65 +758,75 @@ const FormularioGastos = () => {
                   </div>
                 </div>
 
-                {/* Tabla */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs md:text-sm">
-                    <thead>
-                      <tr className="bg-white/10 backdrop-blur-sm">
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">Tipo</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">Detalle</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">Monto</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">Forma Pago</th>
-                        <th className="text-white font-semibold p-2 md:p-4 text-left">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {gastosFiltrados.map((item, index) => (
-                        <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                            {formatearFechaMostrar(item.fecha_cl || item.fecha)}
-                          </td>
-                          <td className="p-2 md:p-4">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              item.tipo_gasto === 'Fijo' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-orange-100 text-orange-800'
-                            }`}>
-                              {item.tipo_gasto}
-                            </span>
-                          </td>
-                          <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-32 md:max-w-48">
-                            {item.detalle || 'Sin detalle'}
-                          </td>
-                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm font-semibold">
-                            ${formatearNumero(item.monto)}
-                          </td>
-                          <td className="p-2 md:p-4">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              item.forma_pago === 'Efectivo' 
-                                ? 'bg-green-100 text-green-800'
-                                : item.forma_pago === 'Débito'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {item.forma_pago}
-                            </span>
-                          </td>
-                          <td className="p-2 md:p-4">
-                            <button
-                              onClick={() => eliminarGasto(item.id)}
-                              disabled={loading}
-                              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-colors"
-                            >
-                              🗑️ Eliminar
-                            </button>
-                          </td>
+                {/* Mensaje cuando no hay resultados después de filtrar */}
+                {gastosFiltrados.length === 0 && (busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) ? (
+                  <div className="text-center py-6 md:py-8">
+                    <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">🔍</div>
+                    <p className="text-yellow-300 text-base md:text-lg font-bold">No se encontraron gastos con los filtros aplicados</p>
+                    <p className="text-gray-400 mt-2 text-sm md:text-base">
+                      Intenta con otros filtros o <button onClick={limpiarFiltros} className="text-blue-400 hover:text-blue-300 underline">limpiar todos los filtros</button>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs md:text-sm">
+                      <thead>
+                        <tr className="bg-white/10 backdrop-blur-sm">
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Tipo</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Detalle</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Monto</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Forma Pago</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Acciones</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {gastosFiltrados.map((item, index) => (
+                          <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                              {formatearFechaMostrar(item.fecha_cl || item.fecha)}
+                            </td>
+                            <td className="p-2 md:p-4">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                item.tipo_gasto === 'Fijo' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}>
+                                {item.tipo_gasto}
+                              </span>
+                            </td>
+                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-32 md:max-w-48">
+                              {item.detalle || 'Sin detalle'}
+                            </td>
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm font-semibold">
+                              ${formatearNumero(item.monto)}
+                            </td>
+                            <td className="p-2 md:p-4">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                item.forma_pago === 'Efectivo' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : item.forma_pago === 'Débito'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {item.forma_pago}
+                              </span>
+                            </td>
+                            <td className="p-2 md:p-4">
+                              <button
+                                onClick={() => eliminarGasto(item.id)}
+                                disabled={loading}
+                                className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-colors"
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </>
             )}
           </div>

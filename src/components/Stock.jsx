@@ -143,7 +143,10 @@ export default function Stock() {
           // Actualizar datos cuando hay cambios en inventario
           setActualizandoAutomaticamente(true);
           cargarStock();
-          cargarProductoMasVendido();
+          // Solo actualizar producto más vendido si hay cambios en ventas
+          if (payload.event === 'INSERT' || payload.event === 'UPDATE') {
+            cargarProductoMasVendido();
+          }
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
       )
@@ -203,12 +206,11 @@ export default function Stock() {
     // Configurar suscripción en tiempo real
     configurarSuscripcionTiempoReal();
     
-    // Configurar actualización periódica cada 30 segundos
+    // Configurar actualización periódica solo para el stock cada 30 segundos
     intervalRef.current = setInterval(() => {
-      console.log('🔄 Actualización periódica automática...');
+      console.log('🔄 Actualización periódica automática del stock...');
       setActualizandoAutomaticamente(true);
       cargarStock();
-      cargarProductoMasVendido();
       setTimeout(() => setActualizandoAutomaticamente(false), 2000);
     }, 30000); // 30 segundos
 
@@ -225,8 +227,11 @@ export default function Stock() {
 
   // Función para recargar datos
   const recargarDatos = () => {
+    console.log('🔄 Recarga manual solicitada por el usuario');
+    setActualizandoAutomaticamente(true);
     cargarStock();
     cargarProductoMasVendido();
+    setTimeout(() => setActualizandoAutomaticamente(false), 2000);
   };
 
 
@@ -273,7 +278,7 @@ export default function Stock() {
             <div className="text-center mb-4">
               <div className="inline-flex items-center gap-2 bg-green-500/20 backdrop-blur-sm text-green-300 px-4 py-2 rounded-full border border-green-400/30 animate-pulse">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                <span className="text-sm font-medium">Actualizando automáticamente...</span>
+                <span className="text-sm font-medium">Actualizando datos...</span>
               </div>
             </div>
           )}

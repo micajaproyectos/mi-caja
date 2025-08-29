@@ -260,11 +260,10 @@ export default function RegistroVenta() {
   // Función para filtrar ventas usando fecha_cl
   const filtrarVentas = useCallback(() => {
     let ventasFiltradas = [...ventasRegistradas];
+    const fechaActual = obtenerFechaActual();
 
     // Si no hay filtros activos, mostrar solo las ventas del día actual
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
-      const fechaActual = obtenerFechaActual();
-      
       ventasFiltradas = ventasFiltradas.filter(venta => {
         const fechaVenta = venta.fecha_cl || venta.fecha;
         return fechaVenta === fechaActual;
@@ -281,17 +280,36 @@ export default function RegistroVenta() {
       // Filtrar por mes (si se selecciona)
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = venta.fecha_cl || venta.fecha;
+          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
+          let fechaVenta = venta.fecha_cl || venta.fecha;
+          
+          if (!fechaVenta && venta.created_at) {
+            // Si no hay fecha_cl ni fecha, usar created_at
+            const fechaCreated = new Date(venta.created_at);
+            fechaVenta = fechaCreated.toISOString().split('T')[0];
+          }
+          
           if (!fechaVenta) return false;
+          
           const [year, month] = fechaVenta.split('-');
-          return parseInt(month) === parseInt(filtroMes) + 1; // +1 porque los meses van de 0-11
+          const mesVenta = parseInt(month);
+          const mesFiltro = parseInt(filtroMes);
+          return mesVenta === mesFiltro;
         });
       }
 
       // Filtrar por año (si se selecciona)
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = venta.fecha_cl || venta.fecha;
+          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
+          let fechaVenta = venta.fecha_cl || venta.fecha;
+          
+          if (!fechaVenta && venta.created_at) {
+            // Si no hay fecha_cl ni fecha, usar created_at
+            const fechaCreated = new Date(venta.created_at);
+            fechaVenta = fechaCreated.toISOString().split('T')[0];
+          }
+          
           if (!fechaVenta) return false;
           const year = fechaVenta.split('-')[0];
           return parseInt(year) === parseInt(filtroAnio);
@@ -301,10 +319,18 @@ export default function RegistroVenta() {
       // Si hay mes y año seleccionados (sin día específico)
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = venta.fecha_cl || venta.fecha;
+          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
+          let fechaVenta = venta.fecha_cl || venta.fecha;
+          
+          if (!fechaVenta && venta.created_at) {
+            // Si no hay fecha_cl ni fecha, usar created_at
+            const fechaCreated = new Date(venta.created_at);
+            fechaVenta = fechaCreated.toISOString().split('T')[0];
+          }
+          
           if (!fechaVenta) return false;
           const [year, month] = fechaVenta.split('-');
-          return parseInt(month) === parseInt(filtroMes) + 1 && 
+          return parseInt(month) === parseInt(filtroMes) && 
                  parseInt(year) === parseInt(filtroAnio);
         });
       }
@@ -341,31 +367,57 @@ export default function RegistroVenta() {
   // Función para obtener años únicos de las ventas usando fecha_cl
   const obtenerAniosUnicosLocal = () => {
     const fechas = ventasRegistradas.map(venta => venta.fecha_cl || venta.fecha).filter(Boolean);
-    return obtenerAniosUnicos(fechas);
+    const aniosExistentes = obtenerAniosUnicos(fechas);
+    
+    // Obtener el año actual
+    const anioActual = new Date().getFullYear();
+    
+    // Agregar años futuros si no están en la lista
+    const aniosCompletos = [...aniosExistentes];
+    
+    // Agregar el año actual si no está
+    if (!aniosCompletos.includes(anioActual)) {
+      aniosCompletos.push(anioActual);
+    }
+    
+    // Agregar años futuros hasta 2 años adelante
+    for (let i = 1; i <= 2; i++) {
+      const anioFuturo = anioActual + i;
+      if (!aniosCompletos.includes(anioFuturo)) {
+        aniosCompletos.push(anioFuturo);
+      }
+    }
+    
+    // Ordenar de mayor a menor
+    return aniosCompletos.sort((a, b) => b - a);
   };
 
   // Función para obtener las ventas que se deben mostrar
   const obtenerVentasAMostrar = () => {
-    // Para la visualización, mostrar todas las ventas filtradas
-    // Pero para los contadores, usar solo las que tienen total_final
+    // Mostrar TODAS las ventas filtradas (incluyendo productos individuales)
+    // Esto permite ver todos los productos que componen cada venta
     return ventasFiltradas.slice(0, ventasMostradas);
   };
 
-  // Función para cargar más ventas
-  const cargarMasVentas = () => {
-    setVentasMostradas(prev => prev + 10);
-  };
+
 
   // Función para mostrar todas las ventas
   const mostrarTodasLasVentas = () => {
-    const ventasCompletas = ventasFiltradas.filter(v => v.total_final && v.total_final > 0);
-    setVentasMostradas(ventasCompletas.length);
+    setVentasMostradas(ventasFiltradas.length);
   };
 
-  // Función para obtener meses únicos de las ventas usando fecha_cl
+  // Función para obtener todos los meses del año
   const obtenerMesesUnicosLocal = () => {
-    const fechas = ventasRegistradas.map(venta => venta.fecha_cl || venta.fecha).filter(Boolean);
-    return obtenerMesesUnicos(fechas);
+    // Siempre mostrar los 12 meses del año
+    const meses = [];
+    for (let i = 1; i <= 12; i++) {
+      meses.push({
+        value: i,
+        month: i,
+        label: nombresMeses[i - 1]
+      });
+    }
+    return meses;
   };
 
   // Nombres de los meses
@@ -401,45 +453,76 @@ export default function RegistroVenta() {
   };
 
   // Función para calcular estadísticas dinámicas según filtros aplicados
-  const calcularEstadisticasDinamicas = () => {
+  const calcularEstadisticasDinamicas = useCallback(() => {
     let ventasFiltradas = [...ventasRegistradas];
 
     // Si no hay filtros activos, mostrar solo las ventas del día actual
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
       const hoy = obtenerFechaActual();
       ventasFiltradas = ventasFiltradas.filter(venta => {
-        const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
+        const fechaVenta = venta.fecha_cl || venta.fecha;
         return fechaVenta === hoy;
       });
     } else {
       // Aplicar los mismos filtros que se usan en filtrarVentas
       if (filtroDia) {
-        const fechaSeleccionada = obtenerFechaFormatoISO(filtroDia);
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = obtenerFechaFormatoISO(venta.fecha);
-          return fechaVenta === fechaSeleccionada;
+          const fechaVenta = venta.fecha_cl || venta.fecha;
+          return fechaVenta === filtroDia;
         });
       }
 
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getUTCMonth() === parseInt(filtroMes);
+          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
+          let fechaVenta = venta.fecha_cl || venta.fecha;
+          
+          if (!fechaVenta && venta.created_at) {
+            // Si no hay fecha_cl ni fecha, usar created_at
+            const fechaCreated = new Date(venta.created_at);
+            fechaVenta = fechaCreated.toISOString().split('T')[0];
+          }
+          
+          if (!fechaVenta) return false;
+          const [year, month] = fechaVenta.split('-');
+          const mesVenta = parseInt(month);
+          const mesFiltro = parseInt(filtroMes);
+          return mesVenta === mesFiltro;
         });
       }
 
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
+          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
+          let fechaVenta = venta.fecha_cl || venta.fecha;
+          
+          if (!fechaVenta && venta.created_at) {
+            // Si no hay fecha_cl ni fecha, usar created_at
+            const fechaCreated = new Date(venta.created_at);
+            fechaVenta = fechaCreated.toISOString().split('T')[0];
+          }
+          
+          if (!fechaVenta) return false;
+          const year = fechaVenta.split('-')[0];
+          return parseInt(year) === parseInt(filtroAnio);
         });
       }
 
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = new Date(venta.fecha);
-          return fechaVenta.getUTCMonth() === parseInt(filtroMes) && 
-                 fechaVenta.getUTCFullYear() === parseInt(filtroAnio);
+          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
+          let fechaVenta = venta.fecha_cl || venta.fecha;
+          
+          if (!fechaVenta && venta.created_at) {
+            // Si no hay fecha_cl ni fecha, usar created_at
+            const fechaCreated = new Date(venta.created_at);
+            fechaVenta = fechaCreated.toISOString().split('T')[0];
+          }
+          
+          if (!fechaVenta) return false;
+          const [year, month] = fechaVenta.split('-');
+          return parseInt(month) === parseInt(filtroMes) && 
+                 parseInt(year) === parseInt(filtroAnio);
         });
       }
 
@@ -479,7 +562,7 @@ export default function RegistroVenta() {
     };
 
     return estadisticas;
-  };
+  }, [ventasRegistradas, filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
 
   // Función para obtener el título dinámico del resumen
   const obtenerTituloResumen = () => {
@@ -499,17 +582,20 @@ export default function RegistroVenta() {
       partes.push(`${day}/${month}/${year}`);
     }
 
-    if (filtroMes && !filtroDia) {
-      partes.push(nombresMeses[parseInt(filtroMes)]);
-    }
+         // Solo mes seleccionado (sin año)
+     if (filtroMes && !filtroDia && !filtroAnio) {
+       partes.push(nombresMeses[parseInt(filtroMes) - 1]);
+     }
 
-    if (filtroAnio && !filtroDia) {
+    // Solo año seleccionado (sin mes)
+    if (filtroAnio && !filtroDia && !filtroMes) {
       partes.push(filtroAnio);
     }
 
-    if (filtroMes && filtroAnio && !filtroDia) {
-      partes.push(`${nombresMeses[parseInt(filtroMes)]} ${filtroAnio}`);
-    }
+         // Mes y año seleccionados juntos
+     if (filtroMes && filtroAnio && !filtroDia) {
+       partes.push(`${nombresMeses[parseInt(filtroMes) - 1]} ${filtroAnio}`);
+     }
 
     if (filtroTipoPago) {
       const infoPago = obtenerInfoTipoPago(filtroTipoPago);
@@ -694,18 +780,12 @@ export default function RegistroVenta() {
     };
   }, [mostrarDropdown]);
 
-  // Log del estado actual (solo en desarrollo y solo cambios significativos)
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production' && ventasRegistradas.length > 0) {
-      console.log('📋 Estado actual de ventas:', ventasRegistradas.length, 'ventas');
-    }
-  }, [ventasRegistradas.length]);
+
 
   // Cleanup: cerrar puerto al salir del componente
   useEffect(() => {
     return () => {
       if (scaleService.isConnected()) {
-        console.log('[scale] component-unmount: closing port');
         scaleService.disconnect();
       }
     };
@@ -744,7 +824,9 @@ export default function RegistroVenta() {
     });
 
     // Log esencial: solo cuando se actualiza la cantidad
-    console.log(`[scale] ✅ cantidad:set ${formattedKg}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[scale] ✅ cantidad:set ${formattedKg}`);
+    }
   };
 
     // No re-registrar handleStableWeight si la referencia no cambió
@@ -771,17 +853,13 @@ export default function RegistroVenta() {
 
   // Handler para el botón de balanza
   const onClickBalanza = () => {
-    console.log('[scale] button:balanza:click');
-    
     // Verificar soporte de Web Serial
     if (!navigator.serial) {
-      console.log('[scale] web-serial-not-supported');
       return;
     }
     
     // 5.3 Gate por unidad (se mantiene)
     if (productoActual.unidad !== 'kg') {
-      console.log('[scale] unit:not-kg');
       return;
     }
     
@@ -934,7 +1012,6 @@ export default function RegistroVenta() {
         return;
       }
 
-      console.log('✅ Venta eliminada exitosamente');
       alert('✅ Venta eliminada exitosamente');
       
       // Recargar la lista de ventas
@@ -1378,7 +1455,7 @@ export default function RegistroVenta() {
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los meses</option>
                     {obtenerMesesUnicosLocal().map(mesObj => (
-                      <option key={mesObj.value} value={mesObj.month - 1} className="bg-gray-800 text-white">
+                      <option key={mesObj.value} value={mesObj.month} className="bg-gray-800 text-white">
                         {mesObj.label}
                       </option>
                     ))}
@@ -1454,12 +1531,12 @@ export default function RegistroVenta() {
                         const [year, month, day] = filtroDia.split('-');
                         return `${day}/${month}/${year}`;
                       })()}`}
-                      {filtroMes && ` Mes: ${nombresMeses[parseInt(filtroMes)]}`}
+                                             {filtroMes && ` Mes: ${nombresMeses[parseInt(filtroMes) - 1]}`}
                       {filtroAnio && ` Año: ${filtroAnio}`}
                       {filtroTipoPago && ` Pago: ${obtenerInfoTipoPago(filtroTipoPago).icon} ${obtenerInfoTipoPago(filtroTipoPago).label}`}
                     </>
                   )}
-                  {` | Mostrando ${ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length} de ${ventasRegistradas.filter(v => v.total_final && v.total_final > 0).length} ventas completas`}
+                                     {` | Mostrando ${ventasFiltradas.length} de ${ventasRegistradas.length} registros totales`}
                 </p>
               </div>
             </div>
@@ -1500,8 +1577,10 @@ export default function RegistroVenta() {
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Acciones</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {obtenerVentasAMostrar().map((venta, index) => (
+                                                                     <tbody>
+                          {(() => {
+                            const ventasAMostrar = obtenerVentasAMostrar();
+                            return ventasAMostrar.map((venta, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
                             <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
                               {formatearFecha(venta.fecha_cl || venta.fecha)}
@@ -1533,47 +1612,40 @@ export default function RegistroVenta() {
                               >
                                 🗑️
                               </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
+                                                         </td>
+                           </tr>
+                         ));
+                         })()}
+                       </tbody>
                     </table>
 
                   </div>
                   
-                  {/* Controles para cargar más ventas */}
-                  {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length > ventasMostradas && (
+                                                       {/* Controles para mostrar todas las ventas */}
+                   {ventasFiltradas.length > ventasMostradas && (
                     <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                         <p className="text-blue-200 text-sm">
-                          Mostrando {Math.min(ventasMostradas, ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length)} de {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length} ventas completas
+                           Mostrando {Math.min(ventasMostradas, ventasFiltradas.length)} de {ventasFiltradas.length} registros totales
                         </p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={cargarMasVentas}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm"
-                          >
-                            Cargar 10 más
-                          </button>
-                          <button
-                            onClick={mostrarTodasLasVentas}
-                            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm"
-                          >
-                            Mostrar todas
-                          </button>
-                        </div>
+                        <button
+                          onClick={mostrarTodasLasVentas}
+                          className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+                        >
+                          📋 Mostrar todas
+                        </button>
                       </div>
                     </div>
                   )}
                   
-                  {/* Información cuando se muestran todas las ventas */}
-                  {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length > 0 && ventasMostradas >= ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length && (
-                    <div className="mt-4 p-3 bg-green-600/20 backdrop-blur-sm rounded-lg border border-green-500/30">
-                      <p className="text-green-200 text-sm text-center">
-                        ✅ Mostrando todas las {ventasFiltradas.filter(v => v.total_final && v.total_final > 0).length} ventas completas
-                      </p>
-                    </div>
-                  )}
+                                     {/* Información cuando se muestran todas las ventas */}
+                   {ventasFiltradas.length > 0 && ventasMostradas >= ventasFiltradas.length && (
+                     <div className="mt-4 p-3 bg-green-600/20 backdrop-blur-sm rounded-lg border border-green-500/30">
+                       <p className="text-green-200 text-sm text-center">
+                         ✅ Mostrando todos los {ventasFiltradas.length} registros
+                       </p>
+                     </div>
+                   )}
                   
                   {/* Resumen de Ventas dinámico según filtros */}
                   <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
