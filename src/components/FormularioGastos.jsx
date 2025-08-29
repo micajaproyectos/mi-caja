@@ -184,7 +184,7 @@ const FormularioGastos = () => {
       // Preparar datos para insertar en Supabase
       const datosGasto = {
         fecha: gasto.fecha,
-        fecha_cl: gasto.fecha, // Por ahora usar la misma fecha
+        // fecha_cl es una columna generada automáticamente, no se puede insertar manualmente
         tipo_gasto: gasto.tipo_gasto,
         detalle: gasto.detalle,
         monto: Number(gasto.monto),
