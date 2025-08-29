@@ -113,9 +113,12 @@ const FormularioProveedores = () => {
         const year = fechaActual.getFullYear();
         const mesFormateado = filtroMes.padStart(2, '0');
         const fechaInicio = `${year}-${mesFormateado}-01`;
-        const fechaFin = `${year}-${mesFormateado}-31`;
         
-        query = query.gte('fecha_cl', fechaInicio).lte('fecha_cl', fechaFin);
+        // Calcular la fecha final del mes correctamente
+        const fechaFin = new Date(year, parseInt(filtroMes), 0); // Último día del mes
+        const fechaFinFormateada = fechaFin.toISOString().split('T')[0];
+        
+        query = query.gte('fecha_cl', fechaInicio).lte('fecha_cl', fechaFinFormateada);
       }
       if (filtroEstado) {
         query = query.eq('estado', filtroEstado);
