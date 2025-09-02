@@ -39,8 +39,8 @@ export default function Pedidos() {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
   // Estados para gestión de mesas
-  const [mesas, setMesas] = useState(['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4']);
-  const [mesaSeleccionada, setMesaSeleccionada] = useState('Mesa 1');
+  const [mesas, setMesas] = useState([]);
+  const [mesaSeleccionada, setMesaSeleccionada] = useState('');
   const [cantidadMesas, setCantidadMesas] = useState(4);
   const [productosPorMesa, setProductosPorMesa] = useState({});
   
@@ -314,8 +314,12 @@ export default function Pedidos() {
       nuevasMesas.push(`Mesa ${mesas.length + i}`);
     }
     
-    setMesas([...mesas, ...nuevasMesas]);
+    const mesasActualizadas = [...mesas, ...nuevasMesas];
+    setMesas(mesasActualizadas);
     setCantidadMesas(4); // Resetear a 4
+    
+    // Guardar en localStorage inmediatamente
+    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
   };
 
   // Función para eliminar una mesa
@@ -334,7 +338,8 @@ export default function Pedidos() {
     }
 
     // Eliminar la mesa y sus productos
-    setMesas(mesas.filter(mesa => mesa !== mesaAEliminar));
+    const mesasActualizadas = mesas.filter(mesa => mesa !== mesaAEliminar);
+    setMesas(mesasActualizadas);
     
     // Eliminar productos de la mesa eliminada
     setProductosPorMesa(prev => {
@@ -343,7 +348,10 @@ export default function Pedidos() {
       return nuevosProductos;
     });
 
-    // Actualizar localStorage
+    // Actualizar localStorage de mesas
+    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+    
+    // Actualizar localStorage de productos
     const productosGuardados = { ...productosPorMesa };
     delete productosGuardados[mesaAEliminar];
     localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
@@ -644,6 +652,30 @@ export default function Pedidos() {
     cargarProductosInventario();
     cargarPedidosRegistrados();
     
+    // Cargar mesas guardadas en localStorage
+    const mesasGuardadas = localStorage.getItem('mesasPedidos');
+    if (mesasGuardadas) {
+      try {
+        const mesasArray = JSON.parse(mesasGuardadas);
+        setMesas(mesasArray);
+        // Si hay mesas guardadas, seleccionar la primera
+        if (mesasArray.length > 0) {
+          setMesaSeleccionada(mesasArray[0]);
+        }
+      } catch (error) {
+        console.error('Error al cargar mesas del localStorage:', error);
+        // Si hay error, inicializar con mesas por defecto
+        const mesasDefault = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4'];
+        setMesas(mesasDefault);
+        setMesaSeleccionada('Mesa 1');
+      }
+    } else {
+      // Si no hay mesas guardadas, inicializar con mesas por defecto
+      const mesasDefault = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4'];
+      setMesas(mesasDefault);
+      setMesaSeleccionada('Mesa 1');
+    }
+    
     // Cargar productos guardados en localStorage
     const productosGuardados = localStorage.getItem('productosPorMesa');
     if (productosGuardados) {
@@ -659,6 +691,13 @@ export default function Pedidos() {
   useEffect(() => {
     localStorage.setItem('productosPorMesa', JSON.stringify(productosPorMesa));
   }, [productosPorMesa]);
+
+  // Guardar mesas en localStorage cuando cambien
+  useEffect(() => {
+    if (mesas.length > 0) {
+      localStorage.setItem('mesasPedidos', JSON.stringify(mesas));
+    }
+  }, [mesas]);
 
   // Aplicar filtros cuando cambien los valores de filtro
   useEffect(() => {
@@ -1185,9 +1224,9 @@ export default function Pedidos() {
                     <div className="flex items-end">
                       <button
                         onClick={limpiarFiltros}
-                        className="w-full bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs transition-colors"
+                        className="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                       >
-                        🗑️ Limpiar
+                        🧹 Limpiar
                       </button>
                     </div>
                   </div>
