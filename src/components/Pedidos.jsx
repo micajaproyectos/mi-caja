@@ -66,6 +66,14 @@ export default function Pedidos() {
   
   // Estado para controlar si mostrar solo día actual o histórico
   const [mostrarSoloHoy, setMostrarSoloHoy] = useState(true);
+
+  // Estados para estadísticas de pedidos
+  const [estadisticasPedidos, setEstadisticasPedidos] = useState({
+    total: { cantidad: 0, monto: 0 },
+    efectivo: { cantidad: 0, monto: 0 },
+    debito: { cantidad: 0, monto: 0 },
+    transferencia: { cantidad: 0, monto: 0 }
+  });
   
   // Función para cargar pedidos registrados desde Supabase
   const cargarPedidosRegistrados = async () => {
@@ -429,6 +437,125 @@ export default function Pedidos() {
     setPedidosFiltrados(pedidosRegistrados);
   };
 
+  // Función para calcular estadísticas dinámicas según filtros aplicados
+  const calcularEstadisticasPedidos = useCallback(() => {
+    let pedidosFiltrados = [...pedidosRegistrados];
+
+    // Aplicar los mismos filtros que en aplicarFiltros()
+    if (filtroFecha) {
+      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+        if (!pedido.fecha) return false;
+        const fechaPedido = new Date(pedido.fecha).toISOString().split('T')[0];
+        return fechaPedido === filtroFecha;
+      });
+    }
+
+    if (filtroMes) {
+      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+        if (!pedido.fecha) return false;
+        const fecha = new Date(pedido.fecha);
+        return (fecha.getMonth() + 1).toString() === filtroMes;
+      });
+    }
+
+    if (filtroAnio) {
+      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+        if (!pedido.fecha) return false;
+        const fecha = new Date(pedido.fecha);
+        return fecha.getFullYear().toString() === filtroAnio;
+      });
+    }
+
+    if (filtroTipoPago) {
+      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+        return pedido.tipo_pago === filtroTipoPago;
+      });
+    }
+
+    // Solo considerar pedidos con total_final (pedidos completos)
+    const pedidosCompletos = pedidosFiltrados.filter(pedido => 
+      pedido.total_final && pedido.total_final > 0
+    );
+
+    // Calcular estadísticas
+    const estadisticas = {
+      total: { cantidad: 0, monto: 0 },
+      efectivo: { cantidad: 0, monto: 0 },
+      debito: { cantidad: 0, monto: 0 },
+      transferencia: { cantidad: 0, monto: 0 }
+    };
+
+    // Agrupar por tipo de pago y calcular totales
+    pedidosCompletos.forEach(pedido => {
+      const monto = parseFloat(pedido.total_final) || 0;
+      
+      // Solo contar una vez por pedido (usar la primera fila de cada pedido)
+      if (pedido.mesa && pedido.estado === 'pagado') {
+        estadisticas.total.cantidad++;
+        estadisticas.total.monto += monto;
+
+        switch (pedido.tipo_pago) {
+          case 'efectivo':
+            estadisticas.efectivo.cantidad++;
+            estadisticas.efectivo.monto += monto;
+            break;
+          case 'debito':
+            estadisticas.debito.cantidad++;
+            estadisticas.debito.monto += monto;
+            break;
+          case 'transferencia':
+            estadisticas.transferencia.cantidad++;
+            estadisticas.transferencia.monto += monto;
+            break;
+        }
+      }
+    });
+
+    return estadisticas;
+  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
+
+  // Función para obtener el título dinámico del resumen
+  const obtenerTituloResumenPedidos = () => {
+    if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
+      return `Resumen de Pedidos - ${(() => {
+        const fechaActual = obtenerFechaHoyChile();
+        const [year, month, day] = fechaActual.split('-');
+        return `${day}/${month}/${year}`;
+      })()}`;
+    }
+
+    let titulo = 'Resumen de Pedidos - ';
+    const partes = [];
+
+    if (filtroFecha) {
+      const [year, month, day] = filtroFecha.split('-');
+      partes.push(`${day}/${month}/${year}`);
+    }
+
+    if (filtroMes) {
+      const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      partes.push(meses[parseInt(filtroMes) - 1]);
+    }
+
+    if (filtroAnio) {
+      partes.push(filtroAnio);
+    }
+
+    if (filtroTipoPago) {
+      const tiposPago = {
+        'efectivo': 'Efectivo',
+        'debito': 'Débito',
+        'transferencia': 'Transferencia'
+      };
+      partes.push(tiposPago[filtroTipoPago] || filtroTipoPago);
+    }
+
+    return titulo + partes.join(' - ');
+  };
+
   // Función para validar fecha (similar a RegistroVenta.jsx)
   const validarFecha = (fechaString) => {
     if (!fechaString) return false;
@@ -709,6 +836,12 @@ export default function Pedidos() {
     setPedidosFiltrados(pedidosRegistrados);
     calcularAniosDisponibles(); // Calcular años disponibles cuando cambien los pedidos
   }, [pedidosRegistrados, calcularAniosDisponibles]);
+
+  // Actualizar estadísticas cuando cambien los filtros o pedidos
+  useEffect(() => {
+    const nuevasEstadisticas = calcularEstadisticasPedidos();
+    setEstadisticasPedidos(nuevasEstadisticas);
+  }, [calcularEstadisticasPedidos]);
 
   // Opciones de unidad
   const opcionesUnidad = [
@@ -1364,6 +1497,80 @@ export default function Pedidos() {
                      ))}
                    </tbody>
                  </table>
+               </div>
+             )}
+
+             {/* Sección de Estadísticas de Pedidos */}
+             {pedidosFiltrados.length > 0 && (
+               <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                 <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">{obtenerTituloResumenPedidos()}</h4>
+                 
+                 {/* Listado de estadísticas */}
+                 <div className="space-y-2 md:space-y-3">
+                   {/* Total */}
+                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                     <div className="flex items-center">
+                       <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
+                       <div>
+                         <p className="text-blue-200 text-sm md:text-base font-medium">Total</p>
+                         <p className="text-blue-300 text-xs md:text-sm">{estadisticasPedidos.total.cantidad} pedidos</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-blue-300 font-bold text-lg md:text-xl">
+                         ${estadisticasPedidos.total.monto.toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {/* Efectivo */}
+                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                     <div className="flex items-center">
+                       <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
+                       <div>
+                         <p className="text-green-200 text-sm md:text-base font-medium">Efectivo</p>
+                         <p className="text-green-300 text-xs md:text-sm">{estadisticasPedidos.efectivo.cantidad} pedidos</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-green-300 font-bold text-lg md:text-xl">
+                         ${estadisticasPedidos.efectivo.monto.toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {/* Débito */}
+                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                     <div className="flex items-center">
+                       <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
+                       <div>
+                         <p className="text-purple-200 text-sm md:text-base font-medium">Débito</p>
+                         <p className="text-purple-300 text-xs md:text-sm">{estadisticasPedidos.debito.cantidad} pedidos</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-purple-300 font-bold text-lg md:text-xl">
+                         ${estadisticasPedidos.debito.monto.toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {/* Transferencia */}
+                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                     <div className="flex items-center">
+                       <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
+                       <div>
+                         <p className="text-indigo-200 text-sm md:text-base font-medium">Transferencia</p>
+                         <p className="text-indigo-300 text-xs md:text-sm">{estadisticasPedidos.transferencia.cantidad} pedidos</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-indigo-300 font-bold text-lg md:text-xl">
+                         ${estadisticasPedidos.transferencia.monto.toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+                 </div>
                </div>
              )}
            </div>
