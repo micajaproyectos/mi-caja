@@ -1310,7 +1310,7 @@ export default function Clientes() {
               </div>
 
               {/* Botones de acción */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex justify-center">
                 <button
                   type="submit"
                   disabled={loading || productosDelPedido.length === 0}
@@ -1318,14 +1318,6 @@ export default function Clientes() {
                 >
                   {loading ? '⏳ Registrando...' : `📝 Registrar Pedido ${productosDelPedido.length > 0 ? `(${productosDelPedido.length} productos)` : ''}`}
                 </button>
-                
-                  <button
-                    type="button"
-                    onClick={limpiarFormulario}
-                    className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    🗑️ Limpiar Todo
-                  </button>
               </div>
             </form>
           </div>
@@ -1440,12 +1432,6 @@ export default function Clientes() {
               >
                 🗑️ Limpiar Filtros
               </button>
-                <button
-                  onClick={cargarRegistrosPedidos}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 text-sm"
-                >
-                  🔄 Actualizar
-                </button>
             </div>
           </div>
 

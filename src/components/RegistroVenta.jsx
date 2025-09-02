@@ -1511,7 +1511,7 @@ export default function RegistroVenta() {
               <div className="mt-3 md:mt-4 flex justify-center">
                 <button
                   onClick={limpiarFiltros}
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-medium py-3 md:py-4 px-6 md:px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base shadow-lg"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   🧹 Limpiar Filtros
@@ -1741,14 +1741,14 @@ export default function RegistroVenta() {
               <div className="mt-4 md:mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                 <button
                   onClick={cargarVentas}
-                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 md:py-4 px-4 md:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base shadow-lg"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   🔄 Actualizar Lista
                 </button>
                 <button
                   onClick={exportarDatosFiltrados}
-                  className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 md:px-6 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base shadow-lg"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                   📊 Exportar CSV

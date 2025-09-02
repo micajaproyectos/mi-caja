@@ -29,8 +29,12 @@ const FormularioProveedores = () => {
   // Estados para filtros
   const [busquedaProveedor, setBusquedaProveedor] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
-  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroMes, setFiltroMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0')); // Mes actual por defecto
+  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear()); // Año actual por defecto
   const [filtroEstado, setFiltroEstado] = useState('');
+  
+  // Estado para años disponibles
+  const [aniosDisponibles, setAniosDisponibles] = useState([]);
 
   // Opciones para el selector de estado
   const opcionesEstado = [
@@ -80,6 +84,28 @@ const FormularioProveedores = () => {
     return `${day}/${month}/${year}`;
   };
 
+  // Función para calcular años disponibles
+  const calcularAniosDisponibles = () => {
+    const anios = new Set();
+    const anioActual = new Date().getFullYear();
+    
+    // Siempre incluir el año actual
+    anios.add(anioActual);
+    
+    // Agregar años de los registros existentes
+    proveedoresRegistrados.forEach(proveedor => {
+      if (proveedor.fecha_cl || proveedor.fecha) {
+        const fecha = proveedor.fecha_cl || proveedor.fecha;
+        const anio = new Date(fecha).getFullYear();
+        anios.add(anio);
+      }
+    });
+    
+    // Convertir a array y ordenar descendente
+    const aniosArray = Array.from(anios).sort((a, b) => b - a);
+    setAniosDisponibles(aniosArray);
+  };
+
   // Cargar proveedores desde Supabase
   const cargarProveedores = async () => {
     try {
@@ -108,9 +134,8 @@ const FormularioProveedores = () => {
         query = query.eq('fecha_cl', filtroFecha);
       }
       if (filtroMes) {
-        // Filtrar por mes usando el formato YYYY-MM
-        const fechaActual = new Date();
-        const year = fechaActual.getFullYear();
+        // Filtrar por mes y año usando el formato YYYY-MM
+        const year = filtroAnio || new Date().getFullYear();
         const mesFormateado = filtroMes.padStart(2, '0');
         const fechaInicio = `${year}-${mesFormateado}-01`;
         
@@ -129,7 +154,7 @@ const FormularioProveedores = () => {
       if (error) throw error;
       
       console.log(`📋 Proveedores cargados para usuario ${usuarioId}:`, data?.length || 0);
-      console.log('🔍 Filtros aplicados:', { busquedaProveedor, filtroFecha, filtroMes, filtroEstado });
+      console.log('🔍 Filtros aplicados:', { busquedaProveedor, filtroFecha, filtroMes, filtroAnio, filtroEstado });
       setProveedoresRegistrados(data || []);
     } catch (error) {
       console.error('Error al cargar proveedores:', error);
@@ -143,7 +168,12 @@ const FormularioProveedores = () => {
   // Cargar datos al montar el componente
   useEffect(() => {
     cargarProveedores();
-  }, [busquedaProveedor, filtroFecha, filtroMes, filtroEstado]);
+  }, [busquedaProveedor, filtroFecha, filtroMes, filtroAnio, filtroEstado]);
+
+  // Calcular años disponibles cuando cambien los proveedores
+  useEffect(() => {
+    calcularAniosDisponibles();
+  }, [proveedoresRegistrados]);
 
   // Manejar cambios en el formulario
   const handleChange = (e) => {
@@ -379,11 +409,12 @@ const FormularioProveedores = () => {
     }
   };
 
-  // Limpiar filtros
+  // Limpiar filtros (volver al mes y año actual)
   const limpiarFiltros = () => {
     setBusquedaProveedor('');
     setFiltroFecha('');
-    setFiltroMes('');
+    setFiltroMes(String(new Date().getMonth() + 1).padStart(2, '0')); // Volver al mes actual
+    setFiltroAnio(new Date().getFullYear()); // Volver al año actual
     setFiltroEstado('');
   };
 
@@ -616,6 +647,23 @@ const FormularioProveedores = () => {
                   
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                      📅 Filtrar por Año
+                    </label>
+                    <select
+                      value={filtroAnio}
+                      onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
+                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    >
+                      {aniosDisponibles.map(anio => (
+                        <option key={anio} value={anio} className="bg-gray-800 text-white">
+                          {anio}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white font-medium mb-2 text-sm md:text-base">
                       📊 Filtrar por Estado
                     </label>
                     <select
@@ -635,9 +683,9 @@ const FormularioProveedores = () => {
                   <div className="flex items-end">
                     <button
                       onClick={limpiarFiltros}
-                      className="w-full px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
+                      className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
-                      🔄 Limpiar Filtros
+                      🧹 Limpiar Filtros
                     </button>
                   </div>
                 </div>
@@ -656,6 +704,15 @@ const FormularioProveedores = () => {
                 ) : proveedoresRegistrados.length === 0 ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-gray-300 text-sm md:text-base">📭 No hay proveedores registrados</div>
+                  </div>
+                ) : proveedoresRegistrados.length === 0 && filtroMes === String(new Date().getMonth() + 1).padStart(2, '0') && 
+                   filtroAnio === new Date().getFullYear() && !busquedaProveedor && !filtroFecha && !filtroEstado ? (
+                  <div className="text-center py-6 md:py-8">
+                    <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">📅</div>
+                    <p className="text-yellow-300 text-base md:text-lg font-bold">No hay proveedores este mes</p>
+                    <p className="text-gray-400 mt-2 text-sm md:text-base">
+                      <span className="text-blue-400">Usa los filtros para ver otros períodos</span>
+                    </p>
                   </div>
                                   ) : (
                     <div className="overflow-x-auto">

@@ -128,15 +128,29 @@ export default function Seguimiento() {
         console.error('❌ Error al cargar clientes:', clientesError);
       }
 
-      // Calcular totales
-      const totalVentas = ventasData?.reduce((sum, item) => sum + (parseFloat(item.total_venta) || 0), 0) || 0;
-      const totalGastos = gastosData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
-      const totalInventario = inventarioData?.reduce((sum, item) => sum + (parseFloat(item.costo_total) || 0), 0) || 0;
-      const totalProveedores = proveedoresData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
-      const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
+                    // 6. Total de Pedidos del mes (suma de total_final de pedidos)
+       const { data: pedidosData, error: pedidosError } = await supabase
+         .from('pedidos')
+         .select('total_final, fecha_cl')
+         .eq('usuario_id', usuarioId)
+         .not('total_final', 'is', null)
+         .gte('fecha_cl', fechaInicio)
+         .lte('fecha_cl', fechaFin);
+
+       if (pedidosError) {
+         console.error('❌ Error al cargar pedidos:', pedidosError);
+       }
+
+                    // Calcular totales
+       const totalVentas = ventasData?.reduce((sum, item) => sum + (parseFloat(item.total_venta) || 0), 0) || 0;
+       const totalGastos = gastosData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
+       const totalInventario = inventarioData?.reduce((sum, item) => sum + (parseFloat(item.costo_total) || 0), 0) || 0;
+       const totalProveedores = proveedoresData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
+       const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
+       const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
 
       setTotales({
-        ventas: totalVentas,
+        ventas: totalVentas + totalPedidos, // Sumar ventas + pedidos en la misma tarjeta
         gastos: totalGastos,
         inventario: totalInventario,
         proveedores: totalProveedores,
@@ -381,6 +395,25 @@ export default function Seguimiento() {
       } catch (error) {
         console.warn('⚠️ Error al consultar tabla clientes para años:', error);
       }
+
+                    // 6. Tabla pedidos
+       try {
+         const { data: pedidosData, error: pedidosError } = await supabase
+           .from('pedidos')
+           .select('fecha_cl')
+           .eq('usuario_id', usuarioId);
+         
+         if (!pedidosError && pedidosData) {
+           pedidosData.forEach(item => {
+             if (item.fecha_cl) {
+               const anio = new Date(item.fecha_cl).getFullYear();
+               if (anio >= 2025) aniosEncontrados.add(anio);
+             }
+           });
+         }
+       } catch (error) {
+         console.warn('⚠️ Error al consultar tabla pedidos para años:', error);
+       }
       
       // Convertir a array y ordenar
       const aniosArray = Array.from(aniosEncontrados).sort((a, b) => b - a);
@@ -728,6 +761,7 @@ export default function Seguimiento() {
                 <p className="text-green-200 text-xs opacity-75">Mes actual</p>
               </div>
             </div>
+
           </div>
 
           {/* Gráfico de Ventas Acumuladas Mensuales */}

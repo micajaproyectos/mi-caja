@@ -1057,9 +1057,9 @@ export default function RegistroAsistencia() {
                 <div className="flex items-end gap-2">
                   <button
                     onClick={limpiarFiltros}
-                    className="flex-1 px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
+                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
-                    🔄 Limpiar Filtros
+                    🧹 Limpiar Filtros
                   </button>
                   <button
                     onClick={exportarCSV}

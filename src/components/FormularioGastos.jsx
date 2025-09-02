@@ -13,7 +13,10 @@ import Footer from './Footer';
 const FormularioGastos = () => {
   const navigate = useNavigate();
   
-  console.log('🔍 FormularioGastos: Componente iniciando...');
+  // Log de inicialización (solo en desarrollo y una vez)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔍 FormularioGastos: Componente iniciando...');
+  }
   
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const obtenerFechaActual = () => {
@@ -42,8 +45,8 @@ const FormularioGastos = () => {
   // Estados para filtros
   const [busquedaDetalle, setBusquedaDetalle] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
-  const [filtroMes, setFiltroMes] = useState('');
-  const [filtroAnio, setFiltroAnio] = useState('');
+  const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1); // Mes actual por defecto
+  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear()); // Año actual por defecto
   const [filtroTipoGasto, setFiltroTipoGasto] = useState('');
   const [filtroFormaPago, setFiltroFormaPago] = useState('');
 
@@ -103,7 +106,10 @@ const FormularioGastos = () => {
 
   // Función para cargar gastos registrados filtrados por usuario
   const cargarGastos = async () => {
+    // Log de función (solo en desarrollo)
+  if (process.env.NODE_ENV !== 'production') {
     console.log('🔍 cargarGastos: Función llamada');
+  }
     try {
       setLoadingDatos(true);
       setError(null);
@@ -111,12 +117,16 @@ const FormularioGastos = () => {
       // Obtener usuario autenticado
       const usuario = await authService.getCurrentUser();
       if (!usuario) {
+        if (process.env.NODE_ENV !== 'production') {
         console.log('🔍 No hay usuario autenticado');
+      }
         setGastosRegistrados([]);
         return;
       }
 
-      console.log('🔍 Usuario autenticado:', usuario.id);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔍 Usuario autenticado:', usuario.id);
+      }
       
       // Consultar gastos desde Supabase
       const { data: gastos, error } = await supabase
@@ -132,7 +142,9 @@ const FormularioGastos = () => {
         return;
       }
 
-      console.log('✅ Gastos cargados desde Supabase:', gastos?.length || 0);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Gastos cargados desde Supabase:', gastos?.length || 0);
+      }
       setGastosRegistrados(gastos || []);
       
     } catch (error) {
@@ -155,7 +167,10 @@ const FormularioGastos = () => {
   // Función para registrar un nuevo gasto
   const registrarGasto = async (e) => {
     e.preventDefault();
-    console.log('🔍 registrarGasto: Función llamada');
+    // Log de función (solo en desarrollo)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 registrarGasto: Función llamada');
+    }
     
     // Validaciones
     if (!gasto.fecha || !gasto.tipo_gasto || !gasto.detalle || !gasto.monto || !gasto.forma_pago) {
@@ -172,7 +187,9 @@ const FormularioGastos = () => {
       setLoading(true);
       setError(null);
 
-      console.log('💰 Registrando gasto:', gasto);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('💰 Registrando gasto:', gasto);
+      }
 
       // Obtener usuario autenticado
       const usuario = await authService.getCurrentUser();
@@ -208,7 +225,9 @@ const FormularioGastos = () => {
       // Actualizar estado local
       setGastosRegistrados(prev => [nuevoGasto, ...prev]);
 
-      console.log('✅ Gasto registrado exitosamente en Supabase:', nuevoGasto);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Gasto registrado exitosamente en Supabase:', nuevoGasto);
+      }
 
       // Limpiar formulario
       setGasto({
@@ -251,7 +270,9 @@ const FormularioGastos = () => {
 
       // Actualizar estado local
       setGastosRegistrados(prev => prev.filter(g => g.id !== id));
-      console.log('✅ Gasto eliminado exitosamente de Supabase');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Gasto eliminado exitosamente de Supabase');
+      }
 
     } catch (error) {
       console.error('Error inesperado al eliminar gasto:', error);
@@ -261,12 +282,12 @@ const FormularioGastos = () => {
     }
   };
 
-  // Función para limpiar todos los filtros
+  // Función para limpiar todos los filtros (excepto mes y año actual)
   const limpiarFiltros = () => {
     setBusquedaDetalle('');
     setFiltroFecha('');
-    setFiltroMes('');
-    setFiltroAnio('');
+    setFiltroMes(new Date().getMonth() + 1); // Volver al mes actual
+    setFiltroAnio(new Date().getFullYear()); // Volver al año actual
     setFiltroTipoGasto('');
     setFiltroFormaPago('');
   };
@@ -283,15 +304,15 @@ const FormularioGastos = () => {
     // Filtro por fecha específica
     const coincideFecha = !filtroFecha || fechaFiltro === filtroFecha;
     
-    // Filtro por mes
-    const coincideMes = !filtroMes || (() => {
+    // Filtro por mes (siempre aplicado, por defecto mes actual)
+    const coincideMes = (() => {
       if (!fechaFiltro) return false;
       const [year, month] = fechaFiltro.split('-');
       return parseInt(month) === parseInt(filtroMes);
     })();
     
-    // Filtro por año
-    const coincideAnio = !filtroAnio || (() => {
+    // Filtro por año (siempre aplicado, por defecto año actual)
+    const coincideAnio = (() => {
       if (!fechaFiltro) return false;
       const year = fechaFiltro.split('-')[0];
       return parseInt(year) === parseInt(filtroAnio);
@@ -334,7 +355,10 @@ const FormularioGastos = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
+    // Log de montaje (solo en desarrollo)
+  if (process.env.NODE_ENV !== 'production') {
     console.log('🔍 useEffect: Componente montado');
+  }
     cargarGastos();
     // Establecer fecha actual por defecto
     setGasto(prev => ({
@@ -357,7 +381,10 @@ const FormularioGastos = () => {
     }
   }, [busquedaDetalle, filtroFecha, filtroMes, filtroAnio, filtroTipoGasto, filtroFormaPago]);
 
-  console.log('🔍 FormularioGastos: Renderizando componente...');
+  // Log de renderizado (solo en desarrollo)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔍 FormularioGastos: Renderizando componente...');
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -629,7 +656,8 @@ const FormularioGastos = () => {
               </div>
 
               {/* Filtros activos */}
-              {(busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) && (
+              {(busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
+                filtroMes !== new Date().getMonth() + 1 || filtroAnio !== new Date().getFullYear()) && (
                 <div className="mb-4">
                   <p className="text-gray-300 text-sm mb-2">Filtros activos:</p>
                   <div className="flex flex-wrap gap-2">
@@ -645,16 +673,16 @@ const FormularioGastos = () => {
                         <button onClick={() => setFiltroFecha('')} className="text-green-400 hover:text-white">✕</button>
                       </span>
                     )}
-                    {filtroMes && (
+                    {filtroMes !== new Date().getMonth() + 1 && (
                       <span className="inline-flex items-center gap-1 bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full text-xs">
                         <span>📆 {obtenerMesesUnicos().find(m => m.value === Number(filtroMes))?.label}</span>
-                        <button onClick={() => setFiltroMes('')} className="text-purple-400 hover:text-white">✕</button>
+                        <button onClick={() => setFiltroMes(new Date().getMonth() + 1)} className="text-purple-400 hover:text-white">✕</button>
                       </span>
                     )}
-                    {filtroAnio && (
+                    {filtroAnio !== new Date().getFullYear() && (
                       <span className="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full text-xs">
                         <span>📅 {filtroAnio}</span>
-                        <button onClick={() => setFiltroAnio('')} className="text-yellow-400 hover:text-white">✕</button>
+                        <button onClick={() => setFiltroAnio(new Date().getFullYear())} className="text-yellow-400 hover:text-white">✕</button>
                       </span>
                     )}
                     {filtroTipoGasto && (
@@ -677,7 +705,7 @@ const FormularioGastos = () => {
                       onClick={limpiarFiltros}
                       className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
-                      🧹 Limpiar Todos los Filtros
+                      🧹 Limpiar Filtros
                     </button>
                   </div>
                 </div>
@@ -690,6 +718,8 @@ const FormularioGastos = () => {
             <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 md:mb-6 text-center">
               📊 Gastos Registrados
             </h3>
+            
+
 
             {loadingDatos ? (
               <div className="text-center py-6 md:py-8">
@@ -704,17 +734,27 @@ const FormularioGastos = () => {
                   Registra tu primer gasto usando el formulario de arriba
                 </p>
               </div>
+            ) : gastosFiltrados.length === 0 && filtroMes === new Date().getMonth() + 1 && filtroAnio === new Date().getFullYear() && 
+               !busquedaDetalle && !filtroFecha && !filtroTipoGasto && !filtroFormaPago ? (
+              <div className="text-center py-6 md:py-8">
+                <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">📅</div>
+                <p className="text-yellow-300 text-base md:text-lg font-bold">No hay gastos este mes</p>
+                <p className="text-gray-400 mt-2 text-sm md:text-base">
+                  <span className="text-blue-400">Usa los filtros para ver otros períodos</span>
+                </p>
+              </div>
             ) : (
               <>
                 {/* Información de filtros aplicados */}
-                {(busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) && (
+                {(busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
+                  filtroMes !== new Date().getMonth() + 1 || filtroAnio !== new Date().getFullYear()) && (
                   <div className="mb-4 p-3 bg-blue-600/20 backdrop-blur-sm rounded-lg border border-blue-500/30">
                     <p className="text-blue-200 text-sm text-center">
                       <strong>Filtros aplicados:</strong> 
                       {busquedaDetalle && ` Búsqueda: "${busquedaDetalle}"`}
                       {filtroFecha && ` Fecha: ${formatearFechaMostrar(filtroFecha)}`}
-                      {filtroMes && ` Mes: ${obtenerMesesUnicos().find(m => m.value === parseInt(filtroMes))?.label}`}
-                      {filtroAnio && ` Año: ${filtroAnio}`}
+                      {filtroMes !== new Date().getMonth() + 1 && ` Mes: ${obtenerMesesUnicos().find(m => m.value === parseInt(filtroMes))?.label}`}
+                      {filtroAnio !== new Date().getFullYear() && ` Año: ${filtroAnio}`}
                       {filtroTipoGasto && ` Tipo: ${filtroTipoGasto}`}
                       {filtroFormaPago && ` Pago: ${filtroFormaPago}`}
                       {` | Mostrando ${gastosFiltrados.length} de ${gastosRegistrados.length} registros totales`}
@@ -759,7 +799,8 @@ const FormularioGastos = () => {
                 </div>
 
                 {/* Mensaje cuando no hay resultados después de filtrar */}
-                {gastosFiltrados.length === 0 && (busquedaDetalle || filtroFecha || filtroMes || filtroAnio || filtroTipoGasto || filtroFormaPago) ? (
+                {gastosFiltrados.length === 0 && (busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
+                  filtroMes !== new Date().getMonth() + 1 || filtroAnio !== new Date().getFullYear()) ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">🔍</div>
                     <p className="text-yellow-300 text-base md:text-lg font-bold">No se encontraron gastos con los filtros aplicados</p>

@@ -72,6 +72,12 @@ export default function Home() {
       route: '/clientes'
     },
     {
+      id: 'pedidos',
+      icon: '🍴',
+      label: 'Pedidos',
+      route: '/pedidos'
+    },
+    {
       id: 'seguimiento',
       icon: '📊',
       label: 'Seguimiento',

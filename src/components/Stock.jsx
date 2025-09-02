@@ -124,10 +124,9 @@ export default function Stock() {
         },
         (payload) => {
           console.log('🔄 Cambio detectado en ventas:', payload);
-          // Actualizar datos cuando hay cambios en ventas
+          // Actualizar solo el stock cuando hay cambios en ventas
           setActualizandoAutomaticamente(true);
           cargarStock();
-          cargarProductoMasVendido();
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
       )
@@ -140,13 +139,9 @@ export default function Stock() {
         },
         (payload) => {
           console.log('🔄 Cambio detectado en inventario:', payload);
-          // Actualizar datos cuando hay cambios en inventario
+          // Actualizar solo el stock cuando hay cambios en inventario
           setActualizandoAutomaticamente(true);
           cargarStock();
-          // Solo actualizar producto más vendido si hay cambios en ventas
-          if (payload.event === 'INSERT' || payload.event === 'UPDATE') {
-            cargarProductoMasVendido();
-          }
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
       )
@@ -205,20 +200,9 @@ export default function Stock() {
     
     // Configurar suscripción en tiempo real
     configurarSuscripcionTiempoReal();
-    
-    // Configurar actualización periódica solo para el stock cada 30 segundos
-    intervalRef.current = setInterval(() => {
-      console.log('🔄 Actualización periódica automática del stock...');
-      setActualizandoAutomaticamente(true);
-      cargarStock();
-      setTimeout(() => setActualizandoAutomaticamente(false), 2000);
-    }, 30000); // 30 segundos
 
     // Limpiar al desmontar el componente
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
       }
@@ -471,10 +455,6 @@ export default function Stock() {
               <h2 className="text-xl md:text-2xl font-semibold text-yellow-400 text-center">
                 🏆 Producto Más Vendido
               </h2>
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Actualización automática</span>
-              </div>
             </div>
             
             <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-yellow-400/30">
