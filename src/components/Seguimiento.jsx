@@ -15,7 +15,8 @@ export default function Seguimiento() {
     gastos: 0,
     inventario: 0,
     proveedores: 0,
-    clientes: 0
+    clientes: 0,
+    pedidos: 0
   });
   
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,16 @@ export default function Seguimiento() {
   const [datosTiposPago, setDatosTiposPago] = useState([]);
   const [loadingTiposPago, setLoadingTiposPago] = useState(false);
   const [errorTiposPago, setErrorTiposPago] = useState(null);
+
+  // Estados para el gráfico de tipos de pago de pedidos
+  const [datosTiposPagoPedidos, setDatosTiposPagoPedidos] = useState([]);
+  const [loadingTiposPagoPedidos, setLoadingTiposPagoPedidos] = useState(false);
+  const [errorTiposPagoPedidos, setErrorTiposPagoPedidos] = useState(null);
+
+  // Estados para el gráfico de pedidos acumulados mensuales
+  const [datosPedidosAcumulados, setDatosPedidosAcumulados] = useState([]);
+  const [loadingPedidosAcumulados, setLoadingPedidosAcumulados] = useState(false);
+  const [errorPedidosAcumulados, setErrorPedidosAcumulados] = useState(null);
 
   // Función para obtener el mes y año actual
   const obtenerMesAnioActual = () => {
@@ -150,11 +161,12 @@ export default function Seguimiento() {
        const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
 
       setTotales({
-        ventas: totalVentas + totalPedidos, // Sumar ventas + pedidos en la misma tarjeta
+        ventas: totalVentas, // Solo ventas de la tabla ventas
         gastos: totalGastos,
         inventario: totalInventario,
         proveedores: totalProveedores,
-        clientes: totalClientes
+        clientes: totalClientes,
+        pedidos: totalPedidos // Total de pedidos separado
       });
 
     } catch (error) {
@@ -514,6 +526,107 @@ export default function Seguimiento() {
     }
   };
 
+  // Función para cargar datos de tipos de pago de pedidos mensuales
+  const cargarTiposPagoPedidos = async () => {
+    try {
+      if (!clienteId) return;
+
+      setLoadingTiposPagoPedidos(true);
+      setErrorTiposPagoPedidos(null);
+
+      // Consultar la vista pedidos_tipo_pago_mensual
+      const { data: tiposPagoPedidosData, error: tiposPagoPedidosError } = await supabase
+        .from('pedidos_tipo_pago_mensual')
+        .select('tipo_pago, cantidad, porcentaje_mes')
+        .eq('cliente_id', clienteId)
+        .eq('anio', anioGrafico)
+        .eq('mes_num', filtroMes)
+        .order('cantidad', { ascending: false });
+
+      if (tiposPagoPedidosError) {
+        console.error('[chart] Error al consultar pedidos_tipo_pago_mensual:', tiposPagoPedidosError);
+        setErrorTiposPagoPedidos('Error al cargar datos de tipos de pago de pedidos');
+        return;
+      }
+
+      // Mapear los datos para el gráfico circular
+      const datosMapeados = tiposPagoPedidosData?.map(item => ({
+        name: item.tipo_pago.charAt(0).toUpperCase() + item.tipo_pago.slice(1),
+        value: parseInt(item.cantidad),
+        porcentaje: parseFloat(item.porcentaje_mes), // Ya viene como porcentaje
+        tipo: item.tipo_pago
+      })) || [];
+
+      setDatosTiposPagoPedidos(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar tipos de pago de pedidos:', error);
+      setErrorTiposPagoPedidos('Error inesperado al cargar datos');
+    } finally {
+      setLoadingTiposPagoPedidos(false);
+    }
+  };
+
+  // Función para cargar datos de pedidos acumulados mensuales
+  const cargarPedidosAcumulados = async () => {
+    try {
+      if (!clienteId) {
+        return;
+      }
+
+      setLoadingPedidosAcumulados(true);
+      setErrorPedidosAcumulados(null);
+      
+      // Crear array base con los 12 meses del año
+      const mesesBase = [
+        { mes: 'Ene', mes_num: 1, totalAcum: 0, totalMes: 0 },
+        { mes: 'Feb', mes_num: 2, totalAcum: 0, totalMes: 0 },
+        { mes: 'Mar', mes_num: 3, totalAcum: 0, totalMes: 0 },
+        { mes: 'Abr', mes_num: 4, totalAcum: 0, totalMes: 0 },
+        { mes: 'May', mes_num: 5, totalAcum: 0, totalMes: 0 },
+        { mes: 'Jun', mes_num: 6, totalAcum: 0, totalMes: 0 },
+        { mes: 'Jul', mes_num: 7, totalAcum: 0, totalMes: 0 },
+        { mes: 'Ago', mes_num: 8, totalAcum: 0, totalMes: 0 },
+        { mes: 'Sep', mes_num: 9, totalAcum: 0, totalMes: 0 },
+        { mes: 'Oct', mes_num: 10, totalAcum: 0, totalMes: 0 },
+        { mes: 'Nov', mes_num: 11, totalAcum: 0, totalMes: 0 },
+        { mes: 'Dic', mes_num: 12, totalAcum: 0, totalMes: 0 }
+      ];
+
+        // Consultar la vista pedidos_mensual_acum_v2
+        const { data: pedidosData, error: pedidosError } = await supabase
+          .from('pedidos_mensual_acum_v2')
+          .select('mes_num, total_acumulado, total_mes')
+          .eq('cliente_id', clienteId)
+          .eq('anio', anioGrafico)
+          .order('mes_num', { ascending: true });
+
+        if (pedidosError) {
+          console.error('[chart] Error al consultar pedidos_mensual_acum_v2:', pedidosError);
+          setErrorPedidosAcumulados('Error al cargar datos de pedidos');
+          return;
+        }
+
+      // Mapear los datos recibidos a los meses base
+      const datosMapeados = mesesBase.map(mesBase => {
+        const datoEncontrado = pedidosData?.find(d => d.mes_num === mesBase.mes_num);
+        return {
+          ...mesBase,
+          totalAcum: datoEncontrado ? parseFloat(datoEncontrado.total_acumulado) || 0 : 0,
+          totalMes: datoEncontrado ? parseFloat(datoEncontrado.total_mes) || 0 : 0
+        };
+      });
+
+      setDatosPedidosAcumulados(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar pedidos acumulados:', error);
+      setErrorPedidosAcumulados('Error inesperado al cargar datos');
+    } finally {
+      setLoadingPedidosAcumulados(false);
+    }
+  };
+
 
   // Cargar totales al montar el componente (solo una vez)
   useEffect(() => {
@@ -540,6 +653,7 @@ export default function Seguimiento() {
   useEffect(() => {
     if (clienteId) {
       cargarVentasAcumuladas();
+      cargarPedidosAcumulados(); // Cargar pedidos acumulados también
       cargarAniosGraficoDisponibles(); // Cargar años disponibles para el gráfico
     }
   }, [clienteId]);
@@ -548,6 +662,7 @@ export default function Seguimiento() {
   useEffect(() => {
     if (clienteId) {
       cargarVentasAcumuladas();
+      cargarPedidosAcumulados(); // Cargar pedidos acumulados también
     }
   }, [anioGrafico, clienteId]);
 
@@ -555,6 +670,7 @@ export default function Seguimiento() {
   useEffect(() => {
     if (clienteId) {
       cargarTiposPago();
+      cargarTiposPagoPedidos();
     }
   }, [clienteId, anioGrafico, filtroMes]);
 
@@ -660,8 +776,8 @@ export default function Seguimiento() {
             )}
           </div>
 
-          {/* 5 Tarjetas tipo Power BI */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 mb-8">
+          {/* 6 Tarjetas tipo Power BI */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 mb-8">
             {/* Tarjeta 1: Ventas */}
             <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
@@ -756,6 +872,26 @@ export default function Seguimiento() {
                 ) : (
                   <div className="text-green-300 text-lg md:text-xl font-bold mb-1">
                     {formatearMoneda(totales.clientes)}
+                  </div>
+                )}
+                <p className="text-green-200 text-xs opacity-75">Mes actual</p>
+              </div>
+            </div>
+
+            {/* Tarjeta 6: Pedidos */}
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+              <div className="text-center">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-2xl md:text-3xl">📋</span>
+                </div>
+                <h3 className="text-green-200 text-sm md:text-base font-medium mb-2">Total Pedidos</h3>
+                {loading ? (
+                  <div className="animate-pulse">
+                    <div className="h-6 md:h-8 bg-green-400/20 rounded mb-2"></div>
+                  </div>
+                ) : (
+                  <div className="text-green-300 text-lg md:text-xl font-bold mb-1">
+                    {formatearMoneda(totales.pedidos)}
                   </div>
                 )}
                 <p className="text-green-200 text-xs opacity-75">Mes actual</p>
@@ -924,11 +1060,16 @@ export default function Seguimiento() {
             )}
           </div>
 
-          {/* Gráfico Circular de Tipos de Pago */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+          {/* Gráficos Circulares de Tipos de Pago */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            {/* Gráfico Circular de Ventas */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                Ventas
+              </h2>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
-                <h3 className="text-xl md:text-2xl font-bold text-white">
+                <h3 className="text-lg md:text-xl font-medium text-green-200">
                   💳 Distribución por Tipo de Pago
                 </h3>
                 {/* Filtros para el gráfico circular */}
@@ -1074,9 +1215,321 @@ export default function Seguimiento() {
                 </p>
               </div>
             )}
+            </div>
+
+            {/* Gráfico Circular de Pedidos */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                  Pedidos
+                </h2>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                  <h3 className="text-lg md:text-xl font-medium text-green-200">
+                    📋 Distribución por Tipo de Pago
+                  </h3>
+                  {/* Filtros para el gráfico circular de pedidos */}
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Filtro de mes */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-white font-medium text-sm md:text-base">
+                        Mes:
+                      </label>
+                      <select
+                        value={filtroMes}
+                        onChange={(e) => setFiltroMes(parseInt(e.target.value))}
+                        className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        <option value="1" className="bg-gray-800 text-white">Enero</option>
+                        <option value="2" className="bg-gray-800 text-white">Febrero</option>
+                        <option value="3" className="bg-gray-800 text-white">Marzo</option>
+                        <option value="4" className="bg-gray-800 text-white">Abril</option>
+                        <option value="5" className="bg-gray-800 text-white">Mayo</option>
+                        <option value="6" className="bg-gray-800 text-white">Junio</option>
+                        <option value="7" className="bg-gray-800 text-white">Julio</option>
+                        <option value="8" className="bg-gray-800 text-white">Agosto</option>
+                        <option value="9" className="bg-gray-800 text-white">Septiembre</option>
+                        <option value="10" className="bg-gray-800 text-white">Octubre</option>
+                        <option value="11" className="bg-gray-800 text-white">Noviembre</option>
+                        <option value="12" className="bg-gray-800 text-white">Diciembre</option>
+                      </select>
+                    </div>
+
+                    {/* Filtro de año */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-white font-medium text-sm md:text-base">
+                        Año:
+                      </label>
+                      <select
+                        value={filtroAnio}
+                        onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
+                        className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        {aniosDisponibles.map(anio => (
+                          <option key={anio} value={anio} className="bg-gray-800 text-white">
+                            {anio}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {loadingTiposPagoPedidos ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                  <span className="ml-3 text-green-200">Cargando...</span>
+                </div>
+              ) : errorTiposPagoPedidos ? (
+                <div className="text-center py-8">
+                  <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-red-300 text-sm">{errorTiposPagoPedidos}</p>
+                  </div>
+                </div>
+              ) : datosTiposPagoPedidos.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  {/* Gráfico Circular */}
+                  <div className="h-64 md:h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={datosTiposPagoPedidos}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, porcentaje }) => `${name}: ${porcentaje.toFixed(1)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {datosTiposPagoPedidos.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={coloresTiposPago[entry.tipo] || '#8884d8'} 
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value, name, props) => [
+                            `${value} pedidos`,
+                            `${props.payload.name} (${props.payload.porcentaje.toFixed(1)}%)`
+                          ]}
+                          contentStyle={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            color: 'white'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Leyenda y Estadísticas */}
+                  <div className="space-y-4">
+                    <div className="text-center lg:text-left">
+                      <h4 className="text-lg font-semibold text-white mb-4">Resumen del Mes</h4>
+                      <div className="space-y-3">
+                        {datosTiposPagoPedidos.map((item, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: coloresTiposPago[item.tipo] || '#8884d8' }}
+                              ></div>
+                              <span className="text-white font-medium">{item.name}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-green-300 font-bold">{item.value} pedidos</div>
+                              <div className="text-green-200 text-sm">{item.porcentaje.toFixed(1)}%</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Total de pedidos del mes */}
+                      <div className="mt-6 p-4 bg-green-500/20 rounded-lg border border-green-400/30">
+                        <div className="text-center">
+                          <div className="text-green-200 text-sm font-medium">Total de Pedidos del Mes</div>
+                          <div className="text-green-300 text-2xl font-bold">
+                            {datosTiposPagoPedidos.reduce((sum, item) => sum + item.value, 0)} pedidos
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-green-400 text-4xl mb-4">📋</div>
+                  <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de tipos de pago de pedidos</p>
+                  <p className="text-green-200 text-sm">
+                    No se encontraron pedidos para el mes seleccionado
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          
+          {/* Gráfico de Pedidos Acumulados Mensuales */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+            <div className="text-center mb-6">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                <h3 className="text-xl md:text-2xl font-bold text-white">
+                  📋 Pedidos Acumulados
+                </h3>
+                {/* Filtro de año para el gráfico */}
+                <div className="flex items-center gap-2">
+                  <label className="text-white font-medium text-sm md:text-base">
+                    Año:
+                  </label>
+                  <select
+                    value={anioGrafico}
+                    onChange={(e) => setAnioGrafico(parseInt(e.target.value))}
+                    className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    {aniosGraficoDisponibles.map(anio => (
+                      <option key={anio} value={anio} className="bg-gray-800 text-white">
+                        {anio}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="text-green-200 text-sm md:text-base">
+                Total acumulado mensual de pedidos pagados
+              </p>
+            </div>
+
+            {loadingPedidosAcumulados ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                <span className="ml-3 text-green-200">Cargando...</span>
+              </div>
+            ) : errorPedidosAcumulados ? (
+              <div className="text-center py-8">
+                <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-red-300 text-sm">{errorPedidosAcumulados}</p>
+                </div>
+              </div>
+            ) : datosPedidosAcumulados.length > 0 ? (
+              <div className="h-64 md:h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={datosPedidosAcumulados}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                    aria-label="Gráfico de pedidos acumulados"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                    <XAxis 
+                      dataKey="mes" 
+                      stroke="rgba(255, 255, 255, 0.7)"
+                      fontSize={12}
+                    />
+                    <YAxis 
+                      stroke="rgba(255, 255, 255, 0.7)"
+                      fontSize={12}
+                      tickFormatter={(value) => new Intl.NumberFormat('es-CL').format(value)}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '8px',
+                        color: 'white'
+                      }}
+                      formatter={(value, name, props) => {
+                        // Usar el total_mes directamente desde los datos mapeados
+                        const mesActual = props.payload.mes_num;
+                        const mesData = datosPedidosAcumulados.find(d => d.mes_num === mesActual);
+                        
+                        return [
+                          <div key="tooltip-content">
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Total Acumulado:</strong><br />
+                              {new Intl.NumberFormat('es-CL', {
+                                style: 'currency',
+                                currency: 'CLP',
+                                minimumFractionDigits: 0
+                              }).format(value)}
+                            </div>
+                            <div>
+                              <strong>Valor del Mes:</strong><br />
+                              {new Intl.NumberFormat('es-CL', {
+                                style: 'currency',
+                                currency: 'CLP',
+                                minimumFractionDigits: 0
+                              }).format(mesData?.totalMes || 0)}
+                            </div>
+                          </div>
+                        ];
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="totalAcum"
+                      stroke="transparent"
+                      strokeWidth={0}
+                      dot={{
+                        fill: '#3b82f6',
+                        stroke: 'white',
+                        strokeWidth: 2,
+                        r: 8
+                      }}
+                      activeDot={{
+                        fill: '#3b82f6',
+                        stroke: 'white',
+                        strokeWidth: 3,
+                        r: 10
+                      }}
+                      label={{
+                        position: 'top',
+                        fill: 'white',
+                        fontSize: 10,
+                        fontWeight: 'bold',
+                        offset: 15,
+                        formatter: (value) => new Intl.NumberFormat('es-CL', {
+                          style: 'currency',
+                          currency: 'CLP',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        }).format(value)
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+                
+                {/* Información adicional del gráfico */}
+                <div className="mt-6 text-center">
+                  <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                      Total del año: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalAcum, 0))}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-blue-400 rounded-full"></span>
+                      Promedio mensual: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalAcum, 0) / 12)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-blue-300 rounded-full"></span>
+                      Meses con pedidos: {datosPedidosAcumulados.filter(d => d.totalAcum > 0).length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-blue-400 text-4xl mb-4">📋</div>
+                <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de pedidos acumulados</p>
+                <p className="text-green-200 text-sm">
+                  El gráfico mostrará los 12 meses con valores en 0
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Botón de recarga */}
           <div className="text-center mb-8">
