@@ -30,7 +30,7 @@ const FormularioProveedores = () => {
   const [busquedaProveedor, setBusquedaProveedor] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0')); // Mes actual por defecto
-  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear()); // Año actual por defecto
+  const [filtroAnio, setFiltroAnio] = useState(2025); // Año 2025 por defecto
   const [filtroEstado, setFiltroEstado] = useState('');
   
   // Estado para años disponibles
@@ -87,17 +87,19 @@ const FormularioProveedores = () => {
   // Función para calcular años disponibles
   const calcularAniosDisponibles = () => {
     const anios = new Set();
-    const anioActual = new Date().getFullYear();
     
-    // Siempre incluir el año actual
-    anios.add(anioActual);
+    // Solo incluir el año 2025 por defecto
+    anios.add(2025);
     
-    // Agregar años de los registros existentes
+    // Solo agregar años FUTUROS (posteriores a 2025) si hay proveedores en esos años
     proveedoresRegistrados.forEach(proveedor => {
       if (proveedor.fecha_cl || proveedor.fecha) {
         const fecha = proveedor.fecha_cl || proveedor.fecha;
         const anio = new Date(fecha).getFullYear();
-        anios.add(anio);
+        // Solo agregar si es un año futuro (mayor a 2025)
+        if (!isNaN(anio) && anio > 2025) {
+          anios.add(anio);
+        }
       }
     });
     
@@ -135,7 +137,7 @@ const FormularioProveedores = () => {
       }
       if (filtroMes) {
         // Filtrar por mes y año usando el formato YYYY-MM
-        const year = filtroAnio || new Date().getFullYear();
+        const year = filtroAnio || 2025;
         const mesFormateado = filtroMes.padStart(2, '0');
         const fechaInicio = `${year}-${mesFormateado}-01`;
         
@@ -414,7 +416,7 @@ const FormularioProveedores = () => {
     setBusquedaProveedor('');
     setFiltroFecha('');
     setFiltroMes(String(new Date().getMonth() + 1).padStart(2, '0')); // Volver al mes actual
-    setFiltroAnio(new Date().getFullYear()); // Volver al año actual
+    setFiltroAnio(2025); // Volver al año 2025
     setFiltroEstado('');
   };
 
@@ -706,7 +708,7 @@ const FormularioProveedores = () => {
                     <div className="text-gray-300 text-sm md:text-base">📭 No hay proveedores registrados</div>
                   </div>
                 ) : proveedoresRegistrados.length === 0 && filtroMes === String(new Date().getMonth() + 1).padStart(2, '0') && 
-                   filtroAnio === new Date().getFullYear() && !busquedaProveedor && !filtroFecha && !filtroEstado ? (
+                   filtroAnio === 2025 && !busquedaProveedor && !filtroFecha && !filtroEstado ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">📅</div>
                     <p className="text-yellow-300 text-base md:text-lg font-bold">No hay proveedores este mes</p>

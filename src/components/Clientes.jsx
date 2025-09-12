@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
@@ -40,6 +40,23 @@ export default function Clientes() {
     ano: '',
     producto: ''
   });
+
+  // Años disponibles para filtros: 2025 por defecto + años futuros si hay registros
+  const aniosDisponiblesFiltro = useMemo(() => {
+    const anios = new Set();
+    anios.add(2025);
+    try {
+      registrosPedidos.forEach(reg => {
+        const fechaStr = reg.fecha_cl || reg.fecha;
+        if (!fechaStr) return;
+        const anio = parseInt(fechaStr.split('-')[0]);
+        if (!isNaN(anio) && anio > 2025) {
+          anios.add(anio);
+        }
+      });
+    } catch {}
+    return Array.from(anios).sort((a, b) => b - a);
+  }, [registrosPedidos]);
   
      // Estados para resumen de clientes
    const [resumenClientes, setResumenClientes] = useState([]);
@@ -1408,19 +1425,11 @@ export default function Clientes() {
                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los años</option>
-                    {(() => {
-                      const anoActual = new Date().getFullYear();
-                      const anos = [];
-                      // Generar opciones para el año actual y los próximos 2 años
-                      for (let i = anoActual; i <= anoActual + 2; i++) {
-                        anos.push(
-                          <option key={i} value={i.toString()} className="bg-gray-800 text-white">
-                            {i}
-                          </option>
-                        );
-                      }
-                      return anos;
-                    })()}
+                    {aniosDisponiblesFiltro.map(anio => (
+                      <option key={anio} value={anio.toString()} className="bg-gray-800 text-white">
+                        {anio}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

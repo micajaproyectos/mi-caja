@@ -24,7 +24,7 @@ export default function Seguimiento() {
   
   // Estados para los filtros
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1); // Mes actual (1-12)
-  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear()); // Año actual
+  const [filtroAnio, setFiltroAnio] = useState(2025); // Año 2025 por defecto
   const [aniosDisponibles, setAniosDisponibles] = useState([]); // Años con datos disponibles
   
 
@@ -34,7 +34,7 @@ export default function Seguimiento() {
   const [datosVentasAcumuladas, setDatosVentasAcumuladas] = useState([]);
   const [loadingVentasAcumuladas, setLoadingVentasAcumuladas] = useState(false);
   const [errorVentasAcumuladas, setErrorVentasAcumuladas] = useState(null);
-  const [anioGrafico, setAnioGrafico] = useState(new Date().getFullYear()); // Año para el gráfico
+  const [anioGrafico, setAnioGrafico] = useState(2025); // Año 2025 para el gráfico
   const [aniosGraficoDisponibles, setAniosGraficoDisponibles] = useState([]); // Años disponibles para el gráfico
 
   // Estados para el gráfico de tipos de pago
@@ -315,6 +315,9 @@ export default function Seguimiento() {
       // Consultar cada tabla individualmente para evitar errores
       const aniosEncontrados = new Set();
       
+      // Siempre incluir el año 2025 por defecto
+      aniosEncontrados.add(2025);
+      
       // 1. Tabla ventas
       try {
         const { data: ventasData, error: ventasError } = await supabase
@@ -326,7 +329,7 @@ export default function Seguimiento() {
           ventasData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio >= 2025) aniosEncontrados.add(anio);
+              if (anio > 2025) aniosEncontrados.add(anio);
             }
           });
         }
@@ -344,7 +347,7 @@ export default function Seguimiento() {
           gastosData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio >= 2025) aniosEncontrados.add(anio);
+              if (anio > 2025) aniosEncontrados.add(anio);
             }
           });
         }
@@ -363,7 +366,7 @@ export default function Seguimiento() {
           inventarioData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio >= 2025) aniosEncontrados.add(anio);
+              if (anio > 2025) aniosEncontrados.add(anio);
             }
           });
         }
@@ -381,7 +384,7 @@ export default function Seguimiento() {
           proveedoresData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio >= 2025) aniosEncontrados.add(anio);
+              if (anio > 2025) aniosEncontrados.add(anio);
             }
           });
         }
@@ -400,7 +403,7 @@ export default function Seguimiento() {
           clientesData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio >= 2025) aniosEncontrados.add(anio);
+              if (anio > 2025) aniosEncontrados.add(anio);
             }
           });
         }
@@ -430,18 +433,16 @@ export default function Seguimiento() {
       // Convertir a array y ordenar
       const aniosArray = Array.from(aniosEncontrados).sort((a, b) => b - a);
       
-      // Si no hay años disponibles, usar al menos el año actual
+      // Si no hay años disponibles, usar al menos el año 2025
       if (aniosArray.length === 0) {
-        const anioActual = new Date().getFullYear();
-        setAniosDisponibles([anioActual]);
+        setAniosDisponibles([2025]);
       } else {
         setAniosDisponibles(aniosArray);
       }
     } catch (error) {
       console.error('❌ Error general al cargar años disponibles:', error);
-      // Fallback: usar año actual
-      const anioActual = new Date().getFullYear();
-      setAniosDisponibles([anioActual]);
+      // Fallback: usar año 2025
+      setAniosDisponibles([2025]);
     }
   };
 
@@ -465,10 +466,9 @@ export default function Seguimiento() {
       // Extraer años únicos y ordenarlos
       const aniosUnicos = [...new Set(aniosData?.map(item => item.anio) || [])].sort((a, b) => b - a);
       
-      // Si no hay años, usar al menos el año actual
+      // Si no hay años, usar al menos el año 2025
       if (aniosUnicos.length === 0) {
-        const anioActual = new Date().getFullYear();
-        setAniosGraficoDisponibles([anioActual]);
+        setAniosGraficoDisponibles([2025]);
       } else {
         setAniosGraficoDisponibles(aniosUnicos);
       }
@@ -479,9 +479,8 @@ export default function Seguimiento() {
       }
     } catch (error) {
       console.error('❌ Error al cargar años del gráfico:', error);
-      // Fallback: usar año actual
-      const anioActual = new Date().getFullYear();
-      setAniosGraficoDisponibles([anioActual]);
+      // Fallback: usar año 2025
+      setAniosGraficoDisponibles([2025]);
     }
   };
 

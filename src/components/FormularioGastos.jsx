@@ -46,7 +46,7 @@ const FormularioGastos = () => {
   const [busquedaDetalle, setBusquedaDetalle] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1); // Mes actual por defecto
-  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear()); // Año actual por defecto
+  const [filtroAnio, setFiltroAnio] = useState(2025); // Año 2025 por defecto
   const [filtroTipoGasto, setFiltroTipoGasto] = useState('');
   const [filtroFormaPago, setFiltroFormaPago] = useState('');
 
@@ -98,10 +98,27 @@ const FormularioGastos = () => {
     ];
   };
 
-  // Función para obtener años únicos
+  // Función para obtener años únicos basado en los gastos registrados
   const obtenerAniosUnicosLocal = () => {
-    const currentYear = new Date().getFullYear();
-    return [currentYear - 1, currentYear, currentYear + 1];
+    const anios = new Set();
+    
+    // Solo incluir el año 2025 por defecto
+    anios.add(2025);
+    
+    // Solo agregar años FUTUROS (posteriores a 2025) si hay gastos en esos años
+    gastosRegistrados.forEach(gasto => {
+      const fechaGasto = gasto.fecha_cl || gasto.fecha;
+      if (fechaGasto) {
+        const anio = parseInt(fechaGasto.split('-')[0]);
+        // Solo agregar si es un año futuro (mayor a 2025)
+        if (!isNaN(anio) && anio > 2025) {
+          anios.add(anio);
+        }
+      }
+    });
+    
+    // Convertir a array y ordenar de mayor a menor
+    return Array.from(anios).sort((a, b) => b - a);
   };
 
   // Función para cargar gastos registrados filtrados por usuario
@@ -287,7 +304,7 @@ const FormularioGastos = () => {
     setBusquedaDetalle('');
     setFiltroFecha('');
     setFiltroMes(new Date().getMonth() + 1); // Volver al mes actual
-    setFiltroAnio(new Date().getFullYear()); // Volver al año actual
+    setFiltroAnio(2025); // Volver al año 2025
     setFiltroTipoGasto('');
     setFiltroFormaPago('');
   };
@@ -657,7 +674,7 @@ const FormularioGastos = () => {
 
               {/* Filtros activos */}
               {(busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
-                filtroMes !== new Date().getMonth() + 1 || filtroAnio !== new Date().getFullYear()) && (
+                filtroMes !== new Date().getMonth() + 1 || filtroAnio !== 2025) && (
                 <div className="mb-4">
                   <p className="text-gray-300 text-sm mb-2">Filtros activos:</p>
                   <div className="flex flex-wrap gap-2">
@@ -679,10 +696,10 @@ const FormularioGastos = () => {
                         <button onClick={() => setFiltroMes(new Date().getMonth() + 1)} className="text-purple-400 hover:text-white">✕</button>
                       </span>
                     )}
-                    {filtroAnio !== new Date().getFullYear() && (
+                    {filtroAnio !== 2025 && (
                       <span className="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full text-xs">
                         <span>📅 {filtroAnio}</span>
-                        <button onClick={() => setFiltroAnio(new Date().getFullYear())} className="text-yellow-400 hover:text-white">✕</button>
+                        <button onClick={() => setFiltroAnio(2025)} className="text-yellow-400 hover:text-white">✕</button>
                       </span>
                     )}
                     {filtroTipoGasto && (
@@ -734,7 +751,7 @@ const FormularioGastos = () => {
                   Registra tu primer gasto usando el formulario de arriba
                 </p>
               </div>
-            ) : gastosFiltrados.length === 0 && filtroMes === new Date().getMonth() + 1 && filtroAnio === new Date().getFullYear() && 
+            ) : gastosFiltrados.length === 0 && filtroMes === new Date().getMonth() + 1 && filtroAnio === 2025 && 
                !busquedaDetalle && !filtroFecha && !filtroTipoGasto && !filtroFormaPago ? (
               <div className="text-center py-6 md:py-8">
                 <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">📅</div>
@@ -747,14 +764,14 @@ const FormularioGastos = () => {
               <>
                 {/* Información de filtros aplicados */}
                 {(busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
-                  filtroMes !== new Date().getMonth() + 1 || filtroAnio !== new Date().getFullYear()) && (
+                  filtroMes !== new Date().getMonth() + 1 || filtroAnio !== 2025) && (
                   <div className="mb-4 p-3 bg-blue-600/20 backdrop-blur-sm rounded-lg border border-blue-500/30">
                     <p className="text-blue-200 text-sm text-center">
                       <strong>Filtros aplicados:</strong> 
                       {busquedaDetalle && ` Búsqueda: "${busquedaDetalle}"`}
                       {filtroFecha && ` Fecha: ${formatearFechaMostrar(filtroFecha)}`}
                       {filtroMes !== new Date().getMonth() + 1 && ` Mes: ${obtenerMesesUnicos().find(m => m.value === parseInt(filtroMes))?.label}`}
-                      {filtroAnio !== new Date().getFullYear() && ` Año: ${filtroAnio}`}
+                      {filtroAnio !== 2025 && ` Año: ${filtroAnio}`}
                       {filtroTipoGasto && ` Tipo: ${filtroTipoGasto}`}
                       {filtroFormaPago && ` Pago: ${filtroFormaPago}`}
                       {` | Mostrando ${gastosFiltrados.length} de ${gastosRegistrados.length} registros totales`}
@@ -800,7 +817,7 @@ const FormularioGastos = () => {
 
                 {/* Mensaje cuando no hay resultados después de filtrar */}
                 {gastosFiltrados.length === 0 && (busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
-                  filtroMes !== new Date().getMonth() + 1 || filtroAnio !== new Date().getFullYear()) ? (
+                  filtroMes !== new Date().getMonth() + 1 || filtroAnio !== 2025) ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">🔍</div>
                     <p className="text-yellow-300 text-base md:text-lg font-bold">No se encontraron gastos con los filtros aplicados</p>

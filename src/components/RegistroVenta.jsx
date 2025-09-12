@@ -366,30 +366,25 @@ export default function RegistroVenta() {
 
   // Función para obtener años únicos de las ventas usando fecha_cl
   const obtenerAniosUnicosLocal = () => {
-    const fechas = ventasRegistradas.map(venta => venta.fecha_cl || venta.fecha).filter(Boolean);
-    const aniosExistentes = obtenerAniosUnicos(fechas);
+    const anios = new Set();
     
-    // Obtener el año actual
-    const anioActual = new Date().getFullYear();
+    // Solo incluir el año 2025 por defecto
+    anios.add(2025);
     
-    // Agregar años futuros si no están en la lista
-    const aniosCompletos = [...aniosExistentes];
-    
-    // Agregar el año actual si no está
-    if (!aniosCompletos.includes(anioActual)) {
-      aniosCompletos.push(anioActual);
-    }
-    
-    // Agregar años futuros hasta 2 años adelante
-    for (let i = 1; i <= 2; i++) {
-      const anioFuturo = anioActual + i;
-      if (!aniosCompletos.includes(anioFuturo)) {
-        aniosCompletos.push(anioFuturo);
+    // Solo agregar años FUTUROS (posteriores a 2025) si hay ventas en esos años
+    ventasRegistradas.forEach(venta => {
+      const fechaVenta = venta.fecha_cl || venta.fecha;
+      if (fechaVenta) {
+        const anio = parseInt(fechaVenta.split('-')[0]);
+        // Solo agregar si es un año futuro (mayor a 2025)
+        if (!isNaN(anio) && anio > 2025) {
+          anios.add(anio);
+        }
       }
-    }
+    });
     
     // Ordenar de mayor a menor
-    return aniosCompletos.sort((a, b) => b - a);
+    return Array.from(anios).sort((a, b) => b - a);
   };
 
   // Función para obtener las ventas que se deben mostrar
