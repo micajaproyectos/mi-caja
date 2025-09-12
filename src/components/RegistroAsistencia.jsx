@@ -34,13 +34,21 @@ export default function RegistroAsistencia() {
   const [empleado, setEmpleado] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroEmpleado, setFiltroEmpleado] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAno, setFiltroAno] = useState('');
+  const [anosDisponibles, setAnosDisponibles] = useState(['2025']);
+  const [asistenciasFiltradas, setAsistenciasFiltradas] = useState([]);
   const [localStorageVersion, setLocalStorageVersion] = useState(0); // Forzar re-render cuando localStorage cambie
+  const [empleadosActivos, setEmpleadosActivos] = useState(() => {
+    // Recuperar empleados activos desde localStorage al inicializar
+    const empleadosGuardados = localStorage.getItem('empleadosActivos');
+    return empleadosGuardados ? JSON.parse(empleadosGuardados) : [];
+  }); // Controla cuándo mostrar entradas de múltiples empleados
   const [empleadoActivo, setEmpleadoActivo] = useState(() => {
-    // Recuperar empleado activo desde localStorage al inicializar
-    // Nota: Esta clave es específica de asistencia y se mantiene por compatibilidad
+    // Mantener compatibilidad con sistema anterior
     const empleadoGuardado = localStorage.getItem('empleadoActivo');
     return empleadoGuardado || '';
-  }); // Controla cuándo mostrar entradas del empleado
+  }); // Para compatibilidad con sistema anterior
 
   // Función para actualizar empleado activo y persistirlo en localStorage
   const actualizarEmpleadoActivo = (nuevoEmpleado) => {
@@ -50,6 +58,37 @@ export default function RegistroAsistencia() {
     } else {
       localStorage.removeItem('empleadoActivo');
     }
+  };
+
+  // Función para agregar empleado activo a la lista de múltiples empleados
+  const agregarEmpleadoActivo = (nuevoEmpleado) => {
+    if (!nuevoEmpleado || nuevoEmpleado.trim().length < 2) return;
+    
+    const empleadoNormalizado = nuevoEmpleado.trim();
+    setEmpleadosActivos(prev => {
+      // Evitar duplicados (case-insensitive)
+      const existe = prev.some(emp => emp.toLowerCase() === empleadoNormalizado.toLowerCase());
+      if (existe) return prev;
+      
+      const nuevosEmpleados = [...prev, empleadoNormalizado];
+      localStorage.setItem('empleadosActivos', JSON.stringify(nuevosEmpleados));
+      return nuevosEmpleados;
+    });
+  };
+
+  // Función para remover empleado de la lista de empleados activos
+  const removerEmpleadoActivo = (empleadoARemover) => {
+    setEmpleadosActivos(prev => {
+      const nuevosEmpleados = prev.filter(emp => emp !== empleadoARemover);
+      localStorage.setItem('empleadosActivos', JSON.stringify(nuevosEmpleados));
+      return nuevosEmpleados;
+    });
+  };
+
+  // Función para limpiar todos los empleados activos
+  const limpiarTodosEmpleadosActivos = () => {
+    setEmpleadosActivos([]);
+    localStorage.removeItem('empleadosActivos');
   };
 
   // Función para obtener la fecha actual en Chile (usando dateUtils)
@@ -94,22 +133,250 @@ export default function RegistroAsistencia() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Verificar si el empleado activo tiene entradas pendientes al cargar el componente
+  // Efecto para hacer backup automático cada 5 minutos
   useEffect(() => {
-    // Agregar una pequeña demora para evitar limpiezas prematuras al remontar componente
-    const timeoutId = setTimeout(() => {
-      if (empleadoActivo && fechaActual) {
-        const entradasPendientes = obtenerEntradasPendientes(empleadoActivo, fechaActual);
+    const hacerBackupAutomatico = () => {
+      try {
+        // Verificar qué empleados realmente tienen entradas pendientes
+        const empleadosConEntradasReales = [];
         
-        // Solo limpiar si realmente no hay entradas pendientes después de verificar
-        if (!entradasPendientes || entradasPendientes.length === 0) {
-          actualizarEmpleadoActivo('');
+        empleadosActivos.forEach(empleado => {
+          let tieneEntradasPendientes = false;
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const clave = localStorage.key(i);
+            if (clave && clave.startsWith(`asistencia_${empleado}_`)) {
+              const partes = clave.split('_');
+              if (partes.length >= 3) {
+                const fechaEnClave = partes[partes.length - 1];
+                const entradasPendientes = obtenerEntradasPendientes(empleado, fechaEnClave);
+                if (entradasPendientes && entradasPendientes.length > 0) {
+                  tieneEntradasPendientes = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (tieneEntradasPendientes) {
+            empleadosConEntradasReales.push(empleado);
+          }
+        });
+        
+        // Solo hacer backup si hay empleados con entradas pendientes reales
+        if (empleadosConEntradasReales.length > 0) {
+          const backup = {
+            fecha: fechaActual,
+            timestamp: new Date().toISOString(),
+            empleadosActivos: empleadosConEntradasReales,
+            datosLocalStorage: {}
+          };
+          
+          // Recopilar datos críticos solo de empleados con entradas pendientes
+          for (let i = 0; i < localStorage.length; i++) {
+            const clave = localStorage.key(i);
+            if (clave && clave.startsWith('asistencia_')) {
+              const partes = clave.split('_');
+              if (partes.length >= 3) {
+                const empleado = partes.slice(1, -1).join('_');
+                if (empleadosConEntradasReales.includes(empleado)) {
+                  const valor = localStorage.getItem(clave);
+                  backup.datosLocalStorage[clave] = valor;
+                }
+              }
+            }
+          }
+          
+          // Guardar backup en localStorage con timestamp
+          const backupKey = `backup_automatico_${fechaActual}`;
+          localStorage.setItem(backupKey, JSON.stringify(backup));
+          
+          console.log('💾 Backup automático realizado:', backupKey, 'Empleados:', empleadosConEntradasReales);
+        } else {
+          console.log('ℹ️ No hay empleados con entradas pendientes para backup automático');
+        }
+      } catch (error) {
+        console.error('❌ Error en backup automático:', error);
+      }
+    };
+
+    // Hacer backup inmediatamente
+    hacerBackupAutomatico();
+    
+    // Hacer backup cada 5 minutos
+    const intervalId = setInterval(hacerBackupAutomatico, 5 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [empleadosActivos, fechaActual]);
+
+  // Función para limpiar backups obsoletos
+  const limpiarBackupsObsoletos = useCallback(() => {
+    try {
+      // Limpiar backups de fechas anteriores
+      const fechaActual = obtenerFechaActual();
+      for (let i = 0; i < localStorage.length; i++) {
+        const clave = localStorage.key(i);
+        if (clave && clave.startsWith('backup_automatico_') && !clave.includes(fechaActual)) {
+          localStorage.removeItem(clave);
+          console.log('🗑️ Backup obsoleto eliminado:', clave);
         }
       }
-    }, 100); // Pequeña demora para permitir que el localStorage se cargue completamente
+    } catch (error) {
+      console.error('❌ Error al limpiar backups obsoletos:', error);
+    }
+  }, []);
+
+  // Función para recuperar empleados activos desde localStorage al inicializar
+  const recuperarEmpleadosActivos = useCallback(() => {
+    if (!fechaActual) return;
+    
+    try {
+      // Limpiar backups obsoletos primero
+      limpiarBackupsObsoletos();
+      
+      // Primero intentar recuperar desde backup automático
+      const backupKey = `backup_automatico_${fechaActual}`;
+      const backupData = localStorage.getItem(backupKey);
+      
+      if (backupData) {
+        try {
+          const backup = JSON.parse(backupData);
+          if (backup.empleadosActivos && backup.empleadosActivos.length > 0) {
+            // Verificar que los empleados del backup realmente tengan entradas pendientes
+            const empleadosValidos = [];
+            
+            backup.empleadosActivos.forEach(empleado => {
+              let tieneEntradasPendientes = false;
+              
+              for (let i = 0; i < localStorage.length; i++) {
+                const clave = localStorage.key(i);
+                if (clave && clave.startsWith(`asistencia_${empleado}_`)) {
+                  const partes = clave.split('_');
+                  if (partes.length >= 3) {
+                    const fechaEnClave = partes[partes.length - 1];
+                    const entradasPendientes = obtenerEntradasPendientes(empleado, fechaEnClave);
+                    if (entradasPendientes && entradasPendientes.length > 0) {
+                      tieneEntradasPendientes = true;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (tieneEntradasPendientes) {
+                empleadosValidos.push(empleado);
+              }
+            });
+            
+            if (empleadosValidos.length > 0) {
+              setEmpleadosActivos(empleadosValidos);
+              localStorage.setItem('empleadosActivos', JSON.stringify(empleadosValidos));
+              console.log('✅ Empleados activos recuperados desde backup automático:', empleadosValidos);
+              return;
+            } else {
+              console.log('ℹ️ Backup automático contiene empleados sin entradas pendientes, buscando directamente...');
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Error al parsear backup automático:', error);
+        }
+      }
+      
+      // Si no hay backup válido, buscar directamente en localStorage
+      const empleadosConDatos = [];
+      
+      // Buscar en todas las claves de localStorage que empiecen con 'asistencia_'
+      for (let i = 0; i < localStorage.length; i++) {
+        const clave = localStorage.key(i);
+        if (clave && clave.startsWith('asistencia_')) {
+          // Extraer el nombre del empleado y la fecha de la clave
+          const partes = clave.split('_');
+          if (partes.length >= 3) {
+            const empleado = partes.slice(1, -1).join('_'); // Manejar nombres con guiones bajos
+            const fechaEnClave = partes[partes.length - 1]; // Última parte es la fecha
+            
+            if (empleado && empleado.trim().length >= 2) {
+              // Verificar si tiene entradas pendientes para esta fecha específica
+              const entradasPendientes = obtenerEntradasPendientes(empleado, fechaEnClave);
+              if (entradasPendientes && entradasPendientes.length > 0) {
+                // Solo agregar si es para la fecha actual o si no hay fecha actual definida
+                if (!fechaActual || fechaEnClave === fechaActual) {
+                  empleadosConDatos.push(empleado);
+                  console.log(`✅ Empleado encontrado con entradas pendientes: ${empleado} (fecha: ${fechaEnClave})`);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Actualizar la lista de empleados activos si encontramos datos
+      if (empleadosConDatos.length > 0) {
+        setEmpleadosActivos(empleadosConDatos);
+        localStorage.setItem('empleadosActivos', JSON.stringify(empleadosConDatos));
+        console.log('✅ Empleados activos recuperados desde localStorage:', empleadosConDatos);
+      } else {
+        console.log('ℹ️ No se encontraron empleados activos para recuperar');
+      }
+    } catch (error) {
+      console.error('❌ Error al recuperar empleados activos:', error);
+    }
+  }, [fechaActual, limpiarBackupsObsoletos]);
+
+  // Verificar si los empleados activos tienen entradas pendientes al cargar el componente
+  useEffect(() => {
+    // Solo ejecutar si ya tenemos fecha actual
+    if (fechaActual) {
+      // Primero intentar recuperar empleados desde localStorage
+      recuperarEmpleadosActivos();
+    }
+  }, [fechaActual, recuperarEmpleadosActivos]);
+
+  // Efecto adicional para limpiar empleados sin entradas pendientes (con más demora)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (empleadosActivos.length > 0) {
+        const empleadosConEntradas = [];
+        
+        empleadosActivos.forEach(empleado => {
+          // Buscar entradas pendientes en cualquier fecha para este empleado
+          let tieneEntradasPendientes = false;
+          let fechasConEntradas = [];
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const clave = localStorage.key(i);
+            if (clave && clave.startsWith(`asistencia_${empleado}_`)) {
+              const partes = clave.split('_');
+              if (partes.length >= 3) {
+                const fechaEnClave = partes[partes.length - 1];
+                const entradasPendientes = obtenerEntradasPendientes(empleado, fechaEnClave);
+                if (entradasPendientes && entradasPendientes.length > 0) {
+                  tieneEntradasPendientes = true;
+                  fechasConEntradas.push(fechaEnClave);
+                }
+              }
+            }
+          }
+          
+          if (tieneEntradasPendientes) {
+            empleadosConEntradas.push(empleado);
+            console.log(`✅ Empleado ${empleado} mantiene entradas pendientes en fechas: ${fechasConEntradas.join(', ')}`);
+          } else {
+            console.log(`❌ Empleado ${empleado} NO tiene entradas pendientes en ninguna fecha`);
+          }
+        });
+        
+        // Solo actualizar si realmente hay diferencia (evitar loops infinitos)
+        if (empleadosConEntradas.length !== empleadosActivos.length) {
+          setEmpleadosActivos(empleadosConEntradas);
+          localStorage.setItem('empleadosActivos', JSON.stringify(empleadosConEntradas));
+          console.log('🧹 Empleados sin entradas pendientes removidos:', empleadosActivos.length - empleadosConEntradas.length);
+        }
+      }
+    }, 2000); // Demora más larga para evitar limpiezas prematuras
 
     return () => clearTimeout(timeoutId);
-  }, [empleadoActivo, fechaActual]);
+  }, [empleadosActivos]);
 
   // Cargar asistencias desde la tabla asistencia filtradas por usuario
   const cargarAsistencias = async () => {
@@ -124,7 +391,7 @@ export default function RegistroAsistencia() {
         return;
       }
 
-      // Intentar consulta con fecha_cl primero, fallback a fecha
+      // Cargar todas las asistencias del usuario (sin filtros en la consulta)
       let query = supabase
         .from('asistencia')
         .select('id, empleado, fecha, fecha_cl, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
@@ -132,35 +399,17 @@ export default function RegistroAsistencia() {
         .order('fecha_cl', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Aplicar filtros si están activos
-      if (filtroFecha) {
-        query = query.eq('fecha_cl', filtroFecha);
-      }
-      
-      if (filtroEmpleado && filtroEmpleado.trim()) {
-        query = query.ilike('empleado', `%${filtroEmpleado.trim()}%`);
-      }
-
       let { data, error } = await query;
 
       // Si hay error con fecha_cl, usar consulta sin fecha_cl
-      if (error && error.message?.includes('fecha_cl')) {
-        console.warn('⚠️ Columna fecha_cl no existe en asistencia, usando fecha');
+      if (error && (error.message?.includes('fecha_cl') || error.code === 'PGRST116' || error.status === 404)) {
+        console.warn('⚠️ Error con fecha_cl, usando consulta fallback con fecha:', error.message);
         let fallbackQuery = supabase
           .from('asistencia')
           .select('id, empleado, fecha, hora_entrada, hora_salida, total_horas, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
-
-        // Aplicar filtros en consulta fallback
-        if (filtroFecha) {
-          fallbackQuery = fallbackQuery.eq('fecha', filtroFecha);
-        }
-        
-        if (filtroEmpleado && filtroEmpleado.trim()) {
-          fallbackQuery = fallbackQuery.ilike('empleado', `%${filtroEmpleado.trim()}%`);
-        }
 
         const fallbackResult = await fallbackQuery;
         data = fallbackResult.data;
@@ -169,6 +418,9 @@ export default function RegistroAsistencia() {
 
       if (error) throw error;
       setAsistencias(data || []);
+      
+      // Extraer años disponibles de los registros cargados
+      extraerAnosDisponibles(data || []);
     } catch (error) {
       console.error('Error al cargar asistencias:', error);
       setError('Error al cargar el registro de asistencias');
@@ -178,16 +430,114 @@ export default function RegistroAsistencia() {
     }
   };
 
+  // Función para extraer años únicos de los registros
+  const extraerAnosDisponibles = useCallback((asistencias) => {
+    const anos = new Set();
+    
+    // Agregar 2025 por defecto
+    anos.add('2025');
+    
+    // Extraer años de los registros
+    asistencias.forEach(asistencia => {
+      const fecha = asistencia.fecha_cl || asistencia.fecha;
+      if (fecha) {
+        const ano = fecha.split('-')[0];
+        if (ano && ano.length === 4) {
+          anos.add(ano);
+        }
+      }
+    });
+    
+    // Convertir a array y ordenar descendente
+    const anosArray = Array.from(anos).sort((a, b) => b - a);
+    setAnosDisponibles(anosArray);
+  }, []);
+
+  // Función para filtrar asistencias (similar a RegistroVenta)
+  const filtrarAsistencias = useCallback(() => {
+    let asistenciasFiltradas = [...asistencias];
+
+    // Si no hay filtros activos, mostrar solo las asistencias del día actual
+    if (!filtroFecha && !filtroEmpleado && !filtroMes && !filtroAno) {
+      asistenciasFiltradas = asistenciasFiltradas.filter(asistencia => {
+        const fechaAsistencia = asistencia.fecha_cl || asistencia.fecha;
+        return fechaAsistencia === fechaActual;
+      });
+    } else {
+      // Filtrar por fecha específica (si se selecciona)
+      if (filtroFecha) {
+        asistenciasFiltradas = asistenciasFiltradas.filter(asistencia => {
+          const fechaAsistencia = asistencia.fecha_cl || asistencia.fecha;
+          return fechaAsistencia === filtroFecha;
+        });
+      }
+
+      // Filtrar por empleado (si se selecciona)
+      if (filtroEmpleado && filtroEmpleado.trim()) {
+        asistenciasFiltradas = asistenciasFiltradas.filter(asistencia => {
+          return asistencia.empleado && asistencia.empleado.toLowerCase().includes(filtroEmpleado.toLowerCase());
+        });
+      }
+
+      // Filtrar por mes (si se selecciona y no hay fecha específica)
+      if (filtroMes && !filtroFecha) {
+        asistenciasFiltradas = asistenciasFiltradas.filter(asistencia => {
+          const fechaAsistencia = asistencia.fecha_cl || asistencia.fecha;
+          if (!fechaAsistencia) return false;
+          
+          const [year, month] = fechaAsistencia.split('-');
+          const mesAsistencia = parseInt(month);
+          const mesFiltro = parseInt(filtroMes);
+          return mesAsistencia === mesFiltro;
+        });
+      }
+
+      // Filtrar por año (si se selecciona y no hay fecha específica)
+      if (filtroAno && !filtroFecha) {
+        asistenciasFiltradas = asistenciasFiltradas.filter(asistencia => {
+          const fechaAsistencia = asistencia.fecha_cl || asistencia.fecha;
+          if (!fechaAsistencia) return false;
+          
+          const year = fechaAsistencia.split('-')[0];
+          return parseInt(year) === parseInt(filtroAno);
+        });
+      }
+
+      // Si hay mes y año seleccionados (sin fecha específica)
+      if (filtroMes && filtroAno && !filtroFecha) {
+        asistenciasFiltradas = asistenciasFiltradas.filter(asistencia => {
+          const fechaAsistencia = asistencia.fecha_cl || asistencia.fecha;
+          if (!fechaAsistencia) return false;
+          
+          const [year, month] = fechaAsistencia.split('-');
+          return parseInt(month) === parseInt(filtroMes) && 
+                 parseInt(year) === parseInt(filtroAno);
+        });
+      }
+    }
+
+    setAsistenciasFiltradas(asistenciasFiltradas);
+  }, [asistencias, filtroFecha, filtroEmpleado, filtroMes, filtroAno, fechaActual]);
+
+  // Aplicar filtros cuando cambien los datos o filtros
+  useEffect(() => {
+    filtrarAsistencias();
+  }, [filtrarAsistencias]);
+
   // Función para recargar datos
   const recargarDatos = useCallback(() => {
     cargarAsistencias();
-  }, [filtroFecha, filtroEmpleado]);
+  }, []);
 
   // Función personalizada para limpiar datos de asistencia específicos
   const limpiarDatosAsistencia = useCallback(() => {
-    // Limpiar empleado activo
+    // Limpiar empleado activo (sistema anterior)
     setEmpleadoActivo('');
     localStorage.removeItem('empleadoActivo');
+    
+    // Limpiar empleados activos (sistema nuevo)
+    setEmpleadosActivos([]);
+    localStorage.removeItem('empleadosActivos');
     
     // Limpiar campo de empleado
     setEmpleado('');
@@ -397,8 +747,11 @@ export default function RegistroAsistencia() {
       const entradaGuardada = guardarEntradaLocal(empleado, fechaActual, horaActual);
       alert(`✅ Hora de entrada registrada localmente: ${horaActual}\n\nLa entrada se sincronizará con el servidor cuando registres la salida.\n\n💾 La entrada se mantendrá guardada incluso si navegas a otra sección.`);
       
-      // Activar el empleado para mostrar sus entradas (persistido en localStorage)
+      // Activar el empleado para mostrar sus entradas (sistema anterior)
       actualizarEmpleadoActivo(empleado);
+      
+      // Agregar empleado a la lista de empleados activos (sistema nuevo)
+      agregarEmpleadoActivo(empleado);
       
     } catch (error) {
       console.error('Error al registrar entrada:', error);
@@ -469,11 +822,17 @@ export default function RegistroAsistencia() {
        eliminarEntradaPendiente(empleadoParaBuscar, fechaActual, entradaPendiente.hora_entrada);
         cargarAsistencias();
         
-        // Limpiar el campo del empleado y desactivar para limpiar el listado
-        setEmpleado('');
-        actualizarEmpleadoActivo('');
+        // Verificar si el empleado tiene más entradas pendientes
+        const entradasRestantes = obtenerEntradasPendientes(empleadoParaBuscar, fechaActual);
+        if (entradasRestantes.length === 0) {
+          // Si no hay más entradas pendientes, remover el empleado de la lista activa
+          removerEmpleadoActivo(empleadoParaBuscar);
+        }
         
-        alert(`✅ Hora de salida registrada: ${horaActual}\nTotal horas trabajadas: ${totalHorasFormato}\n\nRegistro sincronizado con el servidor.\n\nEl listado se ha limpiado automáticamente.`);
+        // Limpiar el campo del empleado
+        setEmpleado('');
+        
+        alert(`✅ Hora de salida registrada: ${horaActual}\nTotal horas trabajadas: ${totalHorasFormato}\n\nRegistro sincronizado con el servidor.`);
       
     } catch (error) {
       console.error('Error al registrar salida:', error);
@@ -487,6 +846,8 @@ export default function RegistroAsistencia() {
   const limpiarFiltros = () => {
     setFiltroFecha('');
     setFiltroEmpleado('');
+    setFiltroMes('');
+    setFiltroAno('');
   };
 
   // Función para limpiar entradas pendientes del localStorage
@@ -521,19 +882,206 @@ export default function RegistroAsistencia() {
     }
   };
 
+  // Función para mostrar información completa del sistema
+  const mostrarInfoCompleta = () => {
+    try {
+      let info = `🔍 Información Completa del Sistema:\n\n`;
+      info += `📅 Fecha Actual: ${fechaActual}\n`;
+      info += `👥 Empleados Activos: ${empleadosActivos.length}\n`;
+      info += `📋 Empleados: ${empleadosActivos.join(', ') || 'Ninguno'}\n\n`;
+      
+      // Mostrar todas las claves de localStorage relacionadas con asistencia
+      info += `💾 Datos en localStorage:\n`;
+      let clavesEncontradas = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const clave = localStorage.key(i);
+        if (clave && (clave.startsWith('asistencia_') || clave === 'empleadosActivos' || clave === 'empleadoActivo')) {
+          const valor = localStorage.getItem(clave);
+          info += `• ${clave}: ${valor}\n`;
+          clavesEncontradas++;
+        }
+      }
+      
+      if (clavesEncontradas === 0) {
+        info += `• No se encontraron datos de asistencia en localStorage\n`;
+      }
+      
+      info += `\n📊 Total de entradas registradas hoy: ${entradasRegistradasHoy.length}\n`;
+      
+      alert(info);
+    } catch (error) {
+      console.error('Error al mostrar información completa:', error);
+      alert('❌ Error al obtener información del sistema');
+    }
+  };
+
+  // Función para forzar recuperación de datos
+  const forzarRecuperacionDatos = () => {
+    try {
+      console.log('🔄 Forzando recuperación de datos...');
+      recuperarEmpleadosActivos();
+      alert('✅ Recuperación de datos ejecutada. Revisa la consola para más detalles.');
+    } catch (error) {
+      console.error('❌ Error al forzar recuperación:', error);
+      alert('❌ Error al ejecutar recuperación de datos');
+    }
+  };
+
+  // Función para recuperar empleados de cualquier fecha con entradas pendientes
+  const recuperarEmpleadosCualquierFecha = () => {
+    try {
+      console.log('🔄 Recuperando empleados de cualquier fecha...');
+      const empleadosConDatos = [];
+      const fechasEncontradas = new Set();
+      
+      // Buscar en todas las claves de localStorage que empiecen con 'asistencia_'
+      for (let i = 0; i < localStorage.length; i++) {
+        const clave = localStorage.key(i);
+        if (clave && clave.startsWith('asistencia_')) {
+          const partes = clave.split('_');
+          if (partes.length >= 3) {
+            const empleado = partes.slice(1, -1).join('_');
+            const fechaEnClave = partes[partes.length - 1];
+            
+            if (empleado && empleado.trim().length >= 2) {
+              const entradasPendientes = obtenerEntradasPendientes(empleado, fechaEnClave);
+              console.log(`🔍 Verificando ${empleado} (${fechaEnClave}): ${entradasPendientes.length} entradas pendientes`);
+              if (entradasPendientes && entradasPendientes.length > 0) {
+                empleadosConDatos.push(empleado);
+                fechasEncontradas.add(fechaEnClave);
+                console.log(`✅ Empleado encontrado: ${empleado} (fecha: ${fechaEnClave}, entradas: ${entradasPendientes.length})`);
+              }
+            }
+          }
+        }
+      }
+      
+      if (empleadosConDatos.length > 0) {
+        setEmpleadosActivos(empleadosConDatos);
+        localStorage.setItem('empleadosActivos', JSON.stringify(empleadosConDatos));
+        console.log('✅ Empleados activos actualizados:', empleadosConDatos);
+        alert(`✅ Recuperados ${empleadosConDatos.length} empleados de ${fechasEncontradas.size} fecha(s) diferentes:\n\n${empleadosConDatos.join(', ')}\n\nFechas: ${Array.from(fechasEncontradas).join(', ')}`);
+      } else {
+        alert('ℹ️ No se encontraron empleados con entradas pendientes');
+      }
+    } catch (error) {
+      console.error('❌ Error al recuperar empleados:', error);
+      alert('❌ Error al recuperar empleados de cualquier fecha');
+    }
+  };
+
+  // Función para hacer backup de datos críticos
+  const hacerBackupDatos = () => {
+    try {
+      const backup = {
+        fecha: fechaActual,
+        timestamp: new Date().toISOString(),
+        empleadosActivos: empleadosActivos,
+        datosLocalStorage: {}
+      };
+      
+      // Recopilar todos los datos de localStorage relacionados con asistencia
+      for (let i = 0; i < localStorage.length; i++) {
+        const clave = localStorage.key(i);
+        if (clave && clave.startsWith('asistencia_')) {
+          const valor = localStorage.getItem(clave);
+          backup.datosLocalStorage[clave] = valor;
+        }
+      }
+      
+      // Crear y descargar archivo de backup
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `backup_asistencia_${fechaActual}_${new Date().getTime()}.json`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('✅ Backup de datos creado exitosamente');
+    } catch (error) {
+      console.error('❌ Error al crear backup:', error);
+      alert('❌ Error al crear backup de datos');
+    }
+  };
+
+  // Función para restaurar datos desde backup
+  const restaurarDesdeBackup = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const backup = JSON.parse(e.target.result);
+            
+            // Restaurar empleados activos
+            if (backup.empleadosActivos) {
+              setEmpleadosActivos(backup.empleadosActivos);
+              localStorage.setItem('empleadosActivos', JSON.stringify(backup.empleadosActivos));
+            }
+            
+            // Restaurar datos de localStorage
+            if (backup.datosLocalStorage) {
+              Object.entries(backup.datosLocalStorage).forEach(([clave, valor]) => {
+                localStorage.setItem(clave, valor);
+              });
+            }
+            
+            // Forzar actualización
+            setLocalStorageVersion(prev => prev + 1);
+            
+            alert('✅ Datos restaurados desde backup exitosamente');
+          } catch (error) {
+            console.error('❌ Error al restaurar backup:', error);
+            alert('❌ Error al restaurar datos desde backup');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
   // Función para registrar salida desde el listado
-  const registrarSalidaDesdeListado = async (empleadoEntrada, horaEntrada) => {
+  const registrarSalidaDesdeListado = async (empleadoEntrada, horaEntrada, fechaEntrada = null) => {
     try {
       setLoading(true);
       const horaActual = obtenerHoraActualFormato();
       
-      // Usar empleadoActivo en lugar de empleado para mejor persistencia
-      if (empleadoEntrada === empleadoActivo || empleadoEntrada === empleado) {
-        // Buscar la entrada específica en localStorage usando el empleado correcto
-        const empleadoParaBuscar = empleadoActivo || empleadoEntrada;
+      // Verificar si el empleado está en la lista de empleados activos
+      const empleadoEncontrado = empleadosActivos.find(emp => emp === empleadoEntrada);
+      
+      if (empleadoEncontrado) {
+        // Buscar la entrada específica en localStorage
+        // Si no se proporciona fecha, buscar en la fecha actual primero
+        const fechaParaBuscar = fechaEntrada || fechaActual;
+        const entradasPendientes = obtenerEntradasPendientes(empleadoEntrada, fechaParaBuscar);
+        let entradaPendiente = entradasPendientes.find(e => e.hora_entrada === horaEntrada);
         
-        const entradasPendientes = obtenerEntradasPendientes(empleadoParaBuscar, fechaActual);
-        const entradaPendiente = entradasPendientes.find(e => e.hora_entrada === horaEntrada);
+        // Si no se encuentra en la fecha especificada, buscar en todas las fechas
+        if (!entradaPendiente) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const clave = localStorage.key(i);
+            if (clave && clave.startsWith(`asistencia_${empleadoEntrada}_`)) {
+              const partes = clave.split('_');
+              if (partes.length >= 3) {
+                const fechaEnClave = partes[partes.length - 1];
+                const entradas = obtenerEntradasPendientes(empleadoEntrada, fechaEnClave);
+                entradaPendiente = entradas.find(e => e.hora_entrada === horaEntrada);
+                if (entradaPendiente) {
+                  fechaParaBuscar = fechaEnClave;
+                  break;
+                }
+              }
+            }
+          }
+        }
         
         if (entradaPendiente) {
           // Usar la lógica existente de registrarSalida
@@ -549,7 +1097,7 @@ export default function RegistroAsistencia() {
 
           const registroCompleto = {
             empleado: empleadoEntrada,
-            fecha: fechaActual,
+            fecha: fechaParaBuscar, // Usar la fecha donde se encontró la entrada
             // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
             hora_entrada: horaEntrada,
             hora_salida: horaActual,
@@ -564,16 +1112,34 @@ export default function RegistroAsistencia() {
           
           if (error) throw error;
           
-          // Marcar entrada como sincronizada usando el empleado correcto
-          eliminarEntradaPendiente(empleadoParaBuscar, fechaActual, horaEntrada);
+          // Marcar entrada como sincronizada
+          eliminarEntradaPendiente(empleadoEntrada, fechaParaBuscar, horaEntrada);
+          
+          // Verificar si el empleado tiene más entradas pendientes en cualquier fecha
+          let tieneEntradasRestantes = false;
+          for (let i = 0; i < localStorage.length; i++) {
+            const clave = localStorage.key(i);
+            if (clave && clave.startsWith(`asistencia_${empleadoEntrada}_`)) {
+              const partes = clave.split('_');
+              if (partes.length >= 3) {
+                const fechaEnClave = partes[partes.length - 1];
+                const entradasRestantes = obtenerEntradasPendientes(empleadoEntrada, fechaEnClave);
+                if (entradasRestantes.length > 0) {
+                  tieneEntradasRestantes = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (!tieneEntradasRestantes) {
+            // Si no hay más entradas pendientes, remover el empleado de la lista activa
+            removerEmpleadoActivo(empleadoEntrada);
+          }
           
           cargarAsistencias();
           
-          // Limpiar el campo del empleado y desactivar para limpiar el listado
-          setEmpleado('');
-          actualizarEmpleadoActivo('');
-          
-          alert(`✅ Salida registrada para ${empleadoEntrada}\nHora de salida: ${horaActual}\nTotal horas: ${totalHorasFormato}\n\nEl listado se ha limpiado automáticamente.`);
+          alert(`✅ Salida registrada para ${empleadoEntrada}\nFecha: ${fechaParaBuscar}\nHora de salida: ${horaActual}\nTotal horas: ${totalHorasFormato}\n\nRegistro sincronizado con el servidor.`);
           return;
         }
       }
@@ -610,7 +1176,7 @@ export default function RegistroAsistencia() {
     const headers = ['Empleado', 'Fecha', 'Hora Entrada', 'Hora Salida', 'Total Horas', 'Estado'];
     const csvContent = [
       headers.join(','),
-      ...asistencias.map(asistencia => {
+      ...asistenciasFiltradas.map(asistencia => {
         const estado = asistencia.hora_entrada && asistencia.hora_salida ? 'Completo' : 
                       asistencia.hora_entrada ? 'Solo Entrada' : 'Sin Registro';
         return [
@@ -678,7 +1244,7 @@ export default function RegistroAsistencia() {
     // Crear un Map para evitar duplicados por nombre (case-insensitive)
     const empleadosMap = new Map();
     
-    asistencias.forEach(asistencia => {
+    asistenciasFiltradas.forEach(asistencia => {
       if (asistencia.empleado && asistencia.total_horas) {
         const nombreNormalizado = asistencia.empleado.toLowerCase().trim();
         
@@ -701,7 +1267,7 @@ export default function RegistroAsistencia() {
     // Convertir Map a array y ordenar por total de horas (descendente)
     return Array.from(empleadosMap.values())
       .sort((a, b) => b.total_horas - a.total_horas);
-  }, [asistencias]);
+  }, [asistenciasFiltradas]);
 
   // Calcular estadísticas del día (mantener para otras funcionalidades)
   const estadisticas = useMemo(() => {
@@ -735,23 +1301,32 @@ export default function RegistroAsistencia() {
     return obtenerEntradasPendientes(empleado, fechaActual);
   }, [empleado, fechaActual]);
 
-  // Obtener todas las entradas registradas hoy (solo del empleado activo)
+  // Obtener todas las entradas registradas (de todos los empleados activos, cualquier fecha)
   const entradasRegistradasHoy = useMemo(() => {
-    // Solo mostrar entradas si hay un empleado activo (que haya registrado entrada)
-    if (!empleadoActivo || empleadoActivo.trim().length < 2) {
+    // Si no hay empleados activos, no mostrar nada
+    if (!empleadosActivos || empleadosActivos.length === 0) {
       return [];
     }
     
-    // Filtrar entradas del servidor solo para el empleado activo
+    const todasLasEntradas = [];
+    
+    // Procesar cada empleado activo
+    empleadosActivos.forEach(empleadoActivo => {
+      // Filtrar entradas del servidor para este empleado (fecha actual)
     const entradasServidor = asistencias
       .filter(a => a.fecha === fechaActual && a.empleado === empleadoActivo)
       .map(e => ({ ...e, origen: 'servidor' }));
     
-    // Obtener entradas del localStorage solo para el empleado activo
+      // Obtener entradas del localStorage para este empleado (cualquier fecha)
     const entradasLocal = [];
-    if (fechaActual) {
-      const clave = obtenerClaveLocalStorage(empleadoActivo, fechaActual);
-      if (clave) {
+      
+      // Buscar en todas las claves de localStorage para este empleado
+      for (let i = 0; i < localStorage.length; i++) {
+        const clave = localStorage.key(i);
+        if (clave && clave.startsWith(`asistencia_${empleadoActivo}_`)) {
+          const partes = clave.split('_');
+          if (partes.length >= 3) {
+            const fechaEnClave = partes[partes.length - 1];
         const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
         
         entradas.forEach(entrada => {
@@ -760,7 +1335,7 @@ export default function RegistroAsistencia() {
             if (!entrada.sincronizado) {
               entradasLocal.push({
                 empleado: empleadoActivo,
-                fecha: fechaActual,
+                    fecha: fechaEnClave,
                 hora_entrada: entrada.hora_entrada,
                 hora_salida: entrada.hora_salida || null,
                 sincronizado: entrada.sincronizado || false,
@@ -769,22 +1344,29 @@ export default function RegistroAsistencia() {
             }
           }
         });
+          }
+        }
       }
-    }
+      
+      // Agregar entradas de este empleado a la lista total
+      todasLasEntradas.push(...entradasServidor, ...entradasLocal);
+    });
     
-    // Combinar entradas del servidor y localStorage
-    const todasLasEntradas = [
-      ...entradasServidor,
-      ...entradasLocal
-    ];
-    
-    // Ordenar por hora de entrada (más reciente primero)
+    // Ordenar por fecha y hora de entrada (más reciente primero)
     return todasLasEntradas.sort((a, b) => {
+      // Primero por fecha
+      const fechaA = a.fecha || '0000-00-00';
+      const fechaB = b.fecha || '0000-00-00';
+      if (fechaA !== fechaB) {
+        return fechaB.localeCompare(fechaA);
+      }
+      
+      // Luego por hora de entrada
       const horaA = a.hora_entrada || '00:00';
       const horaB = b.hora_entrada || '00:00';
       return horaB.localeCompare(horaA);
     });
-  }, [asistencias, empleadoActivo, fechaActual, localStorageVersion]);
+  }, [asistencias, empleadosActivos, fechaActual, localStorageVersion]);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
@@ -864,21 +1446,39 @@ export default function RegistroAsistencia() {
                     required
                   />
                   
-                  {/* Indicador de empleado activo con entradas pendientes */}
-                  {empleadoActivo && (
+                  {/* Indicador de empleados activos con entradas pendientes */}
+                  {empleadosActivos.length > 0 && (
                     <div className="mt-3 p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-green-400 text-lg">👤</span>
-                          <span className="text-green-300 font-medium">{empleadoActivo}</span>
-                          <span className="text-green-400 text-sm">tiene entradas pendientes</span>
+                          <span className="text-green-400 text-lg">👥</span>
+                          <span className="text-green-300 font-medium">
+                            {empleadosActivos.length} empleado{empleadosActivos.length !== 1 ? 's' : ''} activo{empleadosActivos.length !== 1 ? 's' : ''}
+                          </span>
                         </div>
                         <button
-                          onClick={() => actualizarEmpleadoActivo('')}
+                          onClick={limpiarTodosEmpleadosActivos}
                           className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 text-red-300 hover:text-red-200 rounded-md text-sm transition-all duration-200"
                         >
-                          Limpiar
+                          Limpiar Todos
                         </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {empleadosActivos.map((empleadoActivo, index) => (
+                          <div
+                            key={`${empleadoActivo}_${index}`}
+                            className="flex items-center gap-2 px-3 py-1 bg-green-600/30 border border-green-500/50 rounded-lg"
+                          >
+                            <span className="text-green-300 text-sm font-medium">{empleadoActivo}</span>
+                            <button
+                              onClick={() => removerEmpleadoActivo(empleadoActivo)}
+                              className="text-red-300 hover:text-red-200 text-xs transition-colors duration-200"
+                              title="Remover empleado"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -934,16 +1534,16 @@ export default function RegistroAsistencia() {
                 </div>
               </div>
 
-              {/* Entradas del Empleado Seleccionado */}
-              {empleadoActivo && (
+              {/* Entradas de Empleados Activos */}
+              {empleadosActivos.length > 0 && (
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
                   <h3 className="text-lg md:text-xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    👤 Entradas del Empleado Seleccionado: {empleadoActivo}
+                    👥 Entradas de Empleados Activos ({empleadosActivos.length})
                   </h3>
                   
                   {entradasRegistradasHoy.length === 0 ? (
                     <div className="text-center py-6 md:py-8">
-                      <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas para {empleadoActivo} hoy</div>
+                      <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas para los empleados activos hoy</div>
                     </div>
                   ) : (
                     <div className="space-y-3 md:space-y-4 max-h-80 overflow-y-auto">
@@ -968,6 +1568,10 @@ export default function RegistroAsistencia() {
                               </div>
                               
                               <div className="text-sm md:text-base text-gray-300 mb-1">
+                                📅 Fecha: <span className="font-semibold text-white">{entrada.fecha}</span>
+                              </div>
+                              
+                              <div className="text-sm md:text-base text-gray-300 mb-1">
                                 🕒 Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
                               </div>
                               
@@ -985,9 +1589,9 @@ export default function RegistroAsistencia() {
                             </div>
                             
                             <div className="flex-shrink-0">
-                              {!entrada.hora_salida && entrada.origen === 'local' && entrada.empleado === empleadoActivo ? (
+                              {!entrada.hora_salida && entrada.origen === 'local' ? (
                                 <button
-                                  onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada)}
+                                  onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada, entrada.fecha)}
                                   disabled={loading}
                                   className="px-3 md:px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -1029,7 +1633,7 @@ export default function RegistroAsistencia() {
                 🔍 Filtros y Controles
               </h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
                     📅 Filtrar por Fecha
@@ -1054,20 +1658,67 @@ export default function RegistroAsistencia() {
                     placeholder="Buscar por nombre del empleado"
                   />
                 </div>
-                <div className="flex items-end gap-2">
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                    📆 Filtrar por Mes
+                  </label>
+                  <select
+                    value={filtroMes}
+                    onChange={(e) => setFiltroMes(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                  >
+                    <option value="">Todos los meses</option>
+                    <option value="01">Enero</option>
+                    <option value="02">Febrero</option>
+                    <option value="03">Marzo</option>
+                    <option value="04">Abril</option>
+                    <option value="05">Mayo</option>
+                    <option value="06">Junio</option>
+                    <option value="07">Julio</option>
+                    <option value="08">Agosto</option>
+                    <option value="09">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                    📅 Filtrar por Año
+                  </label>
+                  <select
+                    value={filtroAno}
+                    onChange={(e) => setFiltroAno(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                  >
+                    <option value="">Todos los años</option>
+                    {anosDisponibles.map(ano => (
+                      <option key={ano} value={ano}>{ano}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Botones de acción */}
+              <div className="flex flex-wrap gap-2 justify-center">
                   <button
                     onClick={limpiarFiltros}
-                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-xs font-medium shadow-md hover:shadow-lg transform hover:scale-105"
                   >
                     🧹 Limpiar Filtros
                   </button>
                   <button
                     onClick={exportarCSV}
-                    className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base font-medium"
+                  className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 text-xs font-medium"
                   >
                     📊 Exportar CSV
                   </button>
-                </div>
+                <button
+                  onClick={recuperarEmpleadosCualquierFecha}
+                  className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors duration-200 text-xs font-medium"
+                >
+                  🔍 Recuperar Empleados
+                </button>
               </div>
 
 
@@ -1081,10 +1732,10 @@ export default function RegistroAsistencia() {
                 <h3 className="text-lg md:text-xl font-bold text-white text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   📋 Todos los Registros de Asistencia
                 </h3>
-                {(filtroFecha || filtroEmpleado) && (
+                {(filtroFecha || filtroEmpleado || filtroMes || filtroAno) && (
                   <div className="px-3 py-1 bg-blue-500/30 border border-blue-500/50 rounded-full">
                     <span className="text-blue-300 text-sm font-medium">
-                      🔍 {asistencias.length} resultado{asistencias.length !== 1 ? 's' : ''} encontrado{asistencias.length !== 1 ? 's' : ''}
+                      🔍 {asistenciasFiltradas.length} resultado{asistenciasFiltradas.length !== 1 ? 's' : ''} encontrado{asistenciasFiltradas.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 )}
@@ -1099,13 +1750,13 @@ export default function RegistroAsistencia() {
                   <div className="text-center py-6 md:py-8">
                     <div className="text-red-400 text-sm md:text-base">❌ {error}</div>
                   </div>
-                ) : asistencias.length === 0 ? (
+                ) : asistenciasFiltradas.length === 0 ? (
                   <div className="text-center py-6 md:py-8">
                     <div className="text-gray-300 text-sm md:text-base">📭 No hay registros de asistencia</div>
                   </div>
                 ) : (
                   <div className="space-y-2 md:space-y-3">
-                    {asistencias.map((asistencia) => (
+                    {asistenciasFiltradas.map((asistencia) => (
                       <div
                         key={asistencia.id}
                         className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4"
