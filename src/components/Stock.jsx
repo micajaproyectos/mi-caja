@@ -254,7 +254,7 @@ export default function Stock() {
           </div>
 
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            📊 Sistema de Stock
+            Sistema de Stock
           </h1>
           
           {/* Indicador de actualización automática */}
@@ -351,11 +351,11 @@ export default function Stock() {
                     <table className="w-full text-xs md:text-sm">
                       <thead>
                         <tr className="bg-white/10 backdrop-blur-sm">
-                          <th className="text-white font-semibold p-2 md:p-4 text-left">📦 Producto</th>
-                          <th className="text-white font-semibold p-2 md:p-4 text-left">📥 Total Ingresado</th>
-                          <th className="text-white font-semibold p-2 md:p-4 text-left">📤 Total Vendido</th>
-                          <th className="text-white font-semibold p-2 md:p-4 text-left">📊 Stock Restante</th>
-                          <th className="text-white font-semibold p-2 md:p-4 text-left">🏷️ Estado</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Total Ingresado</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Total Vendido</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Stock Restante</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Estado</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -404,7 +404,7 @@ export default function Stock() {
           {!loading && !error && stockData.length > 0 && (
             <div className="mt-6 md:mt-8">
               <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
-                📊 Resumen de Stock
+                Resumen de Stock
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
@@ -453,7 +453,7 @@ export default function Stock() {
           <div className="mt-6 md:mt-8">
             <div className="flex items-center justify-center gap-3 mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-semibold text-yellow-400 text-center">
-                🏆 Producto Más Vendido
+                Producto Más Vendido
               </h2>
             </div>
             

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -51,7 +51,7 @@ export default function Pedidos() {
   // Estados para filtros
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
-  const [filtroAnio, setFiltroAnio] = useState('2025'); // Año 2025 por defecto
+  const [filtroAnio, setFiltroAnio] = useState('');
   const [filtroTipoPago, setFiltroTipoPago] = useState('');
   
   // Estado para años disponibles (se calcula automáticamente)
@@ -410,8 +410,8 @@ export default function Pedidos() {
     let filtrados = [...pedidosRegistrados];
     const fechaActual = obtenerFechaHoyChile();
 
-    // Si solo está el año 2025 por defecto y no hay otros filtros, mostrar solo los pedidos del día actual
-    if (!filtroFecha && !filtroMes && filtroAnio === '2025' && !filtroTipoPago) {
+    // Si no hay filtros activos, mostrar solo los pedidos del día actual
+    if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
       filtrados = filtrados.filter(pedido => {
         const fechaPedido = pedido.fecha_cl || pedido.fecha;
         return fechaPedido === fechaActual;
@@ -498,7 +498,7 @@ export default function Pedidos() {
   const limpiarFiltros = () => {
     setFiltroFecha('');
     setFiltroMes('');
-    setFiltroAnio('2025'); // Volver al año 2025
+    setFiltroAnio('');
     setFiltroTipoPago('');
     // No llamar setPedidosFiltrados directamente
     // Los efectos se encargarán de aplicar los filtros correctamente
@@ -510,8 +510,8 @@ export default function Pedidos() {
     const fechaActual = obtenerFechaHoyChile();
 
     // Aplicar los mismos filtros que en aplicarFiltros()
-    // Si solo está el año 2025 por defecto y no hay otros filtros, mostrar solo los pedidos del día actual
-    if (!filtroFecha && !filtroMes && filtroAnio === '2025' && !filtroTipoPago) {
+    // Si no hay filtros activos, mostrar solo los pedidos del día actual
+    if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
       pedidosFiltrados = pedidosFiltrados.filter(pedido => {
         const fechaPedido = pedido.fecha_cl || pedido.fecha;
         return fechaPedido === fechaActual;
@@ -962,13 +962,6 @@ export default function Pedidos() {
   const opcionesUnidad = [
     { value: 'unidad', label: 'Unidad', icon: '📦' },
     { value: 'kg', label: 'Kilogramo', icon: '⚖️' },
-    { value: 'gr', label: 'Gramo', icon: '⚖️' },
-    { value: 'lt', label: 'Litro', icon: '🥤' },
-    { value: 'ml', label: 'Mililitro', icon: '🥤' },
-    { value: 'porcion', label: 'Porción', icon: '🍽️' },
-    { value: 'plato', label: 'Plato', icon: '🍽️' },
-    { value: 'bebida', label: 'Bebida', icon: '🥤' },
-    { value: 'postre', label: 'Postre', icon: '🍰' }
   ];
 
   return (
@@ -1005,20 +998,20 @@ export default function Pedidos() {
           </div>
 
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            🍴 Sistema de Pedidos
+            Sistema de Pedidos
           </h1>
 
                      {/* Formulario de Pedido */}
            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
-             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-               📝 Nuevo Pedido
+            <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+               Nuevo Pedido
              </h2>
 
              {/* Fecha y Búsqueda en la misma fila */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                {/* Fecha */}
                <div>
-                 <label className="block text-white font-medium mb-2 text-sm">📅 Fecha</label>
+                 <label className="block text-white font-medium mb-2 text-sm">Fecha</label>
                  <input
                    type="date"
                    name="fecha"
@@ -1030,7 +1023,7 @@ export default function Pedidos() {
 
                {/* Búsqueda de Producto */}
                <div>
-                 <label className="block text-white font-medium mb-2 text-sm">🔍 Buscar Producto</label>
+                 <label className="block text-white font-medium mb-2 text-sm">Buscar Producto</label>
                  <input
                    ref={searchInputRef}
                    type="text"
@@ -1045,7 +1038,7 @@ export default function Pedidos() {
              {/* Campos del producto */}
              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                <div>
-                 <label className="block text-white font-medium mb-2 text-sm">📦 Unidad</label>
+                 <label className="block text-white font-medium mb-2 text-sm">Unidad</label>
                  <select
                    name="unidad"
                    value={productoActual.unidad}
@@ -1062,7 +1055,7 @@ export default function Pedidos() {
                </div>
 
                <div>
-                 <label className="block text-white font-medium mb-2 text-sm">📊 Cantidad</label>
+                 <label className="block text-white font-medium mb-2 text-sm">Cantidad</label>
                  <input
                    type="number"
                    step="0.01"
@@ -1075,7 +1068,7 @@ export default function Pedidos() {
                </div>
 
                <div>
-                 <label className="block text-white font-medium mb-2 text-sm">💰 Precio</label>
+                 <label className="block text-white font-medium mb-2 text-sm">Precio</label>
                  <input
                    type="number"
                    step="0.01"
@@ -1138,8 +1131,8 @@ export default function Pedidos() {
 
                      {/* Sección de Gestión de Mesas y Productos */}
            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-            <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              🪑 Gestión de Mesas y Productos
+            <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Gestión de Mesas y Productos
             </h2>
             
                                                    {/* Gestión de Mesas */}
@@ -1391,17 +1384,17 @@ export default function Pedidos() {
            {/* Tabla de Pedidos Registrados */}
            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mt-6">
                            <div className="mb-6">
-                <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  📋 Pedidos Registrados
+               <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  Pedidos Registrados
                 </h2>
                 
                 {/* Filtros */}
                 <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                  <h3 className="text-white font-medium mb-3 text-center">🔍 Filtros</h3>
+                  <h3 className="text-green-400 font-medium mb-3 text-center">Filtros</h3>
                                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                      {/* Filtro por Fecha Específica */}
                      <div>
-                       <label className="block text-white text-xs mb-1">📅 Fecha</label>
+                      <label className="block text-white text-xs mb-1">Fecha</label>
                        <input
                          type="date"
                          value={filtroFecha}
@@ -1412,7 +1405,7 @@ export default function Pedidos() {
 
                     {/* Filtro por Mes */}
                     <div>
-                      <label className="block text-white text-xs mb-1">📆 Mes</label>
+                     <label className="block text-white text-xs mb-1">Mes</label>
                       <select
                         value={filtroMes}
                         onChange={(e) => setFiltroMes(e.target.value)}
@@ -1440,7 +1433,7 @@ export default function Pedidos() {
 
                                          {/* Filtro por Año */}
                      <div>
-                       <label className="block text-white text-xs mb-1">📅 Año</label>
+                      <label className="block text-white text-xs mb-1">Año</label>
                        <select
                          value={filtroAnio}
                          onChange={(e) => setFiltroAnio(e.target.value)}
@@ -1454,7 +1447,7 @@ export default function Pedidos() {
 
                     {/* Filtro por Tipo de Pago */}
                     <div>
-                      <label className="block text-white text-xs mb-1">💳 Tipo de Pago</label>
+                      <label className="block text-white text-xs mb-1">Tipo de Pago</label>
                       <select
                         value={filtroTipoPago}
                         onChange={(e) => setFiltroTipoPago(e.target.value)}
@@ -1496,28 +1489,28 @@ export default function Pedidos() {
               ) : (
                <div className="overflow-x-auto">
                  <table className="w-full text-sm text-left">
-                                                                                  <thead className="text-white bg-white/10 rounded-lg">
+                      <thead className="text-white bg-white/10 rounded-lg">
                         <tr>
-                          <th className="px-4 py-3 rounded-l-lg">📅 Fecha</th>
-                          <th className="px-4 py-3">🪑 Mesa</th>
-                          <th className="px-4 py-3">📦 Producto</th>
-                          <th className="px-4 py-3">📊 Cantidad</th>
-                          <th className="px-4 py-3">💰 Precio</th>
-                          <th className="px-4 py-3">💵 Total</th>
-                          <th className="px-4 py-3">💳 Total Final</th>
-                          <th className="px-4 py-3">💳 Tipo Pago</th>
-                          <th className="px-4 py-3">✅ Estado</th>
-                          <th className="px-4 py-3 rounded-r-lg">⚙️ Acciones</th>
+                          <th className="px-4 py-3 rounded-l-lg">Fecha</th>
+                          <th className="px-4 py-3">Mesa</th>
+                          <th className="px-4 py-3">Producto</th>
+                          <th className="px-4 py-3">Cantidad</th>
+                          <th className="px-4 py-3">Precio</th>
+                          <th className="px-4 py-3">Total</th>
+                          <th className="px-4 py-3">Total Final</th>
+                          <th className="px-4 py-3">Tipo Pago</th>
+                          <th className="px-4 py-3">Estado</th>
+                          <th className="px-4 py-3 rounded-r-lg">Acciones</th>
                         </tr>
                       </thead>
                                        <tbody className="text-white">
                       {pedidosFiltrados.map((pedido, index) => (
-                       <tr 
-                         key={index} 
-                         className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
-                           pedido.total_final ? 'bg-green-900/20' : ''
-                         }`}
-                       >
+                       <Fragment key={index}>
+                         <tr 
+                           className={`hover:bg-white/5 transition-colors ${
+                             index > 0 && pedidosFiltrados[index - 1] && pedidosFiltrados[index - 1].total_final ? 'border-t-2 border-white/20' : ''
+                           }`}
+                         >
                                                    <td className="px-4 py-3">
                             <div className="text-sm">
                               {pedido.fecha ? (() => {
@@ -1607,7 +1600,8 @@ export default function Pedidos() {
                                🗑️
                              </button>
                            </td>
-                        </tr>
+                         </tr>
+                       </Fragment>
                      ))}
                    </tbody>
                  </table>

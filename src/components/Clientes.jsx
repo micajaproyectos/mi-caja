@@ -1100,13 +1100,13 @@ export default function Clientes() {
           </div>
           
                                      <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-             📝 Pedidos de Empresas
+              Pedidos de Empresas
            </h1>
 
           {/* Formulario de Pedido */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-6 text-center">
-              📝 Nuevo Pedido
+              Nuevo Pedido
             </h2>
             
             <form onSubmit={guardarPedido} className="space-y-4 md:space-y-6">
@@ -1114,7 +1114,7 @@ export default function Clientes() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                    📅 Fecha *
+                    Fecha *
                   </label>
                   <input
                     type="date"
@@ -1128,7 +1128,7 @@ export default function Clientes() {
 
                                  <div>
                    <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                     🏢 Nombre de la Empresa *
+                      Nombre de la Empresa *
                    </label>
                    
                    {/* Toggle entre dropdown y input nuevo */}
@@ -1201,8 +1201,8 @@ export default function Clientes() {
                                  className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-600/20 transition-all duration-200"
                                  title="Eliminar empresa"
                                >
-                                 🗑️
-                               </button>
+                                 Eliminar
+                                </button>
                              </div>
                            ))}
                          </div>
@@ -1214,14 +1214,14 @@ export default function Clientes() {
 
               {/* Sección de Agregar Productos */}
               <div className="border-t border-white/20 pt-6">
-                <h3 className="text-lg font-bold text-white mb-4 text-center">📦 Agregar Productos al Pedido</h3>
+                <h3 className="text-lg font-bold text-white mb-4 text-center">Agregar Productos al Pedido</h3>
                 
                 {/* Formulario de producto */}
                 <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10">
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end">
                     <div>
                       <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                        📦 Producto *
+                        Producto *
                       </label>
                       <input
                         type="text"
@@ -1235,7 +1235,7 @@ export default function Clientes() {
 
                     <div>
                       <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                        🔢 Cantidad *
+                        Cantidad *
                       </label>
                       <input
                         type="number"
@@ -1251,7 +1251,7 @@ export default function Clientes() {
 
                     <div>
                       <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                        💰 Precio Unitario *
+                        Precio Unitario *
                       </label>
                       <input
                         type="number"
@@ -1267,7 +1267,7 @@ export default function Clientes() {
 
                     <div>
                       <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                        🧮 Total
+                        Total
                       </label>
                       <input
                         type="text"
@@ -1343,11 +1343,11 @@ export default function Clientes() {
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-                📊 Registros de Pedidos
+                Registros de Pedidos
               </h2>
               {!(filtros.producto || filtros.fecha_especifica || filtros.mes || filtros.ano) && (
                 <p className="text-blue-400 text-sm">
-                  📅 Mostrando pedidos del mes actual - Usa los filtros para buscar específicos
+                  Mostrando pedidos del mes actual - Usa los filtros para buscar específicos
                 </p>
               )}
             </div>
@@ -1360,7 +1360,7 @@ export default function Clientes() {
                 {/* Filtro por empresa */}
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
-                    🏢 Buscar Empresa
+                    Buscar Empresa
                   </label>
                   <input
                     type="text"
@@ -1375,7 +1375,7 @@ export default function Clientes() {
                 {/* Filtro por fecha específica */}
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
-                    📅 Fecha Específica
+                   Fecha Específica
                   </label>
                   <input
                     type="date"
@@ -1389,7 +1389,7 @@ export default function Clientes() {
                 {/* Filtro por mes */}
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
-                    📆 Mes
+                    Mes
                   </label>
                   <select
                     name="mes"
@@ -1416,7 +1416,7 @@ export default function Clientes() {
                 {/* Filtro por año */}
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
-                    📅 Año
+                    Año
                   </label>
                   <select
                     name="ano"
@@ -1453,7 +1453,7 @@ export default function Clientes() {
               </div>
               ) : registrosPedidos.length === 0 ? (
               <div className="text-center py-8">
-                  <div className="text-gray-400 text-4xl mb-4">📋</div>
+                  <div className="text-gray-400 text-4xl mb-4"></div>
                                      {filtros.producto ? (
                      <>
                        <p className="text-gray-300 text-lg font-bold mb-2">No hay empresas que coincidan con la búsqueda</p>
@@ -1470,11 +1470,11 @@ export default function Clientes() {
                 <>
                   <div className="p-4 border-b border-white/10">
                     <p className="text-white font-medium">
-                                           {(filtros.producto || filtros.fecha_especifica || filtros.mes || filtros.ano) ? (
-                       `🔍 Registros filtrados: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
-                     ) : (
-                       `📅 Registros del mes: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
-                     )}
+                      {(filtros.producto || filtros.fecha_especifica || filtros.mes || filtros.ano) ? (
+                        `Registros filtrados: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                      ) : (
+                        `Registros del mes: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                      )}
                     </p>
               </div>
                   
@@ -1536,7 +1536,7 @@ export default function Clientes() {
                                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
                                 title="Eliminar registro"
                               >
-                                {loadingEliminar ? '⏳ Eliminando...' : '🗑️ Eliminar'}
+                                {loadingEliminar ? 'Eliminando...' : 'Eliminar'}
                               </button>
                             </td>
                         </tr>
@@ -1553,11 +1553,11 @@ export default function Clientes() {
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <div className="text-center mb-6">
                          <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-             💰 Resumen de Totales por Empresa
+             Resumen de Totales por Empresa
            </h2>
               {!(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) && (
                 <p className="text-blue-400 text-sm">
-                  📅 Mostrando acumulados del mes actual - Usa filtros para ver otros meses
+                  Mostrando acumulados del mes actual - Usa filtros para ver otros meses
                 </p>
               )}
             </div>
@@ -1569,7 +1569,7 @@ export default function Clientes() {
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
                                  <div>
                    <label className="block text-white font-medium mb-2 text-sm">
-                     🏢 Nombre Empresa
+                     Nombre Empresa
                    </label>
                    <input
                      type="text"
@@ -1583,7 +1583,7 @@ export default function Clientes() {
 
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
-                    📅 Mes
+                    Mes
                   </label>
                   <select
                     name="mes"
@@ -1609,7 +1609,7 @@ export default function Clientes() {
 
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm">
-                    📅 Año
+                    Año
                   </label>
                   <select
                     name="ano"
@@ -1651,7 +1651,7 @@ export default function Clientes() {
               </div>
             ) : resumenClientes.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-gray-400 text-4xl mb-4">💰</div>
+                <div className="text-gray-400 text-4xl mb-4"></div>
                                    {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
                      <>
                        <p className="text-gray-300 text-lg font-bold mb-2">No hay empresas que coincidan con los filtros</p>
@@ -1668,11 +1668,11 @@ export default function Clientes() {
               <div className="bg-white/5 rounded-xl border border-white/10">
                 <div className="p-4 border-b border-white/10">
                   <p className="text-white font-medium">
-                                         {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
-                       `🔍 Empresas filtradas: ${resumenClientes.length} | 💵 Total filtrado: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
-                     ) : (
-                       `📅 Empresas del mes: ${resumenClientes.length} | 💵 Total del mes: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
-                     )}
+                    {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
+                      `Empresas filtradas: ${resumenClientes.length} | Total filtrado: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
+                    ) : (
+                      `Empresas del mes: ${resumenClientes.length} | Total del mes: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
+                    )}
                   </p>
                 </div>
                 
@@ -1729,7 +1729,7 @@ export default function Clientes() {
                                       : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
                                   }`}
                                 >
-                                  ✅ Pagado
+                                  Pagado
                                 </button>
                                 <button
                                   onClick={() => cambiarEstadoPago(empresa.nombre, 'pendiente')}
@@ -1739,7 +1739,7 @@ export default function Clientes() {
                                       : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
                                   }`}
                                 >
-                                  ⏳ Pendiente
+                                  Pendiente
                                 </button>
                               </div>
                             </td>
@@ -1796,9 +1796,9 @@ export default function Clientes() {
                   <div className="mt-4 pt-3 border-t border-white/10">
                     <p className="text-center text-gray-400 text-sm">
                       {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
-                        '📊 Estadísticas basadas en los filtros aplicados'
+                        'Estadísticas basadas en los filtros aplicados'
                       ) : (
-                        `📅 Estadísticas del mes actual: ${new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}`
+                        `Estadísticas del mes actual: ${new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}`
                       )}
                     </p>
                   </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -1161,7 +1161,7 @@ export default function RegistroVenta() {
             {/* Sección de productos en la venta - Compacta y horizontal */}
             <div className="mb-4 md:mb-6">
               <div className="flex items-center mb-2">
-                <span className="text-blue-400 text-lg md:text-xl mr-2">🛒</span>
+                <span className="text-blue-400 text-lg md:text-xl mr-2"></span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Productos en la Venta</h3>
               </div>
               
@@ -1325,7 +1325,7 @@ export default function RegistroVenta() {
             {/* Sección de tipo de pago - Compacta */}
             <div className="mb-3 md:mb-4">
               <div className="flex items-center mb-2">
-                <span className="text-blue-400 text-lg md:text-xl mr-2">💳</span>
+                <span className="text-blue-400 text-lg md:text-xl mr-2"></span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Tipo de Pago</h3>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
@@ -1411,13 +1411,13 @@ export default function RegistroVenta() {
 
           {/* Sección de Ventas Registradas */}
           <div className="mt-6 md:mt-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-white text-center drop-shadow-lg mb-3 md:mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <h2 className="text-2xl md:text-3xl font-bold text-green-400 text-center drop-shadow-lg mb-3 md:mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Ventas Registradas
             </h2>
             
             {/* Filtros de fecha */}
             <div className="mb-3 md:mb-4 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
-              <h3 className="text-lg md:text-xl font-semibold text-white mb-3 md:mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-3 md:mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Filtros de Fecha
               </h3>
               
@@ -1576,7 +1576,9 @@ export default function RegistroVenta() {
                           {(() => {
                             const ventasAMostrar = obtenerVentasAMostrar();
                             return ventasAMostrar.map((venta, index) => (
-                          <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                          <tr key={index} className={`hover:bg-white/5 transition-colors ${
+                            venta.total_final ? 'border-b-2 border-white/20' : ''
+                          }`}>
                             <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
                               {formatearFecha(venta.fecha_cl || venta.fecha)}
                             </td>
@@ -1607,7 +1609,7 @@ export default function RegistroVenta() {
                               >
                                 🗑️
                               </button>
-                                                         </td>
+                            </td>
                            </tr>
                          ));
                          })()}

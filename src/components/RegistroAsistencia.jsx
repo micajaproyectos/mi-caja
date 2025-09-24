@@ -1403,7 +1403,7 @@ export default function RegistroAsistencia() {
 
           {/* Título principal */}
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            📋 Registro de Asistencia
+            Registro de Asistencia
           </h1>
 
           {/* 1. SECCIÓN SUPERIOR: Reloj y fecha actual (formato 24hrs) */}
@@ -1427,7 +1427,7 @@ export default function RegistroAsistencia() {
           {/* 2. SECCIÓN MEDIA: Formulario de registro de asistencia */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              📝 Registrar Asistencia
+              Registrar Asistencia
             </h2>
             
             <div className="space-y-6 md:space-y-8">
@@ -1435,7 +1435,7 @@ export default function RegistroAsistencia() {
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
                 <div className="mb-4">
                   <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    👤 Nombre del Empleado
+                    Nombre del Empleado
                   </label>
                   <input
                     type="text"
@@ -1451,7 +1451,6 @@ export default function RegistroAsistencia() {
                     <div className="mt-3 p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-green-400 text-lg">👥</span>
                           <span className="text-green-300 font-medium">
                             {empleadosActivos.length} empleado{empleadosActivos.length !== 1 ? 's' : ''} activo{empleadosActivos.length !== 1 ? 's' : ''}
                           </span>
@@ -1488,7 +1487,7 @@ export default function RegistroAsistencia() {
               {/* Sección de botones de acción */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
                 <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  ⚡ Acciones Disponibles
+                  Acciones Disponibles
                 </h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
@@ -1500,8 +1499,7 @@ export default function RegistroAsistencia() {
                     style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-xl md:text-2xl">📥</span>
-                      <span>{loading ? '⏳ Registrando...' : 'Registrar Entrada'}</span>
+                      <span>{loading ? 'Registrando...' : 'Registrar Entrada'}</span>
                     </div>
                     <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                   </button>
@@ -1514,8 +1512,7 @@ export default function RegistroAsistencia() {
                     style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-xl md:text-2xl">📤</span>
-                      <span>{loading ? '⏳ Registrando...' : 'Registrar Salida'}</span>
+                      <span>{loading ? 'Registrando...' : 'Registrar Salida'}</span>
                     </div>
                     <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                   </button>
@@ -1525,7 +1522,7 @@ export default function RegistroAsistencia() {
                 <div className="mt-4 pt-4 border-t border-white/10">
                   <div className="text-center">
                     <p className="text-gray-300 text-sm md:text-base">
-                      💡 <strong>Proceso:</strong> Registra entrada → Trabaja → Registra salida
+                      <strong>Proceso:</strong> Registra entrada → Trabaja → Registra salida
                     </p>
                     <p className="text-gray-400 text-xs md:text-sm mt-1">
                       Los datos se sincronizan automáticamente con el servidor
@@ -1538,12 +1535,12 @@ export default function RegistroAsistencia() {
               {empleadosActivos.length > 0 && (
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
                   <h3 className="text-lg md:text-xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    👥 Entradas de Empleados Activos ({empleadosActivos.length})
+                    Entradas de Empleados Activos ({empleadosActivos.length})
                   </h3>
                   
                   {entradasRegistradasHoy.length === 0 ? (
-                    <div className="text-center py-6 md:py-8">
-                      <div className="text-gray-300 text-sm md:text-base">📭 No hay entradas registradas para los empleados activos hoy</div>
+                      <div className="text-center py-6 md:py-8">
+                      <div className="text-gray-300 text-sm md:text-base">No hay entradas registradas para los empleados activos hoy</div>
                     </div>
                   ) : (
                     <div className="space-y-3 md:space-y-4 max-h-80 overflow-y-auto">
@@ -1556,34 +1553,34 @@ export default function RegistroAsistencia() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="text-lg md:text-xl font-bold text-white truncate">
-                                  👤 {entrada.empleado}
+                                  {entrada.empleado}
                                 </div>
                                 <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   entrada.origen === 'servidor' 
                                     ? 'bg-green-500/30 text-green-300 border border-green-500/50'
                                     : 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
                                 }`}>
-                                  {entrada.origen === 'servidor' ? '✅ Sincronizado' : '⏳ Pendiente'}
+                                  {entrada.origen === 'servidor' ? 'Sincronizado' : 'Pendiente'}
                                 </div>
                               </div>
                               
                               <div className="text-sm md:text-base text-gray-300 mb-1">
-                                📅 Fecha: <span className="font-semibold text-white">{entrada.fecha}</span>
+                                Fecha: <span className="font-semibold text-white">{entrada.fecha}</span>
                               </div>
                               
                               <div className="text-sm md:text-base text-gray-300 mb-1">
-                                🕒 Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
+                                Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
                               </div>
                               
                               {entrada.hora_salida && (
                                 <div className="text-sm md:text-base text-gray-300 mb-1">
-                                  🚪 Hora de salida: <span className="font-semibold text-white">{entrada.hora_salida}</span>
+                                  Hora de salida: <span className="font-semibold text-white">{entrada.hora_salida}</span>
                                 </div>
                               )}
                               
                               {entrada.total_horas && (
                                 <div className="text-sm md:text-base text-green-400 font-medium">
-                                  ⏰ Total: {convertirHorasDecimalesAFormato(entrada.total_horas)} horas
+                                  Total: {convertirHorasDecimalesAFormato(entrada.total_horas)} horas
                                 </div>
                               )}
                             </div>
@@ -1595,11 +1592,11 @@ export default function RegistroAsistencia() {
                                   disabled={loading}
                                   className="px-3 md:px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {loading ? '⏳ Registrando...' : '📤 Registrar Salida'}
+                                  {loading ? 'Registrando...' : 'Registrar Salida'}
                                 </button>
                               ) : entrada.hora_salida ? (
                                 <div className="px-3 py-2 bg-green-500/30 border border-green-500/50 rounded-lg">
-                                  <span className="text-green-300 text-sm font-medium">✅ Completado</span>
+                                  <span className="text-green-300 text-sm font-medium">Completado</span>
                                 </div>
                               ) : (
                                 <div className="px-3 py-2 bg-gray-500/30 border border-gray-500/50 rounded-lg">
@@ -1624,19 +1621,19 @@ export default function RegistroAsistencia() {
           {/* 3. LISTA DE REGISTROS GENERADOS DE ASISTENCIA */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              📋 Registros de Asistencia Generados
+              Registros de Asistencia Generados
             </h2>
 
             {/* Sección de filtros */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
               <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                🔍 Filtros y Controles
+                Filtros y Controles
               </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                    📅 Filtrar por Fecha
+                    Filtrar por Fecha
                   </label>
                   <input
                     type="date"
@@ -1648,7 +1645,7 @@ export default function RegistroAsistencia() {
                 </div>
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                    👤 Filtrar por Empleado
+                    Filtrar por Empleado
                   </label>
                   <input
                     type="text"
@@ -1660,7 +1657,7 @@ export default function RegistroAsistencia() {
                 </div>
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                    📆 Filtrar por Mes
+                    Filtrar por Mes
                   </label>
                   <select
                     value={filtroMes}
@@ -1684,7 +1681,7 @@ export default function RegistroAsistencia() {
                 </div>
                 <div>
                   <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                    📅 Filtrar por Año
+                    Filtrar por Año
                   </label>
                   <select
                     value={filtroAno}
@@ -1730,12 +1727,12 @@ export default function RegistroAsistencia() {
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
                 <h3 className="text-lg md:text-xl font-bold text-white text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  📋 Todos los Registros de Asistencia
+                  Todos los Registros de Asistencia
                 </h3>
                 {(filtroFecha || filtroEmpleado || filtroMes || filtroAno) && (
                   <div className="px-3 py-1 bg-blue-500/30 border border-blue-500/50 rounded-full">
                     <span className="text-blue-300 text-sm font-medium">
-                      🔍 {asistenciasFiltradas.length} resultado{asistenciasFiltradas.length !== 1 ? 's' : ''} encontrado{asistenciasFiltradas.length !== 1 ? 's' : ''}
+                      {asistenciasFiltradas.length} resultado{asistenciasFiltradas.length !== 1 ? 's' : ''} encontrado{asistenciasFiltradas.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 )}
@@ -1752,7 +1749,7 @@ export default function RegistroAsistencia() {
                   </div>
                 ) : asistenciasFiltradas.length === 0 ? (
                   <div className="text-center py-6 md:py-8">
-                    <div className="text-gray-300 text-sm md:text-base">📭 No hay registros de asistencia</div>
+                    <div className="text-gray-300 text-sm md:text-base">No hay registros de asistencia</div>
                   </div>
                 ) : (
                   <div className="space-y-2 md:space-y-3">
@@ -1764,18 +1761,18 @@ export default function RegistroAsistencia() {
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-white text-sm md:text-base truncate">
-                              👤 {asistencia.empleado}
+                              {asistencia.empleado}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
-                              📅 {formatearFecha(asistencia.fecha_cl || asistencia.fecha)}
+                              {formatearFecha(asistencia.fecha_cl || asistencia.fecha)}
                             </div>
                             <div className="text-xs md:text-sm text-gray-400">
-                              🕒 Entrada: {asistencia.hora_entrada || 'No registrada'} | 
-                              🚪 Salida: {asistencia.hora_salida || 'No registrada'}
+                              Entrada: {asistencia.hora_entrada || 'No registrada'} | 
+                              Salida: {asistencia.hora_salida || 'No registrada'}
                             </div>
                             {asistencia.total_horas && (
                               <div className="text-xs md:text-sm text-green-400 font-medium">
-                                ⏰ Total: {convertirHorasDecimalesAFormato(asistencia.total_horas)} horas
+                                Total: {convertirHorasDecimalesAFormato(asistencia.total_horas)} horas
                               </div>
                             )}
                           </div>
@@ -1787,9 +1784,9 @@ export default function RegistroAsistencia() {
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
-                              {asistencia.hora_entrada && asistencia.hora_salida ? '✅ Completo' : 
-                               asistencia.hora_entrada ? '📥 Solo Entrada' : 
-                               '❌ Sin Registro'}
+                              {asistencia.hora_entrada && asistencia.hora_salida ? 'Completo' : 
+                               asistencia.hora_entrada ? 'Solo Entrada' : 
+                               'Sin Registro'}
                             </div>
                             <button
                               onClick={() => eliminarAsistencia(asistencia.id)}
@@ -1812,12 +1809,12 @@ export default function RegistroAsistencia() {
           {/* 4. SECCIÓN FINAL: Total de horas trabajadas por empleado */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              ⏰ Total de Horas Trabajadas por Empleado
+              Total de Horas Trabajadas por Empleado
             </h2>
             
             {horasPorEmpleado.length === 0 ? (
               <div className="text-center py-6 md:py-8">
-                <div className="text-gray-300 text-sm md:text-base">📭 No hay registros de horas trabajadas</div>
+                <div className="text-gray-300 text-sm md:text-base">No hay registros de horas trabajadas</div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -1828,7 +1825,7 @@ export default function RegistroAsistencia() {
                   >
                     <div className="text-center">
                       <div className="text-lg md:text-xl font-bold text-white mb-1 truncate" title={empleado.nombre}>
-                        👤 {empleado.nombre}
+                        {empleado.nombre}
                       </div>
                       <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
                         {convertirHorasDecimalesAFormato(empleado.total_horas)}
@@ -1850,7 +1847,7 @@ export default function RegistroAsistencia() {
               <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
                 <div className="text-center">
                   <div className="text-2xl md:text-3xl font-bold text-white mb-2">
-                    📊 Total General: {convertirHorasDecimalesAFormato(
+                    Total General: {convertirHorasDecimalesAFormato(
                       horasPorEmpleado.reduce((total, emp) => total + emp.total_horas, 0)
                     )}
                   </div>
@@ -1858,7 +1855,7 @@ export default function RegistroAsistencia() {
                     {horasPorEmpleado.length} empleado{horasPorEmpleado.length !== 1 ? 's' : ''} registrado{horasPorEmpleado.length !== 1 ? 's' : ''}
                   </div>
                   <div className="text-gray-400 text-xs md:text-sm mt-2">
-                    💼 {horasPorEmpleado.reduce((total, emp) => total + emp.registros, 0)} registros totales
+                    {horasPorEmpleado.reduce((total, emp) => total + emp.registros, 0)} registros totales
                   </div>
                 </div>
               </div>

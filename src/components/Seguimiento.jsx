@@ -715,7 +715,7 @@ export default function Seguimiento() {
           </div>
 
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            📊 Sistema de Seguimiento
+            Sistema de Seguimiento
           </h1>
 
           {/* Filtros de mes y año */}
@@ -904,7 +904,7 @@ export default function Seguimiento() {
             <div className="text-center mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-xl md:text-2xl font-bold text-white">
-                  📈 Ventas Acumuladas
+                  Ventas Acumuladas
                 </h3>
                 {/* Filtro de año para el gráfico */}
                 <div className="flex items-center gap-2">
@@ -1069,7 +1069,7 @@ export default function Seguimiento() {
               </h2>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-lg md:text-xl font-medium text-green-200">
-                  💳 Distribución por Tipo de Pago
+                  Distribución por Tipo de Pago
                 </h3>
                 {/* Filtros para el gráfico circular */}
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -1143,7 +1143,7 @@ export default function Seguimiento() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, porcentaje }) => `${name}: ${porcentaje.toFixed(1)}%`}
+                        label={false}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
@@ -1224,7 +1224,7 @@ export default function Seguimiento() {
                 </h2>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                   <h3 className="text-lg md:text-xl font-medium text-green-200">
-                    📋 Distribución por Tipo de Pago
+                    Distribución por Tipo de Pago
                   </h3>
                   {/* Filtros para el gráfico circular de pedidos */}
                   <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -1298,7 +1298,7 @@ export default function Seguimiento() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, porcentaje }) => `${name}: ${porcentaje.toFixed(1)}%`}
+                          label={false}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
@@ -1377,7 +1377,7 @@ export default function Seguimiento() {
             <div className="text-center mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-xl md:text-2xl font-bold text-white">
-                  📋 Pedidos Acumulados
+                  Pedidos Acumulados
                 </h3>
                 {/* Filtro de año para el gráfico */}
                 <div className="flex items-center gap-2">

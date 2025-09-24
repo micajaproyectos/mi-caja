@@ -360,13 +360,13 @@ const RegistroInventario = () => {
           </div>
 
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            📦 Gestión de Inventario
+            Gestión de Inventario
           </h1>
 
           {/* Formulario de Registro */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
-              ✨ Agregar Producto al Inventario
+              Agregar Producto al Inventario
             </h2>
             
             <form onSubmit={registrarInventario} className="space-y-4 md:space-y-6">
@@ -374,7 +374,7 @@ const RegistroInventario = () => {
                 {/* Fecha de Ingreso */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    📅 Fecha de Ingreso
+                    Fecha de Ingreso
                   </label>
                   <input
                     type="date"
@@ -389,7 +389,7 @@ const RegistroInventario = () => {
                 {/* Producto */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    📦 Producto
+                    Producto
                   </label>
                   <input
                     type="text"
@@ -405,7 +405,7 @@ const RegistroInventario = () => {
                 {/* Cantidad */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    ⚖️ Cantidad
+                    Cantidad
                   </label>
                   <input
                     type="number"
@@ -423,7 +423,7 @@ const RegistroInventario = () => {
                 {/* Unidad */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    🏷️ Unidad
+                    Unidad
                   </label>
                   <select
                     name="unidad"
@@ -445,7 +445,7 @@ const RegistroInventario = () => {
                 {/* Costo Total */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    💰 Costo Total
+                    Costo Total
                   </label>
                   <input
                     type="number"
@@ -463,7 +463,7 @@ const RegistroInventario = () => {
                 {/* Porcentaje de Ganancia - Para cálculos (no se guarda en BD) */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
-                    📈 Porcentaje de Ganancia
+                    Porcentaje de Ganancia
                   </label>
                   <input
                     type="number"
@@ -482,12 +482,12 @@ const RegistroInventario = () => {
               {/* Cálculos Automáticos */}
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 mt-4 md:mt-6 border border-white/10">
                 <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-yellow-400 text-center">
-                  🧮 Cálculos Automáticos
+                  Cálculos Automáticos
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      💵 Precio Unitario (con IVA 19%)
+                      Precio Unitario (con IVA 19%)
                     </label>
                     <p className="text-xl md:text-2xl font-bold text-green-400">
                       ${preciosCalculados.precio_unitario}
@@ -495,7 +495,7 @@ const RegistroInventario = () => {
                   </div>
                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      🎯 Precio de Venta (redondeado a $10)
+                      Precio de Venta (redondeado a $10)
                     </label>
                     <p className="text-xl md:text-2xl font-bold text-blue-400">
                       ${preciosCalculados.precio_venta}
@@ -517,8 +517,7 @@ const RegistroInventario = () => {
                       <span>Registrando...</span>
                     </>
                   ) : (
-                    <>
-                      <span className="text-lg md:text-xl">📦</span>
+                    <> 
                       <span>Registrar Producto</span>
                     </>
                   )}
@@ -530,7 +529,7 @@ const RegistroInventario = () => {
           {/* Tabla de Inventario */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
-              📋 Inventario Registrado
+              Inventario Registrado
             </h2>
             
             {/* Barra de búsqueda */}
@@ -540,7 +539,7 @@ const RegistroInventario = () => {
                   {/* Filtro por nombre */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-400 text-lg">🔍</span>
+                      <span className="text-gray-400 text-lg"></span>
                     </div>
                     <input
                       type="text"
@@ -562,7 +561,7 @@ const RegistroInventario = () => {
                   {/* Filtro por fecha específica */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-400 text-lg">📅</span>
+                      <span className="text-gray-400 text-lg"></span>
                     </div>
                     <input
                       type="date"
@@ -584,7 +583,7 @@ const RegistroInventario = () => {
                   {/* Filtro por mes */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-400 text-lg">📆</span>
+                      <span className="text-gray-400 text-lg"></span>
                     </div>
                     <input
                       type="month"
@@ -609,7 +608,7 @@ const RegistroInventario = () => {
                     <span className="text-sm text-gray-300">Filtros activos:</span>
                     {busquedaProducto && (
                       <span className="inline-flex items-center gap-1 bg-green-500/20 text-green-300 px-2 py-1 rounded-full text-xs">
-                        <span>📝 "{busquedaProducto}"</span>
+                        <span>"{busquedaProducto}"</span>
                         <button
                           onClick={() => setBusquedaProducto('')}
                           className="text-green-400 hover:text-white"
@@ -620,7 +619,7 @@ const RegistroInventario = () => {
                     )}
                                          {filtroFecha && (
                        <span className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full text-xs">
-                         <span>📅 {(() => {
+                         <span>{(() => {
                            // Función para mostrar fecha sin desfase de zona horaria
                            const [year, month, day] = filtroFecha.split('-');
                            return `${day}/${month}/${year}`;
@@ -635,7 +634,7 @@ const RegistroInventario = () => {
                      )}
                                          {filtroMes && (
                        <span className="inline-flex items-center gap-1 bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full text-xs">
-                         <span>📆 {(() => {
+                         <span>{(() => {
                            // Función para mostrar mes sin desfase de zona horaria
                            const [year, month] = filtroMes.split('-');
                            const monthNames = [
@@ -688,7 +687,7 @@ const RegistroInventario = () => {
             
             {inventarioRegistrado.length === 0 ? (
               <div className="text-center py-8 md:py-12">
-                <div className="text-4xl md:text-6xl mb-3 md:mb-4">📦</div>
+                <div className="text-4xl md:text-6xl mb-3 md:mb-4"></div>
                 <p className="text-gray-300 text-base md:text-lg">
                   No hay productos registrados en el inventario
                 </p>
@@ -701,14 +700,14 @@ const RegistroInventario = () => {
                 <table className="w-full text-xs md:text-sm">
                   <thead>
                     <tr className="bg-white/10 backdrop-blur-sm">
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">📅 Fecha de Ingreso</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">📦 Producto</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">⚖️ Cantidad</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">🏷️ Unidad</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">💰 Costo Total</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">💵 Precio Unitario</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">🎯 Precio Venta</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">⚡ Acciones</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha de Ingreso</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Cantidad</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Unidad</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Costo Total</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Precio Unitario</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Precio Venta</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -740,7 +739,7 @@ const RegistroInventario = () => {
                             onClick={() => eliminarInventario(item.id)}
                             className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                           >
-                            🗑️ Eliminar
+                            Eliminar
                           </button>
                         </td>
                       </tr>
@@ -755,7 +754,7 @@ const RegistroInventario = () => {
                       onClick={() => setMostrarTodos(true)}
                       className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center mx-auto text-sm"
                     >
-                      <span className="mr-2">👁️</span>
+                      <span className="mr-2"></span>
                       Ver todos los productos ({productosFiltrados.length})
                     </button>
                   </div>
@@ -768,7 +767,7 @@ const RegistroInventario = () => {
                       onClick={() => setMostrarTodos(false)}
                       className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center mx-auto text-sm"
                     >
-                      <span className="mr-2">👁️</span>
+                      <span className="mr-2"></span>
                       Ver solo los primeros 30
                     </button>
                   </div>

@@ -324,7 +324,8 @@ const FormularioGastos = () => {
     // Filtro por mes (siempre aplicado, por defecto mes actual)
     const coincideMes = (() => {
       if (!fechaFiltro) return false;
-      const [year, month] = fechaFiltro.split('-');
+      if (!filtroMes) return true; // Mostrar todos los meses del año seleccionado
+      const [, month] = fechaFiltro.split('-');
       return parseInt(month) === parseInt(filtroMes);
     })();
     
@@ -437,13 +438,13 @@ const FormularioGastos = () => {
           </div>
 
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            💰 Control de Gastos
+            Control de Gastos
           </h1>
 
           {/* Formulario de registro */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-semibold text-green-400 mb-4 md:mb-6 text-center">
-              📝 Registrar Nuevo Gasto
+              Registrar Nuevo Gasto
             </h2>
 
             {error && (
@@ -457,7 +458,7 @@ const FormularioGastos = () => {
                 {/* Fecha */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    📅 Fecha
+                    Fecha
                   </label>
                   <input
                     type="date"
@@ -472,7 +473,7 @@ const FormularioGastos = () => {
                 {/* Tipo de Gasto */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    🏷️ Tipo de Gasto
+                    Tipo de Gasto
                   </label>
                   <select
                     name="tipo_gasto"
@@ -493,7 +494,7 @@ const FormularioGastos = () => {
                 {/* Forma de Pago */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    💳 Forma de Pago
+                    Forma de Pago
                   </label>
                   <select
                     name="forma_pago"
@@ -515,7 +516,7 @@ const FormularioGastos = () => {
               {/* Detalle */}
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
-                  📝 Detalle
+                  Detalle
                 </label>
                 <input
                   type="text"
@@ -531,7 +532,7 @@ const FormularioGastos = () => {
               {/* Monto */}
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
-                  💵 Monto
+                  Monto
                 </label>
                 <input
                   type="number"
@@ -564,14 +565,14 @@ const FormularioGastos = () => {
           {gastosRegistrados.length > 0 && (
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
               <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 text-center">
-                🔍 Filtros de Búsqueda
+                Filtros de Búsqueda
               </h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4 lg:gap-6 mb-4">
                 {/* Búsqueda por detalle */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    🔍 Buscar por detalle
+                    Buscar por detalle
                   </label>
                   <input
                     type="text"
@@ -585,7 +586,7 @@ const FormularioGastos = () => {
                 {/* Filtro por fecha */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    📅 Filtrar por fecha
+                    Filtrar por fecha
                   </label>
                   <input
                     type="date"
@@ -598,11 +599,11 @@ const FormularioGastos = () => {
                 {/* Filtro por mes */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    📆 Filtrar por mes
+                    Filtrar por mes
                   </label>
                   <select
                     value={filtroMes}
-                    onChange={(e) => setFiltroMes(e.target.value)}
+                    onChange={(e) => setFiltroMes(e.target.value ? Number(e.target.value) : '')}
                     className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los meses</option>
@@ -617,7 +618,7 @@ const FormularioGastos = () => {
                 {/* Filtro por año */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    📅 Filtrar por año
+                    Filtrar por año
                   </label>
                   <select
                     value={filtroAnio}
@@ -636,7 +637,7 @@ const FormularioGastos = () => {
                 {/* Filtro por tipo de gasto */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    🏷️ Tipo de gasto
+                    Tipo de gasto
                   </label>
                   <select
                     value={filtroTipoGasto}
@@ -655,7 +656,7 @@ const FormularioGastos = () => {
                 {/* Filtro por forma de pago */}
                 <div className="min-w-0">
                   <label className="block text-white text-sm font-medium mb-2">
-                    💳 Forma de pago
+                    Forma de pago
                   </label>
                   <select
                     value={filtroFormaPago}
@@ -733,7 +734,7 @@ const FormularioGastos = () => {
           {/* Tabla de gastos registrados */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 md:mb-6 text-center">
-              📊 Gastos Registrados
+              Gastos Registrados
             </h3>
             
 

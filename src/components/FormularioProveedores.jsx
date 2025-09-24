@@ -496,7 +496,7 @@ const FormularioProveedores = () => {
 
           {/* Título principal */}
           <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            🏢 Registro de Proveedores
+            Registro de Proveedores
           </h1>
 
 
@@ -505,14 +505,14 @@ const FormularioProveedores = () => {
             {/* Formulario de registro - Horizontal */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                📝 Registrar Proveedor
+                Registrar Proveedor
               </h2>
               
               <form onSubmit={registrarProveedor} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
                 {/* Nombre del proveedor */}
                 <div>
                   <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    🏢 Nombre del Proveedor
+                    Nombre del Proveedor
                   </label>
                   <input
                     type="text"
@@ -528,7 +528,7 @@ const FormularioProveedores = () => {
                 {/* Monto */}
                 <div>
                   <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    💰 Monto
+                    Monto
                   </label>
                   <input
                     type="number"
@@ -546,7 +546,7 @@ const FormularioProveedores = () => {
                 {/* Estado */}
                 <div>
                   <label className="block text-white font-semibold mb-3 text-sm md:text-base" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    📊 Estado
+                    Estado
                   </label>
                   <select
                     name="estado"
@@ -571,8 +571,7 @@ const FormularioProveedores = () => {
                     style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-lg md:text-xl">📝</span>
-                      <span>{loading ? '⏳ Registrando...' : 'Registrar'}</span>
+                      <span>{loading ? 'Registrando...' : 'Registrar'}</span>
                     </div>
                     <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                   </button>
@@ -585,14 +584,13 @@ const FormularioProveedores = () => {
               {/* Header con título y exportar */}
               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
                 <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  📋 Proveedores Registrados
+                  Proveedores Registrados
                 </h2>
                 <button
                   onClick={exportarCSV}
                   className="group relative px-3 md:px-4 py-1.5 md:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all duration-200 text-xs md:text-sm font-medium shadow-md hover:shadow-lg transform hover:scale-105"
                 >
                   <div className="flex items-center gap-1">
-                    <span className="text-sm md:text-base">📊</span>
                     <span>Exportar CSV</span>
                   </div>
                 </button>
@@ -601,13 +599,13 @@ const FormularioProveedores = () => {
               {/* Sección de filtros */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
                 <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  🔍 Filtros y Búsqueda
+                  Filtros y Búsqueda
                 </h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4 mb-4">
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                      🔍 Buscar Proveedor
+                      Buscar Proveedor
                     </label>
                     <input
                       type="text"
@@ -620,7 +618,7 @@ const FormularioProveedores = () => {
                   
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                      📅 Filtrar por Fecha
+                      Filtrar por Fecha
                     </label>
                     <input
                       type="date"
@@ -632,7 +630,7 @@ const FormularioProveedores = () => {
                   
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                      📆 Filtrar por Mes
+                      Filtrar por Mes
                     </label>
                     <select
                       value={filtroMes}
@@ -649,7 +647,7 @@ const FormularioProveedores = () => {
                   
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                      📅 Filtrar por Año
+                      Filtrar por Año
                     </label>
                     <select
                       value={filtroAnio}
@@ -666,7 +664,7 @@ const FormularioProveedores = () => {
                   
                   <div>
                     <label className="block text-white font-medium mb-2 text-sm md:text-base">
-                      📊 Filtrar por Estado
+                      Filtrar por Estado
                     </label>
                     <select
                       value={filtroEstado}
@@ -687,7 +685,7 @@ const FormularioProveedores = () => {
                       onClick={limpiarFiltros}
                       className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm md:text-base font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
-                      🧹 Limpiar Filtros
+                      Limpiar Filtros
                     </button>
                   </div>
                 </div>
@@ -697,7 +695,7 @@ const FormularioProveedores = () => {
               <div className="max-h-96 md:max-h-[500px] overflow-y-auto">
                 {loadingDatos ? (
                   <div className="text-center py-6 md:py-8">
-                    <div className="text-white text-sm md:text-base">⏳ Cargando proveedores...</div>
+                    <div className="text-white text-sm md:text-base">Cargando proveedores...</div>
                   </div>
                 ) : error ? (
                   <div className="text-center py-6 md:py-8">
@@ -705,12 +703,12 @@ const FormularioProveedores = () => {
                   </div>
                 ) : proveedoresRegistrados.length === 0 ? (
                   <div className="text-center py-6 md:py-8">
-                    <div className="text-gray-300 text-sm md:text-base">📭 No hay proveedores registrados</div>
+                    <div className="text-gray-300 text-sm md:text-base">No hay proveedores registrados</div>
                   </div>
                 ) : proveedoresRegistrados.length === 0 && filtroMes === String(new Date().getMonth() + 1).padStart(2, '0') && 
                    filtroAnio === 2025 && !busquedaProveedor && !filtroFecha && !filtroEstado ? (
                   <div className="text-center py-6 md:py-8">
-                    <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4">📅</div>
+                    <div className="text-yellow-400 text-3xl md:text-4xl mb-3 md:mb-4"></div>
                     <p className="text-yellow-300 text-base md:text-lg font-bold">No hay proveedores este mes</p>
                     <p className="text-gray-400 mt-2 text-sm md:text-base">
                       <span className="text-blue-400">Usa los filtros para ver otros períodos</span>
@@ -721,15 +719,11 @@ const FormularioProveedores = () => {
                       {/* Leyenda de botones */}
                       <div className="flex items-center justify-center gap-6 mb-4 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-                            <span className="text-xs">⏳</span>
-                          </div>
+                          <div className="w-6 h-6 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full" />
                           <span className="text-white text-sm font-medium">Pendiente</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                            <span className="text-xs">✅</span>
-                          </div>
+                          <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-600 rounded_full" />
                           <span className="text-white text-sm font-medium">Pagado</span>
                         </div>
                       </div>
@@ -774,7 +768,7 @@ const FormularioProveedores = () => {
                                   }`}>
                                     <div className="flex items-center justify-center">
                                       <span className="text-sm">
-                                        {prov.estado === 'Pagado' ? '✅' : '⏳'}
+                                        {prov.estado}
                                       </span>
                                     </div>
                                   </div>
@@ -803,9 +797,7 @@ const FormularioProveedores = () => {
                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
                                      )}
                                      <div className="flex items-center justify-center gap-0.5 relative z-10">
-                                       <span className="text-xs">
-                                         {prov.estado === 'Pendiente' ? '✅' : '⏳'}
-                                       </span>
+                                       <span className="text-xs">{prov.estado}</span>
                                      </div>
                                    </button>
                                    
@@ -817,7 +809,7 @@ const FormularioProveedores = () => {
                                       title="Eliminar registro"
                                     >
                                      <div className="flex items-center gap-0.5 justify-center">
-                                       <span className="text-xs">🗑️</span>
+                                       <span className="text-xs">Eliminar</span>
                                      </div>
                                    </button>
                                   </div>
@@ -836,7 +828,7 @@ const FormularioProveedores = () => {
           {/* Estadísticas */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              📊 Estadísticas Generales
+              Estadísticas Generales
             </h2>
             
             {/* Estadísticas reorganizadas: Cantidades a la izquierda, Montos a la derecha */}
