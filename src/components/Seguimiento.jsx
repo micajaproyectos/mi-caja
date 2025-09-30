@@ -899,12 +899,24 @@ export default function Seguimiento() {
 
           </div>
 
-          {/* Gráfico de Ventas Acumuladas Mensuales */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+          {/* Estadísticas de Ventas */}
+          <div className="mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Estadísticas de Ventas
+            </h2>
+            <p className="text-green-200 text-center text-sm md:text-base">
+              Análisis detallado del rendimiento de ventas
+            </p>
+          </div>
+
+          {/* Gráficos de Ventas - Separados pero en la misma línea */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            {/* Gráfico de Ventas Mensuales */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-xl md:text-2xl font-bold text-white">
-                  Ventas Mensuales
+                    Ventas Mensuales
                 </h3>
                 {/* Filtro de año para el gráfico */}
                 <div className="flex items-center gap-2">
@@ -926,7 +938,7 @@ export default function Seguimiento() {
                 </div>
               </div>
               <p className="text-green-200 text-sm md:text-base">
-                Total generado mensualmente por el cliente
+                  Total generado mensualmente por el cliente
               </p>
             </div>
 
@@ -975,7 +987,7 @@ export default function Seguimiento() {
                           return [
                             <div key="tooltip-content">
                               <div style={{ marginBottom: '8px' }}>
-                                <strong>Total del Mes:</strong><br />
+                                  <strong>Total del Mes:</strong><br />
                                 {new Intl.NumberFormat('es-CL', {
                                   style: 'currency',
                                   currency: 'CLP',
@@ -983,12 +995,12 @@ export default function Seguimiento() {
                                 }).format(value)}
                               </div>
                               <div>
-                                <strong>Total Acumulado:</strong><br />
+                                  <strong>Total Acumulado:</strong><br />
                                 {new Intl.NumberFormat('es-CL', {
                                   style: 'currency',
                                   currency: 'CLP',
                                   minimumFractionDigits: 0
-                                }).format(mesData?.totalAcum || 0)}
+                                  }).format(mesData?.totalAcum || 0)}
                               </div>
                             </div>
                           ];
@@ -997,7 +1009,7 @@ export default function Seguimiento() {
                      />
                                            <Line
                         type="monotone"
-                        dataKey="totalMes"
+                          dataKey="totalMes"
                         stroke="transparent"
                         strokeWidth={0}
                         dot={{
@@ -1033,18 +1045,14 @@ export default function Seguimiento() {
                 {/* Información adicional del gráfico */}
                 <div className="mt-6 text-center">
                   <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                      Total del año: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0))}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-green-400 rounded-full"></span>
-                      Promedio mensual: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-green-300 rounded-full"></span>
-                      Meses con ventas: {datosVentasAcumuladas.filter(d => d.totalMes > 0).length}
-                    </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                        Total del año: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0))}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 bg-green-400 rounded-full"></span>
+                        Promedio mensual: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
+                      </span>
                   </div>
                 </div>
               </div>
@@ -1059,17 +1067,15 @@ export default function Seguimiento() {
             )}
           </div>
 
-          {/* Gráficos Circulares de Tipos de Pago */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-            {/* Gráfico Circular de Ventas */}
+            {/* Gráfico Circular de Tipos de Pago de Ventas */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                Ventas
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                  Ventas por Tipo de Pago
               </h2>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-lg md:text-xl font-medium text-green-200">
-                  Distribución por Tipo de Pago
+                    Distribución Mensual
                 </h3>
                 {/* Filtros para el gráfico circular */}
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -1215,16 +1221,183 @@ export default function Seguimiento() {
               </div>
             )}
             </div>
+            </div>
 
-            {/* Gráfico Circular de Pedidos */}
+          {/* Estadísticas de Pedidos */}
+          <div className="mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Estadísticas de Pedidos
+            </h2>
+            <p className="text-green-200 text-center text-sm md:text-base">
+              Análisis detallado del rendimiento de pedidos
+            </p>
+          </div>
+
+          {/* Gráficos de Pedidos - Separados pero en la misma línea */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            {/* Gráfico de Pedidos Mensuales */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <div className="text-center mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                  Pedidos
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                  <h3 className="text-xl md:text-2xl font-bold text-white">
+                    Pedidos Mensuales
+                  </h3>
+                  {/* Filtro de año para el gráfico */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-white font-medium text-sm md:text-base">
+                      Año:
+                    </label>
+                    <select
+                      value={anioGrafico}
+                      onChange={(e) => setAnioGrafico(parseInt(e.target.value))}
+                      className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      {aniosGraficoDisponibles.map(anio => (
+                        <option key={anio} value={anio} className="bg-gray-800 text-white">
+                          {anio}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-green-200 text-sm md:text-base">
+                  Total generado mensualmente en pedidos pagados
+                </p>
+              </div>
+
+              {loadingPedidosAcumulados ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                  <span className="ml-3 text-green-200">Cargando...</span>
+                </div>
+              ) : errorPedidosAcumulados ? (
+                <div className="text-center py-8">
+                  <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-red-300 text-sm">{errorPedidosAcumulados}</p>
+                  </div>
+                </div>
+              ) : datosPedidosAcumulados.length > 0 ? (
+                <div className="h-64 md:h-80 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={datosPedidosAcumulados}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                      aria-label="Gráfico de pedidos acumulados"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                      <XAxis 
+                        dataKey="mes" 
+                        stroke="rgba(255, 255, 255, 0.7)"
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        stroke="rgba(255, 255, 255, 0.7)"
+                        fontSize={12}
+                        tickFormatter={(value) => new Intl.NumberFormat('es-CL').format(value)}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          color: 'white'
+                        }}
+                        formatter={(value, name, props) => {
+                          // Usar el total_mes directamente desde los datos mapeados
+                          const mesActual = props.payload.mes_num;
+                          const mesData = datosPedidosAcumulados.find(d => d.mes_num === mesActual);
+                          
+                          return [
+                            <div key="tooltip-content">
+                              <div style={{ marginBottom: '8px' }}>
+                                <strong>Total del Mes:</strong><br />
+                                {new Intl.NumberFormat('es-CL', {
+                                  style: 'currency',
+                                  currency: 'CLP',
+                                  minimumFractionDigits: 0
+                                }).format(value)}
+                              </div>
+                              <div>
+                                <strong>Total Acumulado:</strong><br />
+                                {new Intl.NumberFormat('es-CL', {
+                                  style: 'currency',
+                                  currency: 'CLP',
+                                  minimumFractionDigits: 0
+                                }).format(mesData?.totalAcum || 0)}
+                              </div>
+                            </div>
+                          ];
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="totalMes"
+                        stroke="transparent"
+                        strokeWidth={0}
+                        dot={{
+                          fill: '#3b82f6',
+                          stroke: 'white',
+                          strokeWidth: 2,
+                          r: 8
+                        }}
+                        activeDot={{
+                          fill: '#3b82f6',
+                          stroke: 'white',
+                          strokeWidth: 3,
+                          r: 10
+                        }}
+                        label={{
+                          position: 'top',
+                          fill: 'white',
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          offset: 15,
+                          formatter: (value) => new Intl.NumberFormat('es-CL', {
+                            style: 'currency',
+                            currency: 'CLP',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(value)
+                        }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  
+                  {/* Información adicional del gráfico */}
+                  <div className="mt-6 text-center">
+                    <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                      Total del año: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0))}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-blue-400 rounded-full"></span>
+                      Promedio mensual: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
+                    </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-blue-400 text-4xl mb-4">📋</div>
+                  <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de pedidos mensuales</p>
+                  <p className="text-green-200 text-sm">
+                    El gráfico mostrará los 12 meses con valores en 0
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Gráfico Circular de Tipos de Pago de Pedidos */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+              <div className="text-center mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                  Pedidos por Tipo de Pago
                 </h2>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                   <h3 className="text-lg md:text-xl font-medium text-green-200">
-                    Distribución por Tipo de Pago
+                    Distribución Mensual
                   </h3>
                   {/* Filtros para el gráfico circular de pedidos */}
                   <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -1372,163 +1545,6 @@ export default function Seguimiento() {
             </div>
           </div>
 
-          {/* Gráfico de Pedidos Acumulados Mensuales */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
-            <div className="text-center mb-6">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
-                <h3 className="text-xl md:text-2xl font-bold text-white">
-                  Pedidos Mensuales
-                </h3>
-                {/* Filtro de año para el gráfico */}
-                <div className="flex items-center gap-2">
-                  <label className="text-white font-medium text-sm md:text-base">
-                    Año:
-                  </label>
-                  <select
-                    value={anioGrafico}
-                    onChange={(e) => setAnioGrafico(parseInt(e.target.value))}
-                    className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    {aniosGraficoDisponibles.map(anio => (
-                      <option key={anio} value={anio} className="bg-gray-800 text-white">
-                        {anio}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <p className="text-green-200 text-sm md:text-base">
-                Total generado mensualmente en pedidos pagados
-              </p>
-            </div>
-
-            {loadingPedidosAcumulados ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
-                <span className="ml-3 text-green-200">Cargando...</span>
-              </div>
-            ) : errorPedidosAcumulados ? (
-              <div className="text-center py-8">
-                <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
-                  <p className="text-red-300 text-sm">{errorPedidosAcumulados}</p>
-                </div>
-              </div>
-            ) : datosPedidosAcumulados.length > 0 ? (
-              <div className="h-64 md:h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={datosPedidosAcumulados}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-                    aria-label="Gráfico de pedidos acumulados"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                    <XAxis 
-                      dataKey="mes" 
-                      stroke="rgba(255, 255, 255, 0.7)"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="rgba(255, 255, 255, 0.7)"
-                      fontSize={12}
-                      tickFormatter={(value) => new Intl.NumberFormat('es-CL').format(value)}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        color: 'white'
-                      }}
-                      formatter={(value, name, props) => {
-                        // Usar el total_mes directamente desde los datos mapeados
-                        const mesActual = props.payload.mes_num;
-                        const mesData = datosPedidosAcumulados.find(d => d.mes_num === mesActual);
-                        
-                        return [
-                          <div key="tooltip-content">
-                            <div style={{ marginBottom: '8px' }}>
-                              <strong>Total del Mes:</strong><br />
-                              {new Intl.NumberFormat('es-CL', {
-                                style: 'currency',
-                                currency: 'CLP',
-                                minimumFractionDigits: 0
-                              }).format(value)}
-                            </div>
-                            <div>
-                              <strong>Total Acumulado:</strong><br />
-                              {new Intl.NumberFormat('es-CL', {
-                                style: 'currency',
-                                currency: 'CLP',
-                                minimumFractionDigits: 0
-                              }).format(mesData?.totalAcum || 0)}
-                            </div>
-                          </div>
-                        ];
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="totalMes"
-                      stroke="transparent"
-                      strokeWidth={0}
-                      dot={{
-                        fill: '#3b82f6',
-                        stroke: 'white',
-                        strokeWidth: 2,
-                        r: 8
-                      }}
-                      activeDot={{
-                        fill: '#3b82f6',
-                        stroke: 'white',
-                        strokeWidth: 3,
-                        r: 10
-                      }}
-                      label={{
-                        position: 'top',
-                        fill: 'white',
-                        fontSize: 10,
-                        fontWeight: 'bold',
-                        offset: 15,
-                        formatter: (value) => new Intl.NumberFormat('es-CL', {
-                          style: 'currency',
-                          currency: 'CLP',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0
-                        }).format(value)
-                      }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                
-                {/* Información adicional del gráfico */}
-                <div className="mt-6 text-center">
-                  <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                      Total del año: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0))}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-blue-400 rounded-full"></span>
-                      Promedio mensual: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-blue-300 rounded-full"></span>
-                      Meses con pedidos: {datosPedidosAcumulados.filter(d => d.totalMes > 0).length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-blue-400 text-4xl mb-4">📋</div>
-                <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de pedidos mensuales</p>
-                <p className="text-green-200 text-sm">
-                  El gráfico mostrará los 12 meses con valores en 0
-                </p>
-              </div>
-            )}
-          </div>
 
           {/* Botón de recarga */}
           <div className="text-center mb-8">
