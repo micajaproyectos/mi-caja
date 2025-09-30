@@ -70,7 +70,8 @@ export default function Pedidos() {
     total: { cantidad: 0, monto: 0 },
     efectivo: { cantidad: 0, monto: 0 },
     debito: { cantidad: 0, monto: 0 },
-    transferencia: { cantidad: 0, monto: 0 }
+    transferencia: { cantidad: 0, monto: 0 },
+    propinas: 0
   });
   
   // Función para cargar pedidos registrados desde Supabase
@@ -103,7 +104,7 @@ export default function Pedidos() {
       // Intentar consulta con fecha_cl primero
       let { data, error } = await supabase
         .from('pedidos')
-        .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, estado, tipo_pago, usuario_id, created_at')
+        .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .eq('cliente_id', cliente_id) // 🔒 FILTRO CRÍTICO POR CLIENTE
         .order('fecha_cl', { ascending: false })
@@ -115,7 +116,7 @@ export default function Pedidos() {
         console.warn('⚠️ Columna fecha_cl no existe en pedidos, usando fecha');
         const fallbackQuery = await supabase
           .from('pedidos')
-          .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, estado, tipo_pago, usuario_id, created_at')
+          .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
           .eq('cliente_id', cliente_id)
           .order('fecha', { ascending: false })
@@ -595,17 +596,20 @@ export default function Pedidos() {
       total: { cantidad: 0, monto: 0 },
       efectivo: { cantidad: 0, monto: 0 },
       debito: { cantidad: 0, monto: 0 },
-      transferencia: { cantidad: 0, monto: 0 }
+      transferencia: { cantidad: 0, monto: 0 },
+      propinas: 0
     };
 
     // Agrupar por tipo de pago y calcular totales
     pedidosCompletos.forEach(pedido => {
       const monto = parseFloat(pedido.total_final) || 0;
+      const propina = parseFloat(pedido.propina) || 0;
       
       // Solo contar una vez por pedido (usar la primera fila de cada pedido)
       if (pedido.mesa && pedido.estado === 'pagado') {
         estadisticas.total.cantidad++;
         estadisticas.total.monto += monto;
+        estadisticas.propinas += propina;
 
         switch (pedido.tipo_pago) {
           case 'efectivo':
@@ -817,12 +821,14 @@ export default function Pedidos() {
           let estadoValue = null;
           let mesaValue = null;
           let tipoPagoValue = null;
+          let propinaValue = null;
           
           if (i === 0) {
             totalFinalValue = totalFinal; // Solo el valor numérico del total
             estadoValue = 'pagado'; // Estado solo en la primera fila
             mesaValue = numeroMesa; // Mesa solo en la primera fila
             tipoPagoValue = pedido.tipo_pago; // Tipo de pago solo en la primera fila
+            propinaValue = calcularPropina(mesa); // Propina solo en la primera fila
           }
           
           const pedidoParaInsertar = {
@@ -838,6 +844,7 @@ export default function Pedidos() {
             total_final: totalFinalValue,
             estado: estadoValue, // Estado solo en la primera fila
             tipo_pago: tipoPagoValue, // Tipo de pago solo en la primera fila
+            propina: propinaValue, // Propina solo en la primera fila
             // Agregar el usuario_id del usuario autenticado
             usuario_id: usuarioId,
             // IMPORTANTE: La política RLS requiere que cliente_id coincida con usuarios.cliente_id
@@ -1498,6 +1505,7 @@ export default function Pedidos() {
                           <th className="px-4 py-3">Precio</th>
                           <th className="px-4 py-3">Total</th>
                           <th className="px-4 py-3">Total Final</th>
+                          <th className="px-4 py-3">Propina</th>
                           <th className="px-4 py-3">Tipo Pago</th>
                           <th className="px-4 py-3">Estado</th>
                           <th className="px-4 py-3 rounded-r-lg">Acciones</th>
@@ -1555,6 +1563,15 @@ export default function Pedidos() {
                             {pedido.total_final ? (
                               <span className="bg-green-600/20 text-green-300 px-2 py-1 rounded font-bold text-sm">
                                 ${parseFloat(pedido.total_final).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {pedido.propina ? (
+                              <span className="bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded font-medium text-sm">
+                                ${parseFloat(pedido.propina).toLocaleString()}
                               </span>
                             ) : (
                               <span className="text-gray-500 text-xs">-</span>
@@ -1675,6 +1692,22 @@ export default function Pedidos() {
                      <div className="text-right">
                        <p className="text-indigo-300 font-bold text-lg md:text-xl">
                          ${estadisticasPedidos.transferencia.monto.toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {/* Propinas */}
+                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                     <div className="flex items-center">
+                       <span className="text-yellow-400 text-lg md:text-xl mr-3">💡</span>
+                       <div>
+                         <p className="text-yellow-200 text-sm md:text-base font-medium">Propinas</p>
+                         <p className="text-yellow-300 text-xs md:text-sm">Total de propinas del período</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-yellow-300 font-bold text-lg md:text-xl">
+                         ${estadisticasPedidos.propinas.toLocaleString()}
                        </p>
                      </div>
                    </div>

@@ -16,7 +16,8 @@ export default function Seguimiento() {
     inventario: 0,
     proveedores: 0,
     clientes: 0,
-    pedidos: 0
+    pedidos: 0,
+    propinas: 0
   });
   
   const [loading, setLoading] = useState(true);
@@ -142,7 +143,7 @@ export default function Seguimiento() {
                     // 6. Total de Pedidos del mes (suma de total_final de pedidos)
        const { data: pedidosData, error: pedidosError } = await supabase
          .from('pedidos')
-         .select('total_final, fecha_cl')
+         .select('total_final, propina, fecha_cl')
          .eq('usuario_id', usuarioId)
          .not('total_final', 'is', null)
          .gte('fecha_cl', fechaInicio)
@@ -159,6 +160,7 @@ export default function Seguimiento() {
        const totalProveedores = proveedoresData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
        const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
        const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
+       const totalPropinas = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0;
 
       setTotales({
         ventas: totalVentas, // Solo ventas de la tabla ventas
@@ -166,7 +168,8 @@ export default function Seguimiento() {
         inventario: totalInventario,
         proveedores: totalProveedores,
         clientes: totalClientes,
-        pedidos: totalPedidos // Total de pedidos separado
+        pedidos: totalPedidos, // Total de pedidos separado
+        propinas: totalPropinas // Total de propinas del mes
       });
 
     } catch (error) {
@@ -775,8 +778,8 @@ export default function Seguimiento() {
             )}
           </div>
 
-          {/* 6 Tarjetas tipo Power BI */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 mb-8">
+          {/* 7 Tarjetas tipo Power BI */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 md:gap-6 mb-8">
             {/* Tarjeta 1: Ventas */}
             <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
@@ -891,6 +894,26 @@ export default function Seguimiento() {
                 ) : (
                   <div className="text-green-300 text-lg md:text-xl font-bold mb-1">
                     {formatearMoneda(totales.pedidos)}
+                  </div>
+                )}
+                <p className="text-green-200 text-xs opacity-75">Mes actual</p>
+              </div>
+            </div>
+
+            {/* Tarjeta 7: Propinas */}
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+              <div className="text-center">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-2xl md:text-3xl">💡</span>
+                </div>
+                <h3 className="text-green-200 text-sm md:text-base font-medium mb-2">Total Propinas</h3>
+                {loading ? (
+                  <div className="animate-pulse">
+                    <div className="h-6 md:h-8 bg-green-400/20 rounded mb-2"></div>
+                  </div>
+                ) : (
+                  <div className="text-green-300 text-lg md:text-xl font-bold mb-1">
+                    {formatearMoneda(totales.propinas)}
                   </div>
                 )}
                 <p className="text-green-200 text-xs opacity-75">Mes actual</p>
@@ -1045,14 +1068,14 @@ export default function Seguimiento() {
                 {/* Información adicional del gráfico */}
                 <div className="mt-6 text-center">
                   <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
-                      <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-green-500 rounded-full"></span>
                         Total del año: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0))}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 bg-green-400 rounded-full"></span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-green-400 rounded-full"></span>
                         Promedio mensual: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
-                      </span>
+                    </span>
                   </div>
                 </div>
               </div>

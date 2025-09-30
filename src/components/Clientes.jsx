@@ -1100,7 +1100,7 @@ export default function Clientes() {
           </div>
           
                                      <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Pedidos de Empresas
+              Pedidos de Clientes
            </h1>
 
           {/* Formulario de Pedido */}
