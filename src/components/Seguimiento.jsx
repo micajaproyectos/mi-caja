@@ -904,7 +904,7 @@ export default function Seguimiento() {
             <div className="text-center mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-xl md:text-2xl font-bold text-white">
-                  Ventas Acumuladas
+                  Ventas Mensuales
                 </h3>
                 {/* Filtro de año para el gráfico */}
                 <div className="flex items-center gap-2">
@@ -926,7 +926,7 @@ export default function Seguimiento() {
                 </div>
               </div>
               <p className="text-green-200 text-sm md:text-base">
-                Total acumulado mensual del cliente
+                Total generado mensualmente por el cliente
               </p>
             </div>
 
@@ -975,7 +975,7 @@ export default function Seguimiento() {
                           return [
                             <div key="tooltip-content">
                               <div style={{ marginBottom: '8px' }}>
-                                <strong>Total Acumulado:</strong><br />
+                                <strong>Total del Mes:</strong><br />
                                 {new Intl.NumberFormat('es-CL', {
                                   style: 'currency',
                                   currency: 'CLP',
@@ -983,12 +983,12 @@ export default function Seguimiento() {
                                 }).format(value)}
                               </div>
                               <div>
-                                <strong>Valor del Mes:</strong><br />
+                                <strong>Total Acumulado:</strong><br />
                                 {new Intl.NumberFormat('es-CL', {
                                   style: 'currency',
                                   currency: 'CLP',
                                   minimumFractionDigits: 0
-                                }).format(mesData?.totalMes || 0)}
+                                }).format(mesData?.totalAcum || 0)}
                               </div>
                             </div>
                           ];
@@ -997,7 +997,7 @@ export default function Seguimiento() {
                      />
                                            <Line
                         type="monotone"
-                        dataKey="totalAcum"
+                        dataKey="totalMes"
                         stroke="transparent"
                         strokeWidth={0}
                         dot={{
@@ -1035,15 +1035,15 @@ export default function Seguimiento() {
                   <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                      Total del año: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalAcum, 0))}
+                      Total del año: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0))}
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-green-400 rounded-full"></span>
-                      Promedio mensual: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalAcum, 0) / 12)}
+                      Promedio mensual: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-green-300 rounded-full"></span>
-                      Meses con ventas: {datosVentasAcumuladas.filter(d => d.totalAcum > 0).length}
+                      Meses con ventas: {datosVentasAcumuladas.filter(d => d.totalMes > 0).length}
                     </span>
                   </div>
                 </div>
@@ -1377,7 +1377,7 @@ export default function Seguimiento() {
             <div className="text-center mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-xl md:text-2xl font-bold text-white">
-                  Pedidos Acumulados
+                  Pedidos Mensuales
                 </h3>
                 {/* Filtro de año para el gráfico */}
                 <div className="flex items-center gap-2">
@@ -1399,7 +1399,7 @@ export default function Seguimiento() {
                 </div>
               </div>
               <p className="text-green-200 text-sm md:text-base">
-                Total acumulado mensual de pedidos pagados
+                Total generado mensualmente en pedidos pagados
               </p>
             </div>
 
@@ -1448,7 +1448,7 @@ export default function Seguimiento() {
                         return [
                           <div key="tooltip-content">
                             <div style={{ marginBottom: '8px' }}>
-                              <strong>Total Acumulado:</strong><br />
+                              <strong>Total del Mes:</strong><br />
                               {new Intl.NumberFormat('es-CL', {
                                 style: 'currency',
                                 currency: 'CLP',
@@ -1456,12 +1456,12 @@ export default function Seguimiento() {
                               }).format(value)}
                             </div>
                             <div>
-                              <strong>Valor del Mes:</strong><br />
+                              <strong>Total Acumulado:</strong><br />
                               {new Intl.NumberFormat('es-CL', {
                                 style: 'currency',
                                 currency: 'CLP',
                                 minimumFractionDigits: 0
-                              }).format(mesData?.totalMes || 0)}
+                              }).format(mesData?.totalAcum || 0)}
                             </div>
                           </div>
                         ];
@@ -1469,7 +1469,7 @@ export default function Seguimiento() {
                     />
                     <Line
                       type="monotone"
-                      dataKey="totalAcum"
+                      dataKey="totalMes"
                       stroke="transparent"
                       strokeWidth={0}
                       dot={{
@@ -1506,15 +1506,15 @@ export default function Seguimiento() {
                   <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                      Total del año: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalAcum, 0))}
+                      Total del año: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0))}
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-blue-400 rounded-full"></span>
-                      Promedio mensual: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalAcum, 0) / 12)}
+                      Promedio mensual: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-blue-300 rounded-full"></span>
-                      Meses con pedidos: {datosPedidosAcumulados.filter(d => d.totalAcum > 0).length}
+                      Meses con pedidos: {datosPedidosAcumulados.filter(d => d.totalMes > 0).length}
                     </span>
                   </div>
                 </div>
@@ -1522,7 +1522,7 @@ export default function Seguimiento() {
             ) : (
               <div className="text-center py-8">
                 <div className="text-blue-400 text-4xl mb-4">📋</div>
-                <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de pedidos acumulados</p>
+                <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de pedidos mensuales</p>
                 <p className="text-green-200 text-sm">
                   El gráfico mostrará los 12 meses con valores en 0
                 </p>
