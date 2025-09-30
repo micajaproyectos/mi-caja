@@ -12,7 +12,7 @@ import { obtenerFechaHoyChile } from '../lib/dateUtils.js';
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 // Constantes para cálculos
-const GANANCIA_GLOBAL_DEFAULT = 0.30; // 30% por defecto
+const GANANCIA_GLOBAL_DEFAULT = 30; // 30% por defecto
 
 // Config de firma Supabase (TTL en segundos)
 const SIGNED_URL_TTL = 1200; // 20 min (>= 900 s)
@@ -742,6 +742,9 @@ const InventarioIA = () => {
         setIsProcessing(false); // Resetear para no dejar botón bloqueado
         return;
       }
+      
+      // Normalizar schemaHints antes de crear el payload
+      const normalizedHints = normalizarSchemaHints();
       
       // Crear payload común para todos los casos
       const payload = { 
@@ -2231,8 +2234,8 @@ const aplicarAInventario = useCallback(async () => {
 
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4">🤖 Inventario IA</h1>
-            <p className="text-green-200 text-lg">Procesa documentos con inteligencia artificial</p>
+            <h1 className="text-4xl font-bold text-white mb-4">Inventario IA</h1>
+            <p className="text-green-200 text-lg">Deja que la IA trabaje por ti</p>
           </div>
 
           {/* Mensajes */}
