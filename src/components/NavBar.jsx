@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../lib/authService.js';
 import { sessionManager } from '../lib/sessionManager.js';
 import { supabase } from '../lib/supabaseClient.js';
+import SubscriptionNotification from './SubscriptionNotification.jsx';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ const NavBar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userInfo, setUserInfo] = useState({ nombre: '', email: '' });
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [showSubscriptionNotification, setShowSubscriptionNotification] = useState(false);
+  const [showVisualNotification, setShowVisualNotification] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -51,6 +54,66 @@ const NavBar = () => {
 
   const closeProfile = () => setIsProfileOpen(false);
 
+  // Función para cerrar la notificación de suscripción
+  const closeSubscriptionNotification = () => {
+    setShowSubscriptionNotification(false);
+    markNotificationAsShown();
+    // Activar la notificación visual después de cerrar el popup
+    setShowVisualNotification(true);
+  };
+
+  // Función para verificar si debe mostrar la notificación de suscripción
+  const shouldShowSubscriptionNotification = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    
+    // Verificar si es día 29, 30 o 31
+    if (day >= 29) {
+      // Verificar si ya se mostró hoy (usando localStorage)
+      const lastShown = localStorage.getItem('subscriptionNotificationLastShown');
+      const todayString = `${year}-${month}-${day}`;
+      
+      if (lastShown !== todayString) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Función para verificar si debe mostrar la notificación visual
+  const shouldShowVisualNotification = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    
+    // Verificar si es día 29, 30 o 31
+    if (day >= 29) {
+      // Verificar si ya se mostró el popup este mes
+      const lastShown = localStorage.getItem('subscriptionNotificationLastShown');
+      if (lastShown) {
+        const [lastYear, lastMonth, lastDay] = lastShown.split('-').map(Number);
+        // Si se mostró este mes, mostrar la notificación visual
+        if (lastYear === year && lastMonth === month) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // Función para marcar la notificación como mostrada
+  const markNotificationAsShown = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    const todayString = `${year}-${month}-${day}`;
+    localStorage.setItem('subscriptionNotificationLastShown', todayString);
+  };
+
   // Cargar datos básicos del usuario al montar el componente
   useEffect(() => {
     const loadBasicUserInfo = async () => {
@@ -85,6 +148,16 @@ const NavBar = () => {
     return unsubscribe;
   }, []);
 
+  // Verificar si debe mostrar la notificación de suscripción al montar el componente
+  useEffect(() => {
+    if (shouldShowSubscriptionNotification()) {
+      setShowSubscriptionNotification(true);
+    } else if (shouldShowVisualNotification()) {
+      // Si no debe mostrar el popup pero sí la notificación visual
+      setShowVisualNotification(true);
+    }
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -112,7 +185,7 @@ const NavBar = () => {
           <div className="flex items-center justify-end h-16 relative" ref={menuRef}>
             <button
               onClick={toggleMenu}
-              className="p-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
+              className="p-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 relative"
               style={{
                 backgroundColor: '#0a1e0a',
                 color: 'white',
@@ -125,6 +198,13 @@ const NavBar = () => {
                 <div className="w-5 h-0.5 bg-white rounded"></div>
                 <div className="w-5 h-0.5 bg-white rounded"></div>
               </div>
+              
+              {/* Indicador de notificación */}
+              {showVisualNotification && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"
+                     style={{ boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)' }}>
+                </div>
+              )}
             </button>
 
             {isMenuOpen && (
@@ -136,6 +216,26 @@ const NavBar = () => {
                 }}
               >
                 <div className="p-4">
+                  {/* Notificación de suscripción en el menú */}
+                  {showVisualNotification && (
+                    <div className="mb-4 p-3 rounded-lg border-l-4"
+                         style={{ 
+                           backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                           borderLeftColor: '#ef4444',
+                           border: '1px solid rgba(239, 68, 68, 0.2)'
+                         }}>
+                      <div className="flex items-center">
+                        <span className="text-lg mr-2">🔔</span>
+                        <div>
+                          <p className="text-white text-xs font-medium">Recordatorio de Suscripción</p>
+                          <p className="text-gray-300 text-xs mt-1">
+                            No olvides cancelar tu suscripción mensual. Si ya has cancelado omite esta notificación.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="mb-3">
                     <p className="text-white text-sm font-semibold">{userInfo.nombre || 'Usuario'}</p>
                     <p className="text-gray-300 text-xs break-all">{userInfo.email || ''}</p>
@@ -212,6 +312,11 @@ const NavBar = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Notificación de suscripción */}
+      {showSubscriptionNotification && (
+        <SubscriptionNotification onClose={closeSubscriptionNotification} />
       )}
     </>
   );
