@@ -21,11 +21,11 @@ function Comunidad() {
           </div>
 
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <div className="text-center mb-8 animate-fade-in">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Comunidad
             </h1>
-            <p className="text-green-200 text-lg md:text-xl italic">
+            <p className="text-green-200 text-lg md:text-xl italic animate-fade-in-delayed">
               Conéctate con otros usuarios de Mi Caja
             </p>
           </div>
