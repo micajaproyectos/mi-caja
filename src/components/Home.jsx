@@ -82,6 +82,12 @@ export default function Home() {
       icon: '📊',
       label: 'Seguimiento',
       route: '/seguimiento'
+    },
+    {
+      id: 'comunidad',
+      icon: '💬',
+      label: 'Comunidad',
+      route: '/comunidad'
     }
   ], []);
 

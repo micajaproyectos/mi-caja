@@ -14,6 +14,7 @@ import InventarioIA from './components/InventarioIA';
 import Clientes from './components/Clientes';
 import Seguimiento from './components/Seguimiento';
 import Pedidos from './components/Pedidos';
+import Comunidad from './components/Comunidad';
 
 // Componentes placeholder para las otras secciones
 const Inventario = () => {
@@ -99,6 +100,11 @@ function App() {
           <Route path="/seguimiento" element={
             <RutaPrivada>
               <Seguimiento />
+            </RutaPrivada>
+          } />
+          <Route path="/comunidad" element={
+            <RutaPrivada>
+              <Comunidad />
             </RutaPrivada>
           } />
         </Routes>
