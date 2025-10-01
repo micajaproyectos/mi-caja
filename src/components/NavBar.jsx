@@ -69,8 +69,10 @@ const NavBar = () => {
     const month = today.getMonth();
     const year = today.getFullYear();
     
-    // Verificar si es día 29, 30 o 31
-    if (day >= 29) {
+    // Verificar si está en el rango del 28 al fin de mes o del 1 al 5
+    const isInNotificationPeriod = day >= 28 || day <= 5;
+    
+    if (isInNotificationPeriod) {
       // Verificar si ya se mostró hoy (usando localStorage)
       const lastShown = localStorage.getItem('subscriptionNotificationLastShown');
       const todayString = `${year}-${month}-${day}`;
@@ -89,14 +91,20 @@ const NavBar = () => {
     const month = today.getMonth();
     const year = today.getFullYear();
     
-    // Verificar si es día 29, 30 o 31
-    if (day >= 29) {
-      // Verificar si ya se mostró el popup este mes
+    // Verificar si está en el rango del 28 al fin de mes o del 1 al 5
+    const isInNotificationPeriod = day >= 28 || day <= 5;
+    
+    if (isInNotificationPeriod) {
+      // Verificar si ya se mostró el popup en este periodo
       const lastShown = localStorage.getItem('subscriptionNotificationLastShown');
       if (lastShown) {
         const [lastYear, lastMonth, lastDay] = lastShown.split('-').map(Number);
-        // Si se mostró este mes, mostrar la notificación visual
+        // Si se mostró este mes o mes anterior (dependiendo del periodo), mostrar la notificación visual
         if (lastYear === year && lastMonth === month) {
+          return true;
+        }
+        // Si estamos en los primeros 5 días y se mostró el mes anterior
+        if (day <= 5 && lastYear === year && lastMonth === month - 1) {
           return true;
         }
       }
