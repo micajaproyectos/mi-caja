@@ -26,7 +26,7 @@ function Comunidad() {
               Comunidad
             </h1>
             <p className="text-green-200 text-lg md:text-xl italic animate-fade-in-delayed">
-              Conéctate con otros usuarios de Mi Caja
+              Conéctate con la comunidad de Mi Caja y potencia tu negocio
             </p>
           </div>
 
