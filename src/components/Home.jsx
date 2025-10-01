@@ -78,16 +78,22 @@ export default function Home() {
       route: '/pedidos'
     },
     {
-      id: 'seguimiento',
-      icon: '📊',
-      label: 'Seguimiento',
-      route: '/seguimiento'
+      id: 'insumos',
+      icon: '🧰',
+      label: 'Insumos',
+      route: '/insumos'
     },
     {
       id: 'comunidad',
       icon: '💬',
       label: 'Comunidad',
       route: '/comunidad'
+    },
+    {
+      id: 'seguimiento',
+      icon: '📊',
+      label: 'Seguimiento',
+      route: '/seguimiento'
     }
   ], []);
 
