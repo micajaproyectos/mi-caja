@@ -1060,7 +1060,7 @@ export default function RegistroAsistencia() {
       if (empleadoEncontrado) {
         // Buscar la entrada específica en localStorage
         // Si no se proporciona fecha, buscar en la fecha actual primero
-        const fechaParaBuscar = fechaEntrada || fechaActual;
+        let fechaParaBuscar = fechaEntrada || fechaActual;
         const entradasPendientes = obtenerEntradasPendientes(empleadoEntrada, fechaParaBuscar);
         let entradaPendiente = entradasPendientes.find(e => e.hora_entrada === horaEntrada);
         
