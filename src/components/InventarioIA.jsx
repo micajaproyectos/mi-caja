@@ -1180,6 +1180,9 @@ const aplicarAInventario = useCallback(async () => {
             if (retryRes.ok) {
               mostrarMensaje('success', `Inventario registrado: ${retryOut.inserted} ítem(s)`);
               
+              // Mostrar popup de éxito
+              alert(`✅ ¡Inventario cargado exitosamente!\n\nSe registraron ${retryOut.inserted} ítem(s) en el inventario.\n\nLos productos ya están disponibles para ventas.`);
+              
               if (retryOut.invalid?.length) {
                 console.info("Filas inválidas:", retryOut.invalid);
               }
@@ -1226,6 +1229,9 @@ const aplicarAInventario = useCallback(async () => {
     }
 
     mostrarMensaje('success', `Inventario registrado: ${out.inserted} ítem(s)`);
+    
+    // Mostrar popup de éxito
+    alert(`✅ ¡Inventario cargado exitosamente!\n\nSe registraron ${out.inserted} ítem(s) en el inventario.\n\nLos productos ya están disponibles para ventas.`);
     
     if (out.invalid?.length) {
       console.info("Filas inválidas:", out.invalid);
