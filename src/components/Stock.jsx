@@ -15,6 +15,11 @@ export default function Stock() {
   const [loadingMasVendido, setLoadingMasVendido] = useState(true);
   const [errorMasVendido, setErrorMasVendido] = useState(null);
   
+  // Estados para productos sin ventas por más de 30 días
+  const [productosSinVentas, setProductosSinVentas] = useState([]);
+  const [loadingSinVentas, setLoadingSinVentas] = useState(true);
+  const [errorSinVentas, setErrorSinVentas] = useState(null);
+  
   // Estado para indicar actualización automática
   const [actualizandoAutomaticamente, setActualizandoAutomaticamente] = useState(false);
   
@@ -33,14 +38,14 @@ export default function Stock() {
   // Obtener productos a mostrar (50 inicialmente o todos si mostrarTodos es true)
   const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 50);
 
-  // Función para cargar datos del stock desde la vista stock_view
+  // Función para cargar datos del stock desde la vista stock_view_new
   const cargarStock = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const { data, error } = await supabase
-        .from('stock_view')
+        .from('stock_view_new')
         .select('*')
         .order('producto', { ascending: true });
 
@@ -51,7 +56,7 @@ export default function Stock() {
       }
 
       setStockData(data || []);
-      console.log('✅ Datos del stock cargados:', data);
+      console.log('✅ Datos del stock cargados desde stock_view_new:', data);
     } catch (error) {
       console.error('Error inesperado al cargar datos del stock:', error);
       setError('Error inesperado al cargar los datos');
@@ -60,17 +65,49 @@ export default function Stock() {
     }
   };
 
-  // Nueva función para cargar el producto más vendido desde stock_view
+  // Función para cargar productos sin ventas por más de 30 días usando la vista optimizada
+  const cargarProductosSinVentas = async () => {
+    try {
+      setLoadingSinVentas(true);
+      setErrorSinVentas(null);
+
+      console.log('🔄 Cargando productos sin ventas desde productos_sin_ventas_30d_view...');
+
+      // Consultar directamente la vista optimizada
+      const { data, error } = await supabase
+        .from('productos_sin_ventas_30d_view')
+        .select('*')
+        .order('fecha_ingreso', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error al cargar productos sin ventas:', error);
+        setErrorSinVentas('Error al cargar productos sin ventas');
+        return;
+      }
+
+      console.log('📊 Productos sin ventas encontrados:', data?.length || 0);
+
+      setProductosSinVentas(data || []);
+
+    } catch (error) {
+      console.error('❌ Error inesperado al cargar productos sin ventas:', error);
+      setErrorSinVentas('Error inesperado al cargar productos sin ventas');
+    } finally {
+      setLoadingSinVentas(false);
+    }
+  };
+
+  // Nueva función para cargar el producto más vendido desde stock_view_new
   const cargarProductoMasVendido = async () => {
     try {
       setLoadingMasVendido(true);
       setErrorMasVendido(null);
 
-      console.log('🔄 Cargando producto más vendido desde stock_view...');
+      console.log('🔄 Cargando producto más vendido desde stock_view_new...');
 
-      // Consultar la vista stock_view y ordenar por total_vendido descendente
+      // Consultar la vista stock_view_new y ordenar por total_vendido descendente
       const { data, error } = await supabase
-        .from('stock_view')
+        .from('stock_view_new')
         .select('producto, total_vendido, total_ingresado, stock_restante, estado')
         .order('total_vendido', { ascending: false })
         .limit(1);
@@ -81,7 +118,7 @@ export default function Stock() {
         return;
       }
 
-      console.log('📊 Datos obtenidos de stock_view:', data);
+      console.log('📊 Datos obtenidos de stock_view_new:', data);
 
       if (data && data.length > 0) {
         const producto = data[0];
@@ -197,6 +234,7 @@ export default function Stock() {
   useEffect(() => {
     cargarStock();
     cargarProductoMasVendido();
+    cargarProductosSinVentas();
     
     // Configurar suscripción en tiempo real
     configurarSuscripcionTiempoReal();
@@ -215,6 +253,7 @@ export default function Stock() {
     setActualizandoAutomaticamente(true);
     cargarStock();
     cargarProductoMasVendido();
+    cargarProductosSinVentas();
     setTimeout(() => setActualizandoAutomaticamente(false), 2000);
   };
 
@@ -520,6 +559,101 @@ export default function Stock() {
                   <p className="text-gray-300 text-lg md:text-xl font-bold mb-3">No hay productos vendidos</p>
                   <p className="text-gray-500 text-sm md:text-base">
                     Aún no se han registrado ventas de productos
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sección de Productos Sin Ventas por más de 30 días */}
+          <div className="mt-6 md:mt-8">
+            <div className="flex items-center justify-center gap-3 mb-4 md:mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold text-red-400 text-center">
+                Productos Sin Ventas (+30 días)
+              </h2>
+            </div>
+            
+            <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-red-400/30">
+              {loadingSinVentas ? (
+                <div className="text-center py-6 md:py-8">
+                  <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-red-400"></div>
+                  <p className="text-white mt-3 md:mt-4 text-sm md:text-base">Cargando productos sin ventas...</p>
+                </div>
+              ) : errorSinVentas ? (
+                <div className="text-center py-6 md:py-8">
+                  <div className="text-red-400 text-3xl md:text-4xl mb-3 md:mb-4">❌</div>
+                  <p className="text-red-400 text-base md:text-lg font-bold mb-2">Error</p>
+                  <p className="text-gray-300 mb-3 md:mb-4 text-sm md:text-base">{errorSinVentas}</p>
+                  <button
+                    onClick={cargarProductosSinVentas}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm md:text-base"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              ) : productosSinVentas.length > 0 ? (
+                <div>
+                  <div className="text-center mb-6">
+                    <div className="text-red-400 text-4xl md:text-5xl mb-4">⚠️</div>
+                    <p className="text-gray-300 text-base md:text-lg mb-2">
+                      Productos que no han tenido ventas por más de 30 días
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      Considera revisar estos productos para optimizar el inventario
+                    </p>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs md:text-sm">
+                      <thead>
+                        <tr className="bg-white/10 backdrop-blur-sm">
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha Ingreso</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Stock Disponible</th>
+                          <th className="text-white font-semibold p-2 md:p-4 text-left">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {productosSinVentas.map((item, index) => (
+                          <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
+                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
+                              {item.producto || 'Sin nombre'}
+                            </td>
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                              {new Date(item.fecha_ingreso).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </td>
+                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                              {formatearNumero(item.stock_restante || 0)}
+                            </td>
+                            <td className="p-2 md:p-4">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerEstiloEstado(calcularEstado(item.stock_restante))}`}>
+                                {calcularEstado(item.stock_restante)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                      <p className="text-gray-300 text-sm">
+                        <span className="text-red-400 font-medium">Total:</span> {productosSinVentas.length} productos sin ventas por más de 30 días
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 md:py-12">
+                  <div className="text-green-400 text-4xl md:text-6xl mb-4 md:mb-6">✅</div>
+                  <p className="text-gray-300 text-lg md:text-xl font-bold mb-3">¡Excelente gestión!</p>
+                  <p className="text-gray-500 text-sm md:text-base">
+                    Todos los productos han tenido ventas en los últimos 30 días
                   </p>
                 </div>
               )}
