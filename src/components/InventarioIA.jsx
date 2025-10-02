@@ -1050,7 +1050,7 @@ const aplicarAInventario = useCallback(async () => {
   try {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    if (!session || !session.access_token) {
       mostrarMensaje('error', 'Debe iniciar sesión para aplicar al inventario');
       return;
     }
@@ -1098,7 +1098,8 @@ const aplicarAInventario = useCallback(async () => {
         unidad: item.unidad?.toLowerCase().trim() || null,
         costo_total: item.costo_total || null,
         porcentaje_ganancia: item.porcentaje_ganancia || null,
-        precio_unitario: item.precio_unitario || null,
+        // Redondear precio_unitario para evitar números periódicos
+        precio_unitario: item.precio_unitario ? Math.round(item.precio_unitario) : null,
         // Redondear precio_venta para que coincida con lo mostrado en la tabla
         precio_venta: item.precio_venta ? Math.round(item.precio_venta) : null,
       })),
@@ -1131,7 +1132,8 @@ const aplicarAInventario = useCallback(async () => {
           precio_unitario: {
             original: item.precio_unitario,
             tipo: typeof item.precio_unitario,
-            formateado: formatearPrecioCLP(item.precio_unitario || 0)
+            formateado: formatearPrecioCLP(item.precio_unitario || 0),
+            redondeado: item.precio_unitario ? Math.round(item.precio_unitario) : null
           },
           precio_venta: {
             original: item.precio_venta,
@@ -1158,7 +1160,57 @@ const aplicarAInventario = useCallback(async () => {
       // Manejar errores específicos de la Edge
       let mensajeError = out?.error || "Error al aplicar al inventario";
       
-      if (out?.error === "No hay filas válidas") {
+      if (res.status === 401 || out?.error === "Auth inválida") {
+        // Intentar refrescar el token y reintentar una vez
+        try {
+          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+          if (refreshedSession?.access_token) {
+            // Reintentar con el token refrescado
+            const retryRes = await fetch(`${supabaseUrl}/functions/v1/inventario-ia-apply`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${refreshedSession.access_token}`,
+              },
+              body: JSON.stringify(payload),
+            });
+            
+            const retryOut = await retryRes.json();
+            
+            if (retryRes.ok) {
+              mostrarMensaje('success', `Inventario registrado: ${retryOut.inserted} ítem(s)`);
+              
+              if (retryOut.invalid?.length) {
+                console.info("Filas inválidas:", retryOut.invalid);
+              }
+              
+              // Reset completo
+              setDraft({ items: [] });
+              setSelectedFile(null);
+              setHaProcesado(false);
+              // Limpiar estados de previsualización
+              setPreviewUrl(null);
+              setShowPreview(false);
+              setCropArea({ x: 0, y: 0, width: 0, height: 0 });
+              setCroppedFile(null);
+              setHasCropSignedUrl(false);
+              setPdfPageDimensions(null);
+              setPageReady(false);
+              setImageReady(false);
+              pageCanvasRef.current = null;
+              imageCanvasRef.current = null;
+              return;
+            } else {
+              mensajeError = "Error de autenticación. Por favor, inicia sesión nuevamente.";
+            }
+          } else {
+            mensajeError = "Error de autenticación. Por favor, inicia sesión nuevamente.";
+          }
+        } catch (refreshError) {
+          console.error("Error refrescando sesión:", refreshError);
+          mensajeError = "Error de autenticación. Por favor, inicia sesión nuevamente.";
+        }
+      } else if (out?.error === "No hay filas válidas") {
         mensajeError = "Todos los ítems del borrador fallaron en la validación";
       } else if (out?.error?.includes("Valores numéricos inválidos")) {
         mensajeError = "Algunos valores numéricos no pueden ser interpretados. Revisa separadores de miles (.) y decimales (,)";

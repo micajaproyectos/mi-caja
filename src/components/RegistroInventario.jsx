@@ -471,7 +471,7 @@ const RegistroInventario = () => {
                     value={inventario.porcentaje_ganancia}
                     onChange={handleChange}
                     placeholder="0.30 (30%)"
-                    step="0.01"
+                    step="0.001"
                     min="0"
                     className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                     required
