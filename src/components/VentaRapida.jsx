@@ -298,35 +298,54 @@ const VentaRapida = () => {
 
   const sumatorias = calcularSumatoriasPorTipoPago();
 
-  // Función para obtener meses únicos de las ventas registradas
-  const obtenerMesesUnicos = () => {
-    const meses = ventasRegistradas.map(venta => {
-      if (!venta.fecha_cl) return null;
-      const [year, month] = venta.fecha_cl.split('-');
-      return { mes: parseInt(month), anio: parseInt(year) };
-    }).filter(m => m !== null);
-
-    const mesesUnicos = Array.from(new Set(meses.map(m => m.mes))).sort((a, b) => a - b);
-    
+  // Función para obtener meses disponibles según el año seleccionado
+  const obtenerMesesDisponibles = () => {
     const nombresMeses = [
-      '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      { valor: '1', nombre: 'Enero' },
+      { valor: '2', nombre: 'Febrero' },
+      { valor: '3', nombre: 'Marzo' },
+      { valor: '4', nombre: 'Abril' },
+      { valor: '5', nombre: 'Mayo' },
+      { valor: '6', nombre: 'Junio' },
+      { valor: '7', nombre: 'Julio' },
+      { valor: '8', nombre: 'Agosto' },
+      { valor: '9', nombre: 'Septiembre' },
+      { valor: '10', nombre: 'Octubre' },
+      { valor: '11', nombre: 'Noviembre' },
+      { valor: '12', nombre: 'Diciembre' }
     ];
 
-    return mesesUnicos.map(mes => ({
-      valor: mes.toString(),
-      nombre: nombresMeses[mes]
-    }));
+    // Si no hay año seleccionado, mostrar todos los meses
+    if (!filtroAnio) {
+      return nombresMeses;
+    }
+
+    // Si hay año seleccionado, mostrar solo los meses que tienen registros para ese año
+    const mesesConRegistros = ventasRegistradas
+      .filter(venta => {
+        if (!venta.fecha_cl) return false;
+        const [year] = venta.fecha_cl.split('-');
+        return parseInt(year) === parseInt(filtroAnio);
+      })
+      .map(venta => {
+        const [, month] = venta.fecha_cl.split('-');
+        return parseInt(month);
+      });
+
+    const mesesUnicos = Array.from(new Set(mesesConRegistros)).sort((a, b) => a - b);
+    
+    return nombresMeses.filter(mes => mesesUnicos.includes(parseInt(mes.valor)));
   };
 
-  // Función para obtener años únicos de las ventas registradas
-  const obtenerAniosUnicos = () => {
+  // Función para obtener años únicos de las ventas registradas (solo años con datos)
+  const obtenerAniosConRegistros = () => {
     const anios = ventasRegistradas.map(venta => {
       if (!venta.fecha_cl) return null;
       const [year] = venta.fecha_cl.split('-');
       return parseInt(year);
     }).filter(a => a !== null);
 
+    // Retornar años únicos ordenados de mayor a menor (más reciente primero)
     return Array.from(new Set(anios)).sort((a, b) => b - a);
   };
 
@@ -336,6 +355,21 @@ const VentaRapida = () => {
     setFiltroMes('');
     setFiltroAnio('');
     setFiltroTipoPago('');
+  };
+
+  // Función para manejar el cambio de año y limpiar mes si es necesario
+  const handleAnioChange = (nuevoAnio) => {
+    setFiltroAnio(nuevoAnio);
+    
+    // Si hay un mes seleccionado, verificar si existe para el nuevo año
+    if (filtroMes && nuevoAnio) {
+      const mesesDisponibles = obtenerMesesDisponibles();
+      const mesExiste = mesesDisponibles.some(mes => mes.valor === filtroMes);
+      
+      if (!mesExiste) {
+        setFiltroMes(''); // Limpiar mes si no existe para el año seleccionado
+      }
+    }
   };
 
   // Función para iniciar edición
@@ -683,7 +717,7 @@ const VentaRapida = () => {
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los meses</option>
-                    {obtenerMesesUnicos().map(mes => (
+                    {obtenerMesesDisponibles().map(mes => (
                       <option key={mes.valor} value={mes.valor} className="bg-gray-800 text-white">
                         {mes.nombre}
                       </option>
@@ -698,12 +732,12 @@ const VentaRapida = () => {
                   </label>
                   <select
                     value={filtroAnio}
-                    onChange={(e) => setFiltroAnio(e.target.value)}
+                    onChange={(e) => handleAnioChange(e.target.value)}
                     className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm md:text-base"
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los años</option>
-                    {obtenerAniosUnicos().map(anio => (
+                    {obtenerAniosConRegistros().map(anio => (
                       <option key={anio} value={anio} className="bg-gray-800 text-white">
                         {anio}
                       </option>
@@ -749,6 +783,23 @@ const VentaRapida = () => {
                 <div className="mt-4 text-center">
                   <p className="text-blue-200 text-xs md:text-sm">
                     ℹ️ Mostrando ventas del día actual. Usa los filtros para ver más registros.
+                  </p>
+                </div>
+              )}
+
+              {/* Indicador de filtros inteligentes */}
+              {filtroAnio && !filtroMes && (
+                <div className="mt-4 text-center">
+                  <p className="text-green-200 text-xs md:text-sm">
+                    🎯 Selecciona un año para ver solo los meses disponibles con registros.
+                  </p>
+                </div>
+              )}
+
+              {filtroAnio && filtroMes && (
+                <div className="mt-4 text-center">
+                  <p className="text-yellow-200 text-xs md:text-sm">
+                    ✨ Filtros inteligentes activos: Solo meses con registros para {filtroAnio}.
                   </p>
                 </div>
               )}
