@@ -41,6 +41,18 @@ export default function Clientes() {
     producto: ''
   });
 
+  // Estados para edición inline
+  const [editandoId, setEditandoId] = useState(null);
+  const [valoresEdicion, setValoresEdicion] = useState({
+    fecha_cl: '',
+    nombre_empresa: '',
+    producto: '',
+    cantidad: '',
+    precio_unitario: '',
+    sub_total: '',
+    total_final: ''
+  });
+
   // Años disponibles para filtros: 2025 por defecto + años futuros si hay registros
   const aniosDisponiblesFiltro = useMemo(() => {
     const anios = new Set();
@@ -1066,6 +1078,127 @@ export default function Clientes() {
     }
   };
 
+  // Función para iniciar la edición de un registro
+  const iniciarEdicion = (registro) => {
+    setEditandoId(registro.id);
+    setValoresEdicion({
+      fecha_cl: registro.fecha_cl || registro.fecha,
+      nombre_empresa: registro.nombre_empresa,
+      producto: registro.producto,
+      cantidad: registro.cantidad.toString(),
+      precio_unitario: registro.precio_unitario.toString(),
+      sub_total: registro.sub_total ? registro.sub_total.toString() : '',
+      total_final: registro.total_final ? registro.total_final.toString() : ''
+    });
+  };
+
+  // Función para cancelar la edición
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setValoresEdicion({
+      fecha_cl: '',
+      nombre_empresa: '',
+      producto: '',
+      cantidad: '',
+      precio_unitario: '',
+      sub_total: '',
+      total_final: ''
+    });
+  };
+
+  // Función para manejar cambios en los campos editables
+  const handleEdicionChange = (campo, valor) => {
+    setValoresEdicion(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  // Función para guardar la edición
+  const guardarEdicion = async (id, registro) => {
+    try {
+      // Validaciones
+      if (!valoresEdicion.fecha_cl || !valoresEdicion.nombre_empresa || !valoresEdicion.producto || 
+          !valoresEdicion.cantidad || !valoresEdicion.precio_unitario) {
+        alert('⚠️ Los campos fecha, empresa, producto, cantidad y precio unitario son obligatorios');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.cantidad) <= 0) {
+        alert('⚠️ La cantidad debe ser mayor a 0');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.precio_unitario) <= 0) {
+        alert('⚠️ El precio unitario debe ser mayor a 0');
+        return;
+      }
+
+      setLoadingRegistros(true);
+
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('Error al obtener cliente_id del usuario:', usuarioError);
+        alert('❌ Error: No se pudo obtener la información del usuario.');
+        return;
+      }
+
+      const cliente_id = usuarioData.cliente_id;
+
+      // Preparar datos para actualización (excluyendo fecha_cl que tiene restricciones de DEFAULT)
+      const datosActualizacion = {
+        nombre_empresa: valoresEdicion.nombre_empresa.trim(),
+        producto: valoresEdicion.producto.trim(),
+        cantidad: parseFloat(valoresEdicion.cantidad),
+        precio_unitario: parseFloat(valoresEdicion.precio_unitario),
+        sub_total: valoresEdicion.sub_total ? parseFloat(valoresEdicion.sub_total) : null,
+        total_final: valoresEdicion.total_final ? parseFloat(valoresEdicion.total_final) : null
+      };
+
+      // Verificar si se intentó cambiar la fecha
+      const fechaOriginal = registro.fecha_cl || registro.fecha;
+      if (valoresEdicion.fecha_cl && valoresEdicion.fecha_cl !== fechaOriginal) {
+        console.warn('⚠️ La fecha no se puede editar debido a restricciones de la base de datos');
+      }
+
+      const { error } = await supabase
+        .from('clientes')
+        .update(datosActualizacion)
+        .eq('id', id)
+        .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo editar registros del usuario actual
+        .eq('cliente_id', cliente_id); // 🔒 SEGURIDAD: Solo editar registros del cliente actual
+
+      if (error) {
+        console.error('❌ Error al actualizar registro:', error);
+        alert('❌ Error al actualizar el registro: ' + error.message);
+        return;
+      }
+
+      alert('✅ Registro actualizado exitosamente');
+      cancelarEdicion();
+      await cargarRegistrosPedidos();
+
+    } catch (error) {
+      console.error('❌ Error inesperado al actualizar registro:', error);
+      alert('❌ Error inesperado al actualizar el registro');
+    } finally {
+      setLoadingRegistros(false);
+    }
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
@@ -1493,54 +1626,176 @@ export default function Clientes() {
                       </tr>
                     </thead>
                     <tbody>
-                        {registrosPedidos.map((registro, index) => (
-                        <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                          <td className="text-white p-3 text-sm">
-                            {(() => {
-                              const fechaStr = registro.fecha_cl || registro.fecha;
-                              if (!fechaStr) return '-';
-                              
-                              // Evitar problemas de zona horaria parseando manualmente
-                              const [year, month, day] = fechaStr.split('-');
-                              const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                              
-                              return fecha.toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: '2-digit', 
-                                day: '2-digit'
-                              });
-                            })()}
-                          </td>
-                                                     <td className="text-gray-300 p-3 text-sm">
-                             {registro.nombre_empresa}
-                           </td>
-                          <td className="text-gray-300 p-3 text-sm">
-                            {registro.producto}
-                          </td>
-                            <td className="text-gray-300 p-3 text-sm text-center">
-                              {formatearNumero(registro.cantidad)}
-                          </td>
-                            <td className="text-gray-300 p-3 text-sm text-right">
-                              ${formatearNumero(registro.precio_unitario)}
-                          </td>
-                            <td className="text-green-300 p-3 text-sm text-right font-medium">
-                              ${formatearNumero(registro.sub_total)}
-                          </td>
-                            <td className="text-green-400 p-3 text-sm text-right font-bold">
-                              ${formatearNumero(registro.total_final)}
-                          </td>
-                            <td className="p-3">
-                              <button
-                                onClick={() => eliminarRegistro(registro.id)}
-                                disabled={loadingEliminar}
-                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                                title="Eliminar registro"
-                              >
-                                {loadingEliminar ? 'Eliminando...' : 'Eliminar'}
-                              </button>
-                            </td>
-                        </tr>
-                      ))}
+                        {registrosPedidos.map((registro, index) => {
+                          const estaEditando = editandoId === registro.id;
+                          
+                          return (
+                            <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                              {/* Fecha */}
+                              <td className="text-white p-3 text-sm">
+                                {estaEditando ? (
+                                  <input
+                                    type="date"
+                                    value={valoresEdicion.fecha_cl}
+                                    onChange={(e) => handleEdicionChange('fecha_cl', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    disabled
+                                    title="La fecha no se puede editar debido a restricciones de la base de datos"
+                                    style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                                  />
+                                ) : (
+                                  (() => {
+                                    const fechaStr = registro.fecha_cl || registro.fecha;
+                                    if (!fechaStr) return '-';
+                                    
+                                    // Evitar problemas de zona horaria parseando manualmente
+                                    const [year, month, day] = fechaStr.split('-');
+                                    const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                    
+                                    return fecha.toLocaleDateString('es-ES', {
+                                      year: 'numeric',
+                                      month: '2-digit', 
+                                      day: '2-digit'
+                                    });
+                                  })()
+                                )}
+                              </td>
+
+                              {/* Empresa */}
+                              <td className="text-gray-300 p-3 text-sm">
+                                {estaEditando ? (
+                                  <input
+                                    type="text"
+                                    value={valoresEdicion.nombre_empresa}
+                                    onChange={(e) => handleEdicionChange('nombre_empresa', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  registro.nombre_empresa
+                                )}
+                              </td>
+
+                              {/* Producto */}
+                              <td className="text-gray-300 p-3 text-sm">
+                                {estaEditando ? (
+                                  <input
+                                    type="text"
+                                    value={valoresEdicion.producto}
+                                    onChange={(e) => handleEdicionChange('producto', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  registro.producto
+                                )}
+                              </td>
+
+                              {/* Cantidad */}
+                              <td className="text-gray-300 p-3 text-sm text-center">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="1"
+                                    value={valoresEdicion.cantidad}
+                                    onChange={(e) => handleEdicionChange('cantidad', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  formatearNumero(registro.cantidad)
+                                )}
+                              </td>
+
+                              {/* Precio Unitario */}
+                              <td className="text-gray-300 p-3 text-sm text-right">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.precio_unitario}
+                                    onChange={(e) => handleEdicionChange('precio_unitario', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  `$${formatearNumero(registro.precio_unitario)}`
+                                )}
+                              </td>
+
+                              {/* Sub Total */}
+                              <td className="text-green-300 p-3 text-sm text-right font-medium">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.sub_total}
+                                    onChange={(e) => handleEdicionChange('sub_total', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-green-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Sub total"
+                                  />
+                                ) : (
+                                  `$${formatearNumero(registro.sub_total)}`
+                                )}
+                              </td>
+
+                              {/* Total Final */}
+                              <td className="text-green-400 p-3 text-sm text-right font-bold">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.total_final}
+                                    onChange={(e) => handleEdicionChange('total_final', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-green-400 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Total final"
+                                  />
+                                ) : (
+                                  `$${formatearNumero(registro.total_final)}`
+                                )}
+                              </td>
+
+                              {/* Acciones */}
+                              <td className="p-3">
+                                {estaEditando ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => guardarEdicion(registro.id, registro)}
+                                      disabled={loadingRegistros}
+                                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Guardar cambios"
+                                    >
+                                      ✅
+                                    </button>
+                                    <button
+                                      onClick={cancelarEdicion}
+                                      disabled={loadingRegistros}
+                                      className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Cancelar edición"
+                                    >
+                                      ❌
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => iniciarEdicion(registro)}
+                                      disabled={loadingRegistros}
+                                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Editar registro"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => eliminarRegistro(registro.id)}
+                                      disabled={loadingEliminar}
+                                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                      title="Eliminar registro"
+                                    >
+                                      {loadingEliminar ? 'Eliminando...' : 'Eliminar'}
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>

@@ -63,6 +63,22 @@ export default function Pedidos() {
   // Estados para la tabla de pedidos registrados
   const [pedidosRegistrados, setPedidosRegistrados] = useState([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
+
+  // Estados para edición inline
+  const [editandoId, setEditandoId] = useState(null);
+  const [valoresEdicion, setValoresEdicion] = useState({
+    fecha_cl: '',
+    mesa: '',
+    producto: '',
+    unidad: '',
+    cantidad: '',
+    precio: '',
+    total: '',
+    total_final: '',
+    propina: '',
+    tipo_pago: '',
+    estado: ''
+  });
   
 
   // Estados para estadísticas de pedidos
@@ -742,6 +758,131 @@ export default function Pedidos() {
     } catch (error) {
       console.error('❌ Error general al eliminar pedido:', error);
       alert('❌ Error al eliminar pedido: ' + error.message);
+    } finally {
+      setLoadingPedidos(false);
+    }
+  };
+
+  // Función para iniciar edición
+  const iniciarEdicion = (pedido) => {
+    setEditandoId(pedido.id);
+    setValoresEdicion({
+      fecha_cl: pedido.fecha_cl || pedido.fecha,
+      mesa: pedido.mesa ? pedido.mesa.toString() : '',
+      producto: pedido.producto,
+      unidad: pedido.unidad,
+      cantidad: pedido.cantidad,
+      precio: pedido.precio ? pedido.precio.toString() : '',
+      total: pedido.total ? pedido.total.toString() : '',
+      total_final: pedido.total_final ? pedido.total_final.toString() : '',
+      propina: pedido.propina ? pedido.propina.toString() : '',
+      tipo_pago: pedido.tipo_pago || '',
+      estado: pedido.estado || ''
+    });
+  };
+
+  // Función para cancelar edición
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setValoresEdicion({
+      fecha_cl: '',
+      mesa: '',
+      producto: '',
+      unidad: '',
+      cantidad: '',
+      precio: '',
+      total: '',
+      total_final: '',
+      propina: '',
+      tipo_pago: '',
+      estado: ''
+    });
+  };
+
+  // Función para manejar cambios en edición
+  const handleEdicionChange = (campo, valor) => {
+    setValoresEdicion(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  // Función para guardar edición
+  const guardarEdicion = async (id) => {
+    try {
+      // Validaciones básicas
+      if (!valoresEdicion.fecha_cl || !valoresEdicion.producto || !valoresEdicion.cantidad || 
+          !valoresEdicion.unidad || !valoresEdicion.precio) {
+        alert('⚠️ Los campos fecha, producto, cantidad, unidad y precio son obligatorios');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.cantidad) <= 0) {
+        alert('⚠️ La cantidad debe ser mayor a 0');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.precio) <= 0) {
+        alert('⚠️ El precio debe ser mayor a 0');
+        return;
+      }
+
+      setLoadingPedidos(true);
+
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('Error al obtener cliente_id del usuario:', usuarioError);
+        alert('❌ Error: No se pudo obtener la información del usuario.');
+        return;
+      }
+
+      const cliente_id = usuarioData.cliente_id;
+
+      const { error } = await supabase
+        .from('pedidos')
+        .update({
+          fecha: valoresEdicion.fecha_cl,
+          mesa: valoresEdicion.mesa ? parseInt(valoresEdicion.mesa) : null,
+          producto: valoresEdicion.producto.trim(),
+          unidad: valoresEdicion.unidad,
+          cantidad: valoresEdicion.cantidad,
+          precio: parseFloat(valoresEdicion.precio),
+          total: valoresEdicion.total ? parseFloat(valoresEdicion.total) : null,
+          total_final: valoresEdicion.total_final ? parseFloat(valoresEdicion.total_final) : null,
+          propina: valoresEdicion.propina ? parseFloat(valoresEdicion.propina) : null,
+          tipo_pago: valoresEdicion.tipo_pago || null,
+          estado: valoresEdicion.estado || null
+        })
+        .eq('id', id)
+        .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo editar pedidos del usuario actual
+        .eq('cliente_id', cliente_id); // 🔒 SEGURIDAD: Solo editar pedidos del cliente actual
+
+      if (error) {
+        console.error('❌ Error al actualizar pedido:', error);
+        alert('❌ Error al actualizar el pedido: ' + error.message);
+        return;
+      }
+
+      alert('✅ Pedido actualizado exitosamente');
+      cancelarEdicion();
+      await cargarPedidosRegistrados();
+
+    } catch (error) {
+      console.error('❌ Error inesperado al actualizar pedido:', error);
+      alert('❌ Error inesperado al actualizar el pedido');
     } finally {
       setLoadingPedidos(false);
     }
@@ -1512,114 +1653,284 @@ export default function Pedidos() {
                         </tr>
                       </thead>
                                        <tbody className="text-white">
-                      {pedidosFiltrados.map((pedido, index) => (
-                       <Fragment key={index}>
-                         <tr 
-                           className={`hover:bg-white/5 transition-colors ${
-                             index > 0 && pedidosFiltrados[index - 1] && pedidosFiltrados[index - 1].total_final ? 'border-t-2 border-white/20' : ''
-                           }`}
-                         >
-                                                   <td className="px-4 py-3">
-                            <div className="text-sm">
-                              {pedido.fecha ? (() => {
-                                // Parsear la fecha correctamente para evitar problemas de zona horaria
-                                const [year, month, day] = pedido.fecha.split('-');
-                                const fechaFormateada = `${day}/${month}/${year}`;
-                                return fechaFormateada;
-                              })() : 'N/A'}
-                            </div>
-                          </td>
-                                                   <td className="px-4 py-3">
-                            {pedido.mesa ? (
-                              <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs">
-                                Mesa {pedido.mesa}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500 text-xs">-</span>
-                            )}
-                          </td>
-                         <td className="px-4 py-3">
-                           <div>
-                             <div className="font-medium">{pedido.producto}</div>
-                             <div className="text-gray-400 text-xs">{pedido.unidad}</div>
-                           </div>
-                         </td>
-                         <td className="px-4 py-3">
-                           <span className="bg-gray-600/20 text-gray-300 px-2 py-1 rounded text-xs">
-                             {pedido.cantidad}
-                           </span>
-                         </td>
-                         <td className="px-4 py-3">
-                           <span className="text-green-400 font-medium">
-                             ${parseFloat(pedido.precio).toLocaleString()}
-                           </span>
-                         </td>
-                         <td className="px-4 py-3">
-                           <span className="text-yellow-400 font-medium">
-                             ${parseFloat(pedido.total).toLocaleString()}
-                           </span>
-                         </td>
-                                                   <td className="px-4 py-3">
-                            {pedido.total_final ? (
-                              <span className="bg-green-600/20 text-green-300 px-2 py-1 rounded font-bold text-sm">
-                                ${parseFloat(pedido.total_final).toLocaleString()}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500 text-xs">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {pedido.propina ? (
-                              <span className="bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded font-medium text-sm">
-                                ${parseFloat(pedido.propina).toLocaleString()}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500 text-xs">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {pedido.tipo_pago ? (
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                pedido.tipo_pago === 'efectivo' 
-                                  ? 'bg-green-600/20 text-green-300' 
-                                  : pedido.tipo_pago === 'debito'
-                                  ? 'bg-blue-600/20 text-blue-300'
-                                  : 'bg-purple-600/20 text-purple-300'
-                              }`}>
-                                {pedido.tipo_pago === 'efectivo' ? '💵 Efectivo' : 
-                                 pedido.tipo_pago === 'debito' ? '💳 Débito' : 
-                                 pedido.tipo_pago === 'transferencia' ? '📱 Transferencia' : 
-                                 pedido.tipo_pago}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500 text-xs">-</span>
-                            )}
-                          </td>
-                                                   <td className="px-4 py-3">
-                            {pedido.estado ? (
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                pedido.estado === 'pagado' 
-                                  ? 'bg-green-600/20 text-green-300' 
-                                  : 'bg-gray-600/20 text-gray-300'
-                              }`}>
-                                {pedido.estado === 'pagado' ? '✅ Pagado' : pedido.estado}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500 text-xs">-</span>
-                            )}
-                          </td>
-                                                     <td className="px-4 py-3">
-                             <button
-                               onClick={() => eliminarPedido(pedido.id)}
-                               className="text-white hover:text-gray-300 text-lg transition-colors"
-                               title="Eliminar pedido"
-                             >
-                               🗑️
-                             </button>
-                           </td>
-                         </tr>
-                       </Fragment>
-                     ))}
+                      {pedidosFiltrados.map((pedido, index) => {
+                        const estaEditando = editandoId === pedido.id;
+                        
+                        return (
+                          <Fragment key={index}>
+                            <tr 
+                              className={`hover:bg-white/5 transition-colors ${
+                                index > 0 && pedidosFiltrados[index - 1] && pedidosFiltrados[index - 1].total_final ? 'border-t-2 border-white/20' : ''
+                              }`}
+                            >
+                              {/* Fecha */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="date"
+                                    value={valoresEdicion.fecha_cl}
+                                    onChange={(e) => handleEdicionChange('fecha_cl', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  <div className="text-sm">
+                                    {pedido.fecha ? (() => {
+                                      const [year, month, day] = pedido.fecha.split('-');
+                                      const fechaFormateada = `${day}/${month}/${year}`;
+                                      return fechaFormateada;
+                                    })() : 'N/A'}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Mesa */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    value={valoresEdicion.mesa}
+                                    onChange={(e) => handleEdicionChange('mesa', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Número mesa"
+                                  />
+                                ) : (
+                                  pedido.mesa ? (
+                                    <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs">
+                                      Mesa {pedido.mesa}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">-</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* Producto */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <div className="flex flex-col gap-1">
+                                    <input
+                                      type="text"
+                                      value={valoresEdicion.producto}
+                                      onChange={(e) => handleEdicionChange('producto', e.target.value)}
+                                      className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    />
+                                    <select
+                                      value={valoresEdicion.unidad}
+                                      onChange={(e) => handleEdicionChange('unidad', e.target.value)}
+                                      className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    >
+                                      <option value="unidad">📦 Unidad</option>
+                                      <option value="kg">⚖️ Kg</option>
+                                    </select>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className="font-medium">{pedido.producto}</div>
+                                    <div className="text-gray-400 text-xs">{pedido.unidad}</div>
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Cantidad */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="text"
+                                    value={valoresEdicion.cantidad}
+                                    onChange={(e) => handleEdicionChange('cantidad', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  <span className="bg-gray-600/20 text-gray-300 px-2 py-1 rounded text-xs">
+                                    {pedido.cantidad}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Precio */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.precio}
+                                    onChange={(e) => handleEdicionChange('precio', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  <span className="text-green-400 font-medium">
+                                    ${parseFloat(pedido.precio).toLocaleString()}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Total */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.total}
+                                    onChange={(e) => handleEdicionChange('total', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  <span className="text-yellow-400 font-medium">
+                                    ${parseFloat(pedido.total).toLocaleString()}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Total Final */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.total_final || ''}
+                                    onChange={(e) => handleEdicionChange('total_final', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Total final"
+                                  />
+                                ) : (
+                                  pedido.total_final ? (
+                                    <span className="bg-green-600/20 text-green-300 px-2 py-1 rounded font-bold text-sm">
+                                      ${parseFloat(pedido.total_final).toLocaleString()}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">-</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* Propina */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={valoresEdicion.propina || ''}
+                                    onChange={(e) => handleEdicionChange('propina', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Propina"
+                                  />
+                                ) : (
+                                  pedido.propina ? (
+                                    <span className="bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded font-medium text-sm">
+                                      ${parseFloat(pedido.propina).toLocaleString()}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">-</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* Tipo de Pago */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <select
+                                    value={valoresEdicion.tipo_pago}
+                                    onChange={(e) => handleEdicionChange('tipo_pago', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  >
+                                    <option value="">Sin tipo</option>
+                                    <option value="efectivo">💵 Efectivo</option>
+                                    <option value="debito">💳 Débito</option>
+                                    <option value="transferencia">📱 Transferencia</option>
+                                  </select>
+                                ) : (
+                                  pedido.tipo_pago ? (
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                      pedido.tipo_pago === 'efectivo' 
+                                        ? 'bg-green-600/20 text-green-300' 
+                                        : pedido.tipo_pago === 'debito'
+                                        ? 'bg-blue-600/20 text-blue-300'
+                                        : 'bg-purple-600/20 text-purple-300'
+                                    }`}>
+                                      {pedido.tipo_pago === 'efectivo' ? '💵 Efectivo' : 
+                                       pedido.tipo_pago === 'debito' ? '💳 Débito' : 
+                                       pedido.tipo_pago === 'transferencia' ? '📱 Transferencia' : 
+                                       pedido.tipo_pago}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">-</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* Estado */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <select
+                                    value={valoresEdicion.estado}
+                                    onChange={(e) => handleEdicionChange('estado', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  >
+                                    <option value="">Sin estado</option>
+                                    <option value="pagado">✅ Pagado</option>
+                                    <option value="pendiente">⏳ Pendiente</option>
+                                  </select>
+                                ) : (
+                                  pedido.estado ? (
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                      pedido.estado === 'pagado' 
+                                        ? 'bg-green-600/20 text-green-300' 
+                                        : 'bg-gray-600/20 text-gray-300'
+                                    }`}>
+                                      {pedido.estado === 'pagado' ? '✅ Pagado' : pedido.estado}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">-</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* Acciones */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => guardarEdicion(pedido.id)}
+                                      disabled={loadingPedidos}
+                                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Guardar cambios"
+                                    >
+                                      ✅
+                                    </button>
+                                    <button
+                                      onClick={cancelarEdicion}
+                                      disabled={loadingPedidos}
+                                      className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Cancelar edición"
+                                    >
+                                      ❌
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => iniciarEdicion(pedido)}
+                                      disabled={loadingPedidos}
+                                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Editar pedido"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => eliminarPedido(pedido.id)}
+                                      disabled={loadingPedidos}
+                                      className="text-white hover:text-gray-300 text-lg transition-colors"
+                                      title="Eliminar pedido"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          </Fragment>
+                        );
+                      })}
                    </tbody>
                  </table>
                </div>

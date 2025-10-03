@@ -93,6 +93,19 @@ export default function RegistroVenta() {
   // Estado para controlar la cantidad de ventas mostradas
   const [ventasMostradas, setVentasMostradas] = useState(10);
 
+  // Estados para edición inline
+  const [editandoId, setEditandoId] = useState(null);
+  const [valoresEdicion, setValoresEdicion] = useState({
+    fecha_cl: '',
+    producto: '',
+    cantidad: '',
+    unidad: '',
+    precio_unitario: '',
+    total_venta: '',
+    total_final: '',
+    tipo_pago: ''
+  });
+
   // Estados para búsqueda de productos del inventario
   const [productosInventario, setProductosInventario] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');
@@ -1035,6 +1048,106 @@ export default function RegistroVenta() {
     }
   };
 
+  // Función para iniciar edición
+  const iniciarEdicion = (venta) => {
+    setEditandoId(venta.id);
+    setValoresEdicion({
+      fecha_cl: venta.fecha_cl || venta.fecha,
+      producto: venta.producto,
+      cantidad: venta.cantidad.toString(),
+      unidad: venta.unidad,
+      precio_unitario: venta.precio_unitario.toString(),
+      total_venta: venta.total_venta.toString(),
+      total_final: venta.total_final ? venta.total_final.toString() : '',
+      tipo_pago: venta.tipo_pago
+    });
+  };
+
+  // Función para cancelar edición
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setValoresEdicion({
+      fecha_cl: '',
+      producto: '',
+      cantidad: '',
+      unidad: '',
+      precio_unitario: '',
+      total_venta: '',
+      total_final: '',
+      tipo_pago: ''
+    });
+  };
+
+  // Función para manejar cambios en edición
+  const handleEdicionChange = (campo, valor) => {
+    setValoresEdicion(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  // Función para guardar edición
+  const guardarEdicion = async (id) => {
+    try {
+      // Validaciones
+      if (!valoresEdicion.fecha_cl || !valoresEdicion.producto || !valoresEdicion.cantidad || 
+          !valoresEdicion.unidad || !valoresEdicion.precio_unitario || !valoresEdicion.tipo_pago) {
+        alert('⚠️ Todos los campos son obligatorios');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.cantidad) <= 0) {
+        alert('⚠️ La cantidad debe ser mayor a 0');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.precio_unitario) <= 0) {
+        alert('⚠️ El precio unitario debe ser mayor a 0');
+        return;
+      }
+
+      setLoading(true);
+
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('ventas')
+        .update({
+          fecha: valoresEdicion.fecha_cl,
+          producto: valoresEdicion.producto.trim(),
+          cantidad: parseFloat(valoresEdicion.cantidad),
+          unidad: valoresEdicion.unidad,
+          precio_unitario: parseFloat(valoresEdicion.precio_unitario),
+          total_venta: parseFloat(valoresEdicion.total_venta),
+          total_final: valoresEdicion.total_final ? parseFloat(valoresEdicion.total_final) : null,
+          tipo_pago: valoresEdicion.tipo_pago
+        })
+        .eq('id', id)
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo editar ventas del usuario actual
+
+      if (error) {
+        console.error('❌ Error al actualizar venta:', error);
+        alert('❌ Error al actualizar la venta: ' + error.message);
+        return;
+      }
+
+      alert('✅ Venta actualizada exitosamente');
+      cancelarEdicion();
+      await cargarVentas();
+
+    } catch (error) {
+      console.error('❌ Error inesperado al actualizar venta:', error);
+      alert('❌ Error inesperado al actualizar la venta');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
 
   return (
@@ -1672,44 +1785,178 @@ export default function RegistroVenta() {
                                                                      <tbody>
                           {(() => {
                             const ventasAMostrar = obtenerVentasAMostrar();
-                            return ventasAMostrar.map((venta, index) => (
-                          <tr key={index} className={`hover:bg-white/5 transition-colors ${
-                            venta.total_final ? 'border-b-2 border-white/20' : ''
-                          }`}>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              {formatearFecha(venta.fecha_cl || venta.fecha)}
-                            </td>
-                            <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">{venta.producto || 'Sin producto'}</td>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              {!isNaN(venta.cantidad) ? venta.cantidad : '0'} {obtenerInfoUnidad(venta.unidad).icon}
-                            </td>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              ${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}
-                            </td>
-                            <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
-                              ${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}
-                            </td>
-                            <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
-                              {venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'}
-                            </td>
-                            <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
-                              <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
-                                {obtenerInfoTipoPago(venta.tipo_pago).icon}
-                              </span>
-                            </td>
-                            <td className="p-2 md:p-3">
-                              <button
-                                onClick={() => eliminarVenta(venta.id)}
-                                disabled={loading}
-                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                                title="Eliminar venta"
-                              >
-                                🗑️
-                              </button>
-                            </td>
-                           </tr>
-                         ));
-                         })()}
+                            return ventasAMostrar.map((venta, index) => {
+                              const estaEditando = editandoId === venta.id;
+                              
+                              return (
+                                <tr key={index} className={`hover:bg-white/5 transition-colors ${
+                                  venta.total_final ? 'border-b-2 border-white/20' : ''
+                                }`}>
+                                  {/* Fecha */}
+                                  <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                                    {estaEditando ? (
+                                      <input
+                                        type="date"
+                                        value={valoresEdicion.fecha_cl}
+                                        onChange={(e) => handleEdicionChange('fecha_cl', e.target.value)}
+                                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                      />
+                                    ) : (
+                                      formatearFecha(venta.fecha_cl || venta.fecha)
+                                    )}
+                                  </td>
+
+                                  {/* Producto */}
+                                  <td className="text-gray-200 p-2 md:p-3 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
+                                    {estaEditando ? (
+                                      <input
+                                        type="text"
+                                        value={valoresEdicion.producto}
+                                        onChange={(e) => handleEdicionChange('producto', e.target.value)}
+                                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                      />
+                                    ) : (
+                                      venta.producto || 'Sin producto'
+                                    )}
+                                  </td>
+
+                                  {/* Cantidad */}
+                                  <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                                    {estaEditando ? (
+                                      <div className="flex flex-col gap-1">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          value={valoresEdicion.cantidad}
+                                          onChange={(e) => handleEdicionChange('cantidad', e.target.value)}
+                                          className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                        />
+                                        <select
+                                          value={valoresEdicion.unidad}
+                                          onChange={(e) => handleEdicionChange('unidad', e.target.value)}
+                                          className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                        >
+                                          <option value="kg">⚖️ Kg</option>
+                                          <option value="unidad">📦 Unidad</option>
+                                        </select>
+                                      </div>
+                                    ) : (
+                                      `${!isNaN(venta.cantidad) ? venta.cantidad : '0'} ${obtenerInfoUnidad(venta.unidad).icon}`
+                                    )}
+                                  </td>
+
+                                  {/* Precio */}
+                                  <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                                    {estaEditando ? (
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={valoresEdicion.precio_unitario}
+                                        onChange={(e) => handleEdicionChange('precio_unitario', e.target.value)}
+                                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                      />
+                                    ) : (
+                                      `$${!isNaN(venta.precio_unitario) ? parseFloat(venta.precio_unitario).toLocaleString() : '0'}`
+                                    )}
+                                  </td>
+
+                                  {/* Total */}
+                                  <td className="text-green-300 p-2 md:p-3 font-bold text-xs md:text-sm">
+                                    {estaEditando ? (
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={valoresEdicion.total_venta}
+                                        onChange={(e) => handleEdicionChange('total_venta', e.target.value)}
+                                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-green-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                      />
+                                    ) : (
+                                      `$${!isNaN(venta.total_venta) ? parseFloat(venta.total_venta).toLocaleString() : '0'}`
+                                    )}
+                                  </td>
+
+                                  {/* Total Final */}
+                                  <td className="text-blue-300 p-2 md:p-3 font-bold text-xs md:text-sm">
+                                    {estaEditando ? (
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={valoresEdicion.total_final || ''}
+                                        onChange={(e) => handleEdicionChange('total_final', e.target.value)}
+                                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-blue-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                        placeholder="Total final"
+                                      />
+                                    ) : (
+                                      venta.total_final ? `$${parseFloat(venta.total_final).toLocaleString()}` : '-'
+                                    )}
+                                  </td>
+
+                                  {/* Tipo de Pago */}
+                                  <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                                    {estaEditando ? (
+                                      <select
+                                        value={valoresEdicion.tipo_pago}
+                                        onChange={(e) => handleEdicionChange('tipo_pago', e.target.value)}
+                                        className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                      >
+                                        <option value="efectivo">💵 Efectivo</option>
+                                        <option value="debito">💳 Débito</option>
+                                        <option value="credito">💳 Crédito</option>
+                                        <option value="transferencia">📱 Transferencia</option>
+                                      </select>
+                                    ) : (
+                                      <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
+                                        {obtenerInfoTipoPago(venta.tipo_pago).icon}
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Acciones */}
+                                  <td className="p-2 md:p-3">
+                                    {estaEditando ? (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <button
+                                          onClick={() => guardarEdicion(venta.id)}
+                                          disabled={loading}
+                                          className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                          title="Guardar cambios"
+                                        >
+                                          ✅
+                                        </button>
+                                        <button
+                                          onClick={cancelarEdicion}
+                                          disabled={loading}
+                                          className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                          title="Cancelar edición"
+                                        >
+                                          ❌
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <button
+                                          onClick={() => iniciarEdicion(venta)}
+                                          disabled={loading}
+                                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                          title="Editar venta"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={() => eliminarVenta(venta.id)}
+                                          disabled={loading}
+                                          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                          title="Eliminar venta"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                        </tbody>
                     </table>
 
