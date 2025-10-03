@@ -50,6 +50,16 @@ const FormularioGastos = () => {
   const [filtroTipoGasto, setFiltroTipoGasto] = useState('');
   const [filtroFormaPago, setFiltroFormaPago] = useState('');
 
+  // Estados para edición inline
+  const [editandoId, setEditandoId] = useState(null);
+  const [valoresEdicion, setValoresEdicion] = useState({
+    fecha: '',
+    tipo_gasto: '',
+    detalle: '',
+    monto: '',
+    forma_pago: ''
+  });
+
   // Opciones para los selectores
   const opcionesTipoGasto = [
     { value: 'Fijo', label: 'Fijo' },
@@ -294,6 +304,105 @@ const FormularioGastos = () => {
     } catch (error) {
       console.error('Error inesperado al eliminar gasto:', error);
       setError('Error inesperado al eliminar el gasto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para iniciar la edición de un gasto
+  const iniciarEdicion = (gasto) => {
+    console.log('🔍 Iniciando edición de gasto:', gasto.id, 'Tipo:', typeof gasto.id);
+    setEditandoId(gasto.id);
+    setValoresEdicion({
+      fecha: gasto.fecha_cl || gasto.fecha,
+      tipo_gasto: gasto.tipo_gasto,
+      detalle: gasto.detalle,
+      monto: gasto.monto.toString(),
+      forma_pago: gasto.forma_pago
+    });
+  };
+
+  // Función para cancelar la edición
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setValoresEdicion({
+      fecha: '',
+      tipo_gasto: '',
+      detalle: '',
+      monto: '',
+      forma_pago: ''
+    });
+  };
+
+  // Función para manejar cambios en los campos editables
+  const handleEdicionChange = (campo, valor) => {
+    setValoresEdicion(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  // Función para guardar la edición
+  const guardarEdicion = async (id) => {
+    try {
+      // Validaciones
+      if (!valoresEdicion.fecha || !valoresEdicion.tipo_gasto || !valoresEdicion.detalle || 
+          !valoresEdicion.monto || !valoresEdicion.forma_pago) {
+        alert('⚠️ Todos los campos son obligatorios');
+        return;
+      }
+
+      if (parseFloat(valoresEdicion.monto) <= 0) {
+        alert('⚠️ El monto debe ser mayor a 0');
+        return;
+      }
+
+      // Validar que el ID sea válido
+      if (!id) {
+        alert('❌ Error: ID del gasto no válido');
+        return;
+      }
+
+      setLoading(true);
+
+      // Obtener el usuario_id del usuario autenticado
+      const usuario = await authService.getCurrentUser();
+      if (!usuario) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Log para debugging
+      console.log('🔍 Editando gasto con ID:', id, 'Tipo:', typeof id);
+
+      // Intentar la actualización
+      let query = supabase
+        .from('gasto')
+        .update({
+          fecha: valoresEdicion.fecha,
+          tipo_gasto: valoresEdicion.tipo_gasto,
+          detalle: valoresEdicion.detalle.trim(),
+          monto: parseFloat(valoresEdicion.monto),
+          forma_pago: valoresEdicion.forma_pago
+        })
+        .eq('usuario_id', usuario.id); // 🔒 SEGURIDAD: Solo editar gastos del usuario actual
+
+      // Intentar usar el ID tal como viene
+      const { error } = await query.eq('id', id);
+
+      if (error) {
+        console.error('❌ Error al actualizar gasto:', error);
+        alert('❌ Error al actualizar el gasto: ' + error.message);
+        return;
+      }
+
+      alert('✅ Gasto actualizado exitosamente');
+      cancelarEdicion();
+      await cargarGastos();
+
+    } catch (error) {
+      console.error('❌ Error inesperado al actualizar gasto:', error);
+      alert('❌ Error inesperado al actualizar el gasto');
     } finally {
       setLoading(false);
     }
@@ -840,48 +949,147 @@ const FormularioGastos = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {gastosFiltrados.map((item, index) => (
-                          <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                              {formatearFechaMostrar(item.fecha_cl || item.fecha)}
-                            </td>
-                            <td className="p-2 md:p-4">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                item.tipo_gasto === 'Fijo' 
-                                  ? 'bg-blue-100 text-blue-800' 
-                                  : 'bg-orange-100 text-orange-800'
-                              }`}>
-                                {item.tipo_gasto}
-                              </span>
-                            </td>
-                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-32 md:max-w-48">
-                              {item.detalle || 'Sin detalle'}
-                            </td>
-                            <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm font-semibold">
-                              ${formatearNumero(item.monto)}
-                            </td>
-                            <td className="p-2 md:p-4">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                item.forma_pago === 'Efectivo' 
-                                  ? 'bg-green-100 text-green-800'
-                                  : item.forma_pago === 'Débito'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-purple-100 text-purple-800'
-                              }`}>
-                                {item.forma_pago}
-                              </span>
-                            </td>
-                            <td className="p-2 md:p-4">
-                              <button
-                                onClick={() => eliminarGasto(item.id)}
-                                disabled={loading}
-                                className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-colors"
-                              >
-                                🗑️ Eliminar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {gastosFiltrados.map((item, index) => {
+                          const estaEditando = editandoId === item.id;
+                          
+                          return (
+                            <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
+                              {/* Fecha */}
+                              <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                                {estaEditando ? (
+                                  <input
+                                    type="date"
+                                    value={valoresEdicion.fecha}
+                                    onChange={(e) => handleEdicionChange('fecha', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  />
+                                ) : (
+                                  formatearFechaMostrar(item.fecha_cl || item.fecha)
+                                )}
+                              </td>
+
+                              {/* Tipo de Gasto */}
+                              <td className="p-2 md:p-4">
+                                {estaEditando ? (
+                                  <select
+                                    value={valoresEdicion.tipo_gasto}
+                                    onChange={(e) => handleEdicionChange('tipo_gasto', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  >
+                                    <option value="Fijo" className="bg-gray-800 text-white">Fijo</option>
+                                    <option value="Variable" className="bg-gray-800 text-white">Variable</option>
+                                  </select>
+                                ) : (
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    item.tipo_gasto === 'Fijo' 
+                                      ? 'bg-blue-100 text-blue-800' 
+                                      : 'bg-orange-100 text-orange-800'
+                                  }`}>
+                                    {item.tipo_gasto}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Detalle */}
+                              <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-32 md:max-w-48">
+                                {estaEditando ? (
+                                  <input
+                                    type="text"
+                                    value={valoresEdicion.detalle}
+                                    onChange={(e) => handleEdicionChange('detalle', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Detalle del gasto"
+                                  />
+                                ) : (
+                                  item.detalle || 'Sin detalle'
+                                )}
+                              </td>
+
+                              {/* Monto */}
+                              <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm font-semibold">
+                                {estaEditando ? (
+                                  <input
+                                    type="number"
+                                    step="1"
+                                    value={valoresEdicion.monto}
+                                    onChange={(e) => handleEdicionChange('monto', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="0"
+                                  />
+                                ) : (
+                                  `$${formatearNumero(item.monto)}`
+                                )}
+                              </td>
+
+                              {/* Forma de Pago */}
+                              <td className="p-2 md:p-4">
+                                {estaEditando ? (
+                                  <select
+                                    value={valoresEdicion.forma_pago}
+                                    onChange={(e) => handleEdicionChange('forma_pago', e.target.value)}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                  >
+                                    <option value="Efectivo" className="bg-gray-800 text-white">Efectivo</option>
+                                    <option value="Débito" className="bg-gray-800 text-white">Débito</option>
+                                    <option value="Transferencia" className="bg-gray-800 text-white">Transferencia</option>
+                                  </select>
+                                ) : (
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    item.forma_pago === 'Efectivo' 
+                                      ? 'bg-green-100 text-green-800'
+                                      : item.forma_pago === 'Débito'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-purple-100 text-purple-800'
+                                  }`}>
+                                    {item.forma_pago}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Acciones */}
+                              <td className="p-2 md:p-4">
+                                {estaEditando ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => guardarEdicion(item.id)}
+                                      disabled={loading}
+                                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Guardar cambios"
+                                    >
+                                      ✅
+                                    </button>
+                                    <button
+                                      onClick={cancelarEdicion}
+                                      disabled={loading}
+                                      className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Cancelar edición"
+                                    >
+                                      ❌
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => iniciarEdicion(item)}
+                                      disabled={loading}
+                                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                      title="Editar gasto"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => eliminarGasto(item.id)}
+                                      disabled={loading}
+                                      className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-2 py-1 rounded text-xs transition-colors"
+                                    >
+                                      🗑️ Eliminar
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

@@ -48,6 +48,10 @@ export default function Pedidos() {
   const [propinaActiva, setPropinaActiva] = useState(false);
   const [porcentajePropina, setPorcentajePropina] = useState(10);
   
+  // Estados para el cálculo de vuelto (solo frontend)
+  const [montoPagado, setMontoPagado] = useState('');
+  const [mostrarVuelto, setMostrarVuelto] = useState(false);
+  
   // Estados para filtros
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
@@ -336,6 +340,14 @@ export default function Pedidos() {
       return (subtotal * porcentajePropina) / 100;
     }
     return 0;
+  };
+
+  // Función para calcular el vuelto
+  const calcularVuelto = () => {
+    if (!mesaSeleccionada) return 0;
+    const totalMesa = calcularTotalConPropina(mesaSeleccionada);
+    const montoPagadoNum = parseFloat(montoPagado) || 0;
+    return montoPagadoNum - totalMesa;
   };
 
   // Función para agregar mesas
@@ -1015,11 +1027,15 @@ export default function Pedidos() {
          return nuevosProductos;
        });
 
-       // Limpiar el tipo de pago
+       // Limpiar el tipo de pago y campos de vuelto
        setPedido(prev => ({
          ...prev,
          tipo_pago: ''
        }));
+       
+       // Limpiar campos de vuelto
+       setMontoPagado('');
+       setMostrarVuelto(false);
 
        // Actualizar localStorage
        const productosGuardados = { ...productosPorMesa };
@@ -1461,7 +1477,10 @@ export default function Pedidos() {
                                                  <div className="grid grid-cols-3 gap-2">
                           <button
                             type="button"
-                            onClick={() => setPedido({...pedido, tipo_pago: 'efectivo'})}
+                            onClick={() => {
+                              setPedido({...pedido, tipo_pago: 'efectivo'});
+                              // No limpiar campos de vuelto al seleccionar efectivo
+                            }}
                             className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                               pedido.tipo_pago === 'efectivo' 
                                 ? 'bg-green-600 border-green-500 text-white' 
@@ -1476,7 +1495,12 @@ export default function Pedidos() {
                           
                           <button
                             type="button"
-                            onClick={() => setPedido({...pedido, tipo_pago: 'debito'})}
+                            onClick={() => {
+                              setPedido({...pedido, tipo_pago: 'debito'});
+                              // Limpiar campos de vuelto al cambiar a débito
+                              setMontoPagado('');
+                              setMostrarVuelto(false);
+                            }}
                             className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                               pedido.tipo_pago === 'debito' 
                                 ? 'bg-green-600 border-green-500 text-white' 
@@ -1493,7 +1517,12 @@ export default function Pedidos() {
                           
                           <button
                             type="button"
-                            onClick={() => setPedido({...pedido, tipo_pago: 'transferencia'})}
+                            onClick={() => {
+                              setPedido({...pedido, tipo_pago: 'transferencia'});
+                              // Limpiar campos de vuelto al cambiar a transferencia
+                              setMontoPagado('');
+                              setMostrarVuelto(false);
+                            }}
                             className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                               pedido.tipo_pago === 'transferencia' 
                                 ? 'bg-green-600 border-green-500 text-white' 
@@ -1506,6 +1535,49 @@ export default function Pedidos() {
                             </div>
                           </button>
                         </div>
+
+                        {/* Campo de Monto Pagado - Solo visible cuando se selecciona Efectivo */}
+                        {pedido.tipo_pago === 'efectivo' && (
+                          <div className="mt-4 pt-3 border-t border-white/20">
+                            <label className="block text-white text-sm font-medium mb-2 text-center">
+                              💰 Monto Pagado
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={montoPagado}
+                              onChange={(e) => {
+                                setMontoPagado(e.target.value);
+                                setMostrarVuelto(e.target.value !== '');
+                              }}
+                              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-center"
+                              placeholder="Ingresa el monto recibido..."
+                            />
+                          </div>
+                        )}
+
+                        {/* Mostrar el vuelto */}
+                        {mostrarVuelto && montoPagado && pedido.tipo_pago === 'efectivo' && (
+                          <div className="mt-4">
+                            <label className="block text-blue-100 text-xs md:text-sm mb-2 text-center">
+                              Vuelto a entregar:
+                            </label>
+                            <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-4 text-center`}>
+                              <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-2xl md:text-3xl font-bold`}>
+                                {calcularVuelto() >= 0 ? (
+                                  `$${calcularVuelto().toLocaleString('es-CL')}`
+                                ) : (
+                                  `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                                )}
+                              </p>
+                              {calcularVuelto() < 0 && (
+                                <p className="text-red-200 text-xs md:text-sm mt-2">
+                                  ⚠️ El monto pagado es insuficiente
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -6,6 +6,9 @@
 -- - ventas (RegistroVenta)
 -- - venta_rapida (VentaRapida)
 -- - inventario (RegistroInventario)
+-- - clientes (Clientes)
+-- - gasto (FormularioGastos)
+-- - pedidos (Pedidos)
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -76,7 +79,12 @@ BEGIN
     -- Determinar el registro_id según el tipo de operación
     IF (TG_OP = 'DELETE') THEN
         -- Para DELETE, usar OLD
-        v_cliente_id := OLD.cliente_id;
+        -- Solo obtener cliente_id si la tabla lo tiene
+        BEGIN
+            v_cliente_id := OLD.cliente_id;
+        EXCEPTION WHEN undefined_column THEN
+            v_cliente_id := NULL;
+        END;
         
         -- Intentar obtener UUID o BIGINT según la tabla
         IF (TG_TABLE_NAME = 'ventas') THEN
@@ -84,6 +92,12 @@ BEGIN
         ELSIF (TG_TABLE_NAME = 'inventario') THEN
             v_registro_id := OLD.id;
         ELSIF (TG_TABLE_NAME = 'venta_rapida') THEN
+            v_registro_id := OLD.id;
+        ELSIF (TG_TABLE_NAME = 'clientes') THEN
+            v_registro_id := OLD.id;
+        ELSIF (TG_TABLE_NAME = 'gasto') THEN
+            v_registro_id_numerico := OLD.id;
+        ELSIF (TG_TABLE_NAME = 'pedidos') THEN
             v_registro_id := OLD.id;
         END IF;
         
@@ -114,7 +128,12 @@ BEGIN
         
     ELSIF (TG_OP = 'UPDATE') THEN
         -- Para UPDATE, usar NEW
-        v_cliente_id := NEW.cliente_id;
+        -- Solo obtener cliente_id si la tabla lo tiene
+        BEGIN
+            v_cliente_id := NEW.cliente_id;
+        EXCEPTION WHEN undefined_column THEN
+            v_cliente_id := NULL;
+        END;
         
         -- Intentar obtener UUID o BIGINT según la tabla
         IF (TG_TABLE_NAME = 'ventas') THEN
@@ -122,6 +141,12 @@ BEGIN
         ELSIF (TG_TABLE_NAME = 'inventario') THEN
             v_registro_id := NEW.id;
         ELSIF (TG_TABLE_NAME = 'venta_rapida') THEN
+            v_registro_id := NEW.id;
+        ELSIF (TG_TABLE_NAME = 'clientes') THEN
+            v_registro_id := NEW.id;
+        ELSIF (TG_TABLE_NAME = 'gasto') THEN
+            v_registro_id_numerico := NEW.id;
+        ELSIF (TG_TABLE_NAME = 'pedidos') THEN
             v_registro_id := NEW.id;
         END IF;
         
@@ -188,10 +213,44 @@ CREATE TRIGGER trigger_auditoria_inventario
 
 COMMENT ON TRIGGER trigger_auditoria_inventario ON public.inventario IS 'Trigger de auditoría para registrar UPDATE y DELETE en tabla inventario';
 
+-- 3.4 TRIGGER para tabla CLIENTES (Clientes)
+DROP TRIGGER IF EXISTS trigger_auditoria_clientes ON public.clientes;
+CREATE TRIGGER trigger_auditoria_clientes
+    AFTER UPDATE OR DELETE ON public.clientes
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_auditoria_trigger();
+
+COMMENT ON TRIGGER trigger_auditoria_clientes ON public.clientes IS 'Trigger de auditoría para registrar UPDATE y DELETE en tabla clientes';
+
+-- 3.5 TRIGGER para tabla GASTO (FormularioGastos)
+DROP TRIGGER IF EXISTS trigger_auditoria_gasto ON public.gasto;
+CREATE TRIGGER trigger_auditoria_gasto
+    AFTER UPDATE OR DELETE ON public.gasto
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_auditoria_trigger();
+
+COMMENT ON TRIGGER trigger_auditoria_gasto ON public.gasto IS 'Trigger de auditoría para registrar UPDATE y DELETE en tabla gasto';
+
+-- 3.6 TRIGGER para tabla PEDIDOS (Pedidos)
+DROP TRIGGER IF EXISTS trigger_auditoria_pedidos ON public.pedidos;
+CREATE TRIGGER trigger_auditoria_pedidos
+    AFTER UPDATE OR DELETE ON public.pedidos
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_auditoria_trigger();
+
+COMMENT ON TRIGGER trigger_auditoria_pedidos ON public.pedidos IS 'Trigger de auditoría para registrar UPDATE y DELETE en tabla pedidos';
+
 -- ----------------------------------------------------------------------------
 -- 4. HABILITAR ROW LEVEL SECURITY (RLS) PARA LA TABLA DE AUDITORÍA
 -- ----------------------------------------------------------------------------
 ALTER TABLE public.auditoria ENABLE ROW LEVEL SECURITY;
+
+-- Eliminar políticas existentes si existen
+DROP POLICY IF EXISTS "Usuarios pueden ver su propia auditoria" ON public.auditoria;
+DROP POLICY IF EXISTS "Admin puede ver toda la auditoria" ON public.auditoria;
+DROP POLICY IF EXISTS "Solo triggers pueden insertar en auditoria" ON public.auditoria;
+DROP POLICY IF EXISTS "Nadie puede actualizar registros de auditoria" ON public.auditoria;
+DROP POLICY IF EXISTS "Nadie puede eliminar registros de auditoria" ON public.auditoria;
 
 -- Política para SELECT: Los usuarios pueden ver solo sus propios registros de auditoría
 CREATE POLICY "Usuarios pueden ver su propia auditoria" ON public.auditoria
@@ -343,14 +402,23 @@ COMMENT ON FUNCTION public.fn_obtener_historial_auditoria IS 'Función para obte
 -- Ejemplo 6: Ver historial de un registro específico de inventario
 -- SELECT * FROM public.fn_obtener_historial_auditoria('inventario', 'uuid-del-registro', NULL);
 
--- Ejemplo 7: Contar operaciones por tabla
+-- Ejemplo 7: Ver historial de un registro específico de clientes
+-- SELECT * FROM public.fn_obtener_historial_auditoria('clientes', 'uuid-del-registro', NULL);
+
+-- Ejemplo 8: Ver historial de un registro específico de gasto
+-- SELECT * FROM public.fn_obtener_historial_auditoria('gasto', 'uuid-del-registro', NULL);
+
+-- Ejemplo 9: Ver historial de un registro específico de pedidos
+-- SELECT * FROM public.fn_obtener_historial_auditoria('pedidos', 'uuid-del-registro', NULL);
+
+-- Ejemplo 10: Contar operaciones por tabla
 -- SELECT tabla_nombre, accion, COUNT(*) as total
 -- FROM public.auditoria
 -- WHERE usuario_id = auth.uid()
 -- GROUP BY tabla_nombre, accion
 -- ORDER BY tabla_nombre, accion;
 
--- Ejemplo 8: Ver qué campos se modificaron en una actualización específica
+-- Ejemplo 11: Ver qué campos se modificaron en una actualización específica
 -- SELECT 
 --     fecha_hora,
 --     usuario_nombre,
@@ -380,7 +448,7 @@ WHERE trigger_name LIKE 'trigger_auditoria_%';
 DO $$
 BEGIN
     RAISE NOTICE '✅ Sistema de auditoría instalado correctamente';
-    RAISE NOTICE '📋 Tablas monitoreadas: ventas, venta_rapida, inventario';
+    RAISE NOTICE '📋 Tablas monitoreadas: ventas, venta_rapida, inventario, clientes, gasto, pedidos';
     RAISE NOTICE '🔍 Acciones registradas: UPDATE, DELETE';
     RAISE NOTICE '📊 Vista disponible: auditoria_detallada';
     RAISE NOTICE '🔒 RLS habilitado para protección de datos';
