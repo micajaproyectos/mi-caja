@@ -1091,18 +1091,42 @@ const aplicarAInventario = useCallback(async () => {
     // Armar el payload con los valores calculados del borrador
     const payload = {
       // La Edge requiere fechaIngreso (no fecha_ingreso) y debe existir siempre
-      fechaIngreso: fechaIngreso ? new Date(fechaIngreso + 'T00:00:00').toISOString() : new Date(obtenerFechaHoyChile() + 'T00:00:00').toISOString(),
-      items: itemsValidos.map(item => ({
-        producto: item.producto || "",
-        cantidad: item.cantidad || null,
-        unidad: item.unidad?.toLowerCase().trim() || null,
-        costo_total: item.costo_total || null,
-        porcentaje_ganancia: item.porcentaje_ganancia || null,
-        // Redondear precio_unitario para evitar números periódicos
-        precio_unitario: item.precio_unitario ? Math.round(item.precio_unitario) : null,
-        // Redondear precio_venta para que coincida con lo mostrado en la tabla
-        precio_venta: item.precio_venta ? Math.round(item.precio_venta) : null,
-      })),
+      // Usar UTC a mediodía para evitar problemas de zona horaria
+      fechaIngreso: fechaIngreso ? `${fechaIngreso}T12:00:00Z` : `${obtenerFechaHoyChile()}T12:00:00Z`,
+      items: itemsValidos.map(item => {
+        // Normalizar costo_total: si es string con formato chileno (1.299,35), convertirlo correctamente
+        let costoTotalNormalizado = item.costo_total;
+        const costoOriginal = costoTotalNormalizado;
+        
+        if (typeof costoTotalNormalizado === 'string') {
+          // Remover puntos (separadores de miles) y reemplazar coma por punto (decimal)
+          costoTotalNormalizado = costoTotalNormalizado.replace(/\./g, '').replace(',', '.');
+          costoTotalNormalizado = parseFloat(costoTotalNormalizado);
+        }
+        // Redondear a entero para evitar decimales
+        costoTotalNormalizado = Math.round(costoTotalNormalizado || 0);
+        
+        // Log si hubo normalización
+        if (costoOriginal !== costoTotalNormalizado) {
+          console.log(`📊 Normalización costo_total para "${item.producto}":`, {
+            original: costoOriginal,
+            normalizado: costoTotalNormalizado,
+            tipo_original: typeof costoOriginal
+          });
+        }
+
+        return {
+          producto: item.producto || "",
+          cantidad: item.cantidad || null,
+          unidad: item.unidad?.toLowerCase().trim() || null,
+          costo_total: costoTotalNormalizado,
+          porcentaje_ganancia: item.porcentaje_ganancia || null,
+          // Redondear precio_unitario para evitar números periódicos
+          precio_unitario: item.precio_unitario ? Math.round(item.precio_unitario) : null,
+          // Redondear precio_venta para que coincida con lo mostrado en la tabla
+          precio_venta: item.precio_venta ? Math.round(item.precio_venta) : null,
+        };
+      }),
     };
 
     // Log de depuración: verificar qué se está enviando (solo en desarrollo)

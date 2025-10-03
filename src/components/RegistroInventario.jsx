@@ -27,6 +27,17 @@ const RegistroInventario = () => {
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
   const [mostrarTodos, setMostrarTodos] = useState(false);
+  
+  // Estados para edición inline
+  const [editandoId, setEditandoId] = useState(null);
+  const [valoresEdicion, setValoresEdicion] = useState({
+    producto: '',
+    cantidad: '',
+    unidad: '',
+    costo_total: '',
+    precio_unitario: '',
+    precio_venta: ''
+  });
 
   // Opciones para el selector de unidad
   const opcionesUnidad = [
@@ -250,11 +261,12 @@ const RegistroInventario = () => {
       // Calcular precios automáticamente
       const precios = calcularPrecios();
       
-      // Crear fecha con zona horaria local para evitar desfases
-      const fechaConZonaHoraria = crearFechaConZonaHoraria(inventario.fecha_ingreso);
+      // Guardar fecha como timestamp en UTC a medianoche para evitar problemas de zona horaria
+      // Formato: YYYY-MM-DDTHH:MM:SSZ
+      const fechaTimestamp = inventario.fecha_ingreso ? `${inventario.fecha_ingreso}T12:00:00Z` : null;
       
       const inventarioParaInsertar = {
-        fecha_ingreso: fechaConZonaHoraria,
+        fecha_ingreso: fechaTimestamp,
         // fecha_cl: NO ENVIAR - es columna generada automáticamente por PostgreSQL
         producto: inventario.producto,
         cantidad: parseFloat(inventario.cantidad) || 0,
@@ -322,6 +334,102 @@ const RegistroInventario = () => {
       console.error('Error inesperado al eliminar inventario:', error);
       alert('Error inesperado al eliminar el producto');
     }
+  };
+
+  // Función para iniciar la edición de un producto
+  const iniciarEdicion = (item) => {
+    setEditandoId(item.id);
+    setValoresEdicion({
+      producto: item.producto,
+      cantidad: item.cantidad,
+      unidad: item.unidad,
+      costo_total: item.costo_total,
+      precio_unitario: item.precio_unitario,
+      precio_venta: item.precio_venta
+    });
+  };
+
+  // Función para cancelar la edición
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setValoresEdicion({
+      producto: '',
+      cantidad: '',
+      unidad: '',
+      costo_total: '',
+      precio_unitario: '',
+      precio_venta: ''
+    });
+  };
+
+  // Función para guardar los cambios
+  const guardarEdicion = async (id) => {
+    try {
+      // Validar que los valores sean válidos
+      if (!valoresEdicion.producto || valoresEdicion.producto.trim() === '') {
+        alert('El nombre del producto no puede estar vacío');
+        return;
+      }
+
+      if (!valoresEdicion.cantidad || valoresEdicion.cantidad <= 0) {
+        alert('La cantidad debe ser mayor a 0');
+        return;
+      }
+
+      if (!valoresEdicion.unidad || valoresEdicion.unidad.trim() === '') {
+        alert('Debe seleccionar una unidad');
+        return;
+      }
+
+      if (!valoresEdicion.costo_total || valoresEdicion.costo_total <= 0) {
+        alert('El costo total debe ser mayor a 0');
+        return;
+      }
+
+      if (!valoresEdicion.precio_unitario || valoresEdicion.precio_unitario <= 0) {
+        alert('El precio unitario debe ser mayor a 0');
+        return;
+      }
+
+      if (!valoresEdicion.precio_venta || valoresEdicion.precio_venta <= 0) {
+        alert('El precio de venta debe ser mayor a 0');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('inventario')
+        .update({
+          producto: valoresEdicion.producto.trim(),
+          cantidad: parseFloat(valoresEdicion.cantidad),
+          unidad: valoresEdicion.unidad,
+          costo_total: parseFloat(valoresEdicion.costo_total),
+          precio_unitario: parseFloat(valoresEdicion.precio_unitario),
+          precio_venta: parseFloat(valoresEdicion.precio_venta)
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error al actualizar inventario:', error);
+        alert('Error al actualizar el producto: ' + error.message);
+        return;
+      }
+
+      alert('Producto actualizado exitosamente');
+      cancelarEdicion();
+      await cargarInventario();
+
+    } catch (error) {
+      console.error('Error inesperado al actualizar inventario:', error);
+      alert('Error inesperado al actualizar el producto');
+    }
+  };
+
+  // Función para manejar cambios en los inputs de edición
+  const handleEdicionChange = (campo, valor) => {
+    setValoresEdicion(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
   };
 
   const preciosCalculados = calcularPrecios();
@@ -711,39 +819,137 @@ const RegistroInventario = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {productosAMostrar.map((item, index) => (
-                      <tr key={item.id || index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                                                 <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                           {formatearFechaCortaChile(item.fecha_ingreso)}
-                         </td>
-                        <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
-                          {item.producto}
-                        </td>
-                        <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                          {item.cantidad}
-                        </td>
-                        <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                          {item.unidad}
-                        </td>
-                        <td className="text-green-300 p-2 md:p-4 font-bold text-xs md:text-sm">
-                          ${parseFloat(item.costo_total).toLocaleString()}
-                        </td>
-                        <td className="text-blue-300 p-2 md:p-4 font-bold text-xs md:text-sm">
-                          ${parseFloat(item.precio_unitario).toLocaleString()}
-                        </td>
-                        <td className="text-yellow-300 p-2 md:p-4 font-bold text-xs md:text-sm">
-                          ${parseFloat(item.precio_venta).toLocaleString()}
-                        </td>
-                        <td className="p-2 md:p-4">
-                          <button
-                            onClick={() => eliminarInventario(item.id)}
-                            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                          >
-                            Eliminar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {productosAMostrar.map((item, index) => {
+                      const estaEditando = editandoId === item.id;
+                      
+                      return (
+                        <tr key={item.id || index} className={`border-b border-white/10 hover:bg-white/5 transition-colors duration-200 ${estaEditando ? 'bg-blue-500/10' : ''}`}>
+                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                            {formatearFechaCortaChile(item.fecha_ingreso)}
+                          </td>
+                          <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm min-w-[200px] md:min-w-[280px]">
+                            {estaEditando ? (
+                              <input
+                                type="text"
+                                value={valoresEdicion.producto}
+                                onChange={(e) => handleEdicionChange('producto', e.target.value)}
+                                className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                placeholder="Nombre del producto"
+                              />
+                            ) : (
+                              <span className="block">{item.producto}</span>
+                            )}
+                          </td>
+                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                            {estaEditando ? (
+                              <input
+                                type="number"
+                                value={valoresEdicion.cantidad}
+                                onChange={(e) => handleEdicionChange('cantidad', e.target.value)}
+                                className="w-20 md:w-24 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                step="0.01"
+                                min="0"
+                              />
+                            ) : (
+                              item.cantidad
+                            )}
+                          </td>
+                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                            {estaEditando ? (
+                              <select
+                                value={valoresEdicion.unidad}
+                                onChange={(e) => handleEdicionChange('unidad', e.target.value)}
+                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                style={{ colorScheme: 'dark' }}
+                              >
+                                <option value="unidad" className="bg-gray-800">unidad</option>
+                                <option value="kg" className="bg-gray-800">kg</option>
+                                <option value="gr" className="bg-gray-800">gr</option>
+                              </select>
+                            ) : (
+                              item.unidad
+                            )}
+                          </td>
+                          <td className="text-green-300 p-2 md:p-4 font-bold text-xs md:text-sm">
+                            {estaEditando ? (
+                              <input
+                                type="number"
+                                value={valoresEdicion.costo_total}
+                                onChange={(e) => handleEdicionChange('costo_total', e.target.value)}
+                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                step="1"
+                                min="0"
+                              />
+                            ) : (
+                              `$${parseFloat(item.costo_total).toLocaleString()}`
+                            )}
+                          </td>
+                          <td className="text-blue-300 p-2 md:p-4 font-bold text-xs md:text-sm">
+                            {estaEditando ? (
+                              <input
+                                type="number"
+                                value={valoresEdicion.precio_unitario}
+                                onChange={(e) => handleEdicionChange('precio_unitario', e.target.value)}
+                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                step="1"
+                                min="0"
+                              />
+                            ) : (
+                              `$${parseFloat(item.precio_unitario).toLocaleString()}`
+                            )}
+                          </td>
+                          <td className="text-yellow-300 p-2 md:p-4 font-bold text-xs md:text-sm">
+                            {estaEditando ? (
+                              <input
+                                type="number"
+                                value={valoresEdicion.precio_venta}
+                                onChange={(e) => handleEdicionChange('precio_venta', e.target.value)}
+                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                step="10"
+                                min="0"
+                              />
+                            ) : (
+                              `$${parseFloat(item.precio_venta).toLocaleString()}`
+                            )}
+                          </td>
+                          <td className="p-2 md:p-4">
+                            {estaEditando ? (
+                              <div className="flex gap-1 md:gap-2">
+                                <button
+                                  onClick={() => guardarEdicion(item.id)}
+                                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg"
+                                  title="Guardar"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={cancelarEdicion}
+                                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg"
+                                  title="Cancelar"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-1 md:gap-2">
+                                <button
+                                  onClick={() => iniciarEdicion(item)}
+                                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => eliminarInventario(item.id)}
+                                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 

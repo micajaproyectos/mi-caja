@@ -94,6 +94,12 @@ export default function Home() {
       icon: '📊',
       label: 'Seguimiento',
       route: '/seguimiento'
+    },
+    {
+      id: 'venta-rapida',
+      icon: '⚡',
+      label: 'Venta Rápida',
+      route: '/venta-rapida'
     }
   ], []);
 

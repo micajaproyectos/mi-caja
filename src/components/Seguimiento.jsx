@@ -81,6 +81,14 @@ export default function Seguimiento() {
       const ultimoDiaDelMes = new Date(filtroAnio, filtroMes, 0).getDate();
       const fechaFin = `${filtroAnio}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
 
+      console.log('🔍 Filtros de fecha para totales mensuales:', {
+        filtroMes,
+        filtroAnio,
+        fechaInicio,
+        fechaFin,
+        ultimoDiaDelMes
+      });
+
       // 1. Total de Ventas del mes
       const { data: ventasData, error: ventasError } = await supabase
         .from('ventas')
@@ -105,16 +113,26 @@ export default function Seguimiento() {
       }
 
       // 3. Total de Inventario (costo_total) del mes
+      // Filtrar por fecha_ingreso en lugar de fecha_cl para evitar problemas de zona horaria
       const { data: inventarioData, error: inventarioError } = await supabase
         .from('inventario')
-        .select('costo_total, fecha_cl')
+        .select('costo_total, fecha_ingreso')
         .eq('usuario_id', usuarioId)
-        .gte('fecha_cl', fechaInicio)
-        .lte('fecha_cl', fechaFin);
+        .gte('fecha_ingreso', `${fechaInicio}T00:00:00`)
+        .lte('fecha_ingreso', `${fechaFin}T23:59:59`);
 
       if (inventarioError) {
         console.error('❌ Error al cargar inventario:', inventarioError);
       }
+
+      console.log('📦 Datos de inventario obtenidos:', {
+        cantidad: inventarioData?.length || 0,
+        primerosRegistros: inventarioData?.slice(0, 3),
+        filtrosUsados: {
+          fechaInicio: `${fechaInicio}T00:00:00`,
+          fechaFin: `${fechaFin}T23:59:59`
+        }
+      });
 
       // 4. Total de Proveedores del mes
       const { data: proveedoresData, error: proveedoresError } = await supabase
@@ -161,6 +179,17 @@ export default function Seguimiento() {
        const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
        const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
        const totalPropinas = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0;
+
+      console.log('💰 Totales calculados:', {
+        totalVentas,
+        totalGastos,
+        totalInventario,
+        totalProveedores,
+        totalClientes,
+        totalPedidos,
+        totalPropinas,
+        registrosInventario: inventarioData?.length || 0
+      });
 
       setTotales({
         ventas: totalVentas, // Solo ventas de la tabla ventas

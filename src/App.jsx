@@ -16,6 +16,7 @@ import Seguimiento from './components/Seguimiento';
 import Pedidos from './components/Pedidos';
 import Comunidad from './components/Comunidad';
 import Insumos from './components/Insumos';
+import VentaRapida from './components/VentaRapida';
 
 // Componentes placeholder para las otras secciones
 const Inventario = () => {
@@ -111,6 +112,11 @@ function App() {
           <Route path="/insumos" element={
             <RutaPrivada>
               <Insumos />
+            </RutaPrivada>
+          } />
+          <Route path="/venta-rapida" element={
+            <RutaPrivada>
+              <VentaRapida />
             </RutaPrivada>
           } />
         </Routes>
