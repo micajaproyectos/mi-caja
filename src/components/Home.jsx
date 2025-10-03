@@ -100,6 +100,12 @@ export default function Home() {
       icon: '⚡',
       label: 'Venta Rápida',
       route: '/venta-rapida'
+    },
+    {
+      id: 'auditoria',
+      icon: '🔍',
+      label: 'Auditoría',
+      route: '/auditoria'
     }
   ], []);
 
