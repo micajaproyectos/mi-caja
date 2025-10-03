@@ -17,7 +17,8 @@ export default function Seguimiento() {
     proveedores: 0,
     clientes: 0,
     pedidos: 0,
-    propinas: 0
+    propinas: 0,
+    ventasRapidas: 0
   });
   
   const [loading, setLoading] = useState(true);
@@ -171,6 +172,18 @@ export default function Seguimiento() {
          console.error('❌ Error al cargar pedidos:', pedidosError);
        }
 
+      // 7. Total de Ventas Rápidas del mes
+      const { data: ventasRapidasData, error: ventasRapidasError } = await supabase
+        .from('venta_rapida')
+        .select('monto, fecha_cl')
+        .eq('usuario_id', usuarioId)
+        .gte('fecha_cl', fechaInicio)
+        .lte('fecha_cl', fechaFin);
+
+      if (ventasRapidasError) {
+        console.error('❌ Error al cargar ventas rápidas:', ventasRapidasError);
+      }
+
                     // Calcular totales
        const totalVentas = ventasData?.reduce((sum, item) => sum + (parseFloat(item.total_venta) || 0), 0) || 0;
        const totalGastos = gastosData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
@@ -179,6 +192,7 @@ export default function Seguimiento() {
        const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
        const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
        const totalPropinas = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0;
+       const totalVentasRapidas = ventasRapidasData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
 
       console.log('💰 Totales calculados:', {
         totalVentas,
@@ -188,6 +202,7 @@ export default function Seguimiento() {
         totalClientes,
         totalPedidos,
         totalPropinas,
+        totalVentasRapidas,
         registrosInventario: inventarioData?.length || 0
       });
 
@@ -198,7 +213,8 @@ export default function Seguimiento() {
         proveedores: totalProveedores,
         clientes: totalClientes,
         pedidos: totalPedidos, // Total de pedidos separado
-        propinas: totalPropinas // Total de propinas del mes
+        propinas: totalPropinas, // Total de propinas del mes
+        ventasRapidas: totalVentasRapidas // Total de ventas rápidas del mes
       });
 
     } catch (error) {
@@ -807,8 +823,8 @@ export default function Seguimiento() {
             )}
           </div>
 
-          {/* 7 Tarjetas tipo Power BI */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 md:gap-6 mb-8">
+          {/* 8 Tarjetas tipo Power BI */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-8">
             {/* Tarjeta 1: Ventas */}
             <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
@@ -943,6 +959,26 @@ export default function Seguimiento() {
                 ) : (
                   <div className="text-green-300 text-lg md:text-xl font-bold mb-1">
                     {formatearMoneda(totales.propinas)}
+                  </div>
+                )}
+                <p className="text-green-200 text-xs opacity-75">Mes actual</p>
+              </div>
+            </div>
+
+            {/* Tarjeta 8: Ventas Rápidas */}
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+              <div className="text-center">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-2xl md:text-3xl">⚡</span>
+                </div>
+                <h3 className="text-green-200 text-sm md:text-base font-medium mb-2">Total Ventas Rápidas</h3>
+                {loading ? (
+                  <div className="animate-pulse">
+                    <div className="h-6 md:h-8 bg-green-400/20 rounded mb-2"></div>
+                  </div>
+                ) : (
+                  <div className="text-green-300 text-lg md:text-xl font-bold mb-1">
+                    {formatearMoneda(totales.ventasRapidas)}
                   </div>
                 )}
                 <p className="text-green-200 text-xs opacity-75">Mes actual</p>

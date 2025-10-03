@@ -79,6 +79,10 @@ export default function RegistroVenta() {
   const [ventasRegistradas, setVentasRegistradas] = useState([]);
   const [loading, setLoading] = useState(false);
   
+  // Estados para el cálculo de vuelto (solo frontend)
+  const [montoPagado, setMontoPagado] = useState('');
+  const [mostrarVuelto, setMostrarVuelto] = useState(false);
+  
   // Estados para filtros
   const [filtroDia, setFiltroDia] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
@@ -255,6 +259,13 @@ export default function RegistroVenta() {
   // Función para calcular el total de la venta
   const calcularTotalVenta = () => {
     return productosVenta.reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
+  };
+  
+  // Función para calcular el vuelto
+  const calcularVuelto = () => {
+    const totalVenta = calcularTotalVenta();
+    const montoPagadoNum = parseFloat(montoPagado) || 0;
+    return montoPagadoNum - totalVenta;
   };
 
   // Función para filtrar ventas usando fecha_cl
@@ -971,6 +982,10 @@ export default function RegistroVenta() {
       });
       setProductosVenta([]);
       
+      // Limpiar campos de vuelto
+      setMontoPagado('');
+      setMostrarVuelto(false);
+      
       // Recargar la lista de ventas
       cargarVentas();
     } catch (error) {
@@ -1331,7 +1346,11 @@ export default function RegistroVenta() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
                 <button
                   type="button"
-                  onClick={() => setVenta({...venta, tipo_pago: 'efectivo'})}
+                  onClick={() => {
+                    setVenta({...venta, tipo_pago: 'efectivo'});
+                    setMontoPagado('');
+                    setMostrarVuelto(false);
+                  }}
                   className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'efectivo' 
                       ? 'bg-green-600 border-green-500 text-white' 
@@ -1346,7 +1365,11 @@ export default function RegistroVenta() {
                 
                 <button
                   type="button"
-                  onClick={() => setVenta({...venta, tipo_pago: 'debito'})}
+                  onClick={() => {
+                    setVenta({...venta, tipo_pago: 'debito'});
+                    setMontoPagado('');
+                    setMostrarVuelto(false);
+                  }}
                   className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'debito' 
                       ? 'bg-green-600 border-green-500 text-white' 
@@ -1361,7 +1384,11 @@ export default function RegistroVenta() {
                 
                 <button
                   type="button"
-                  onClick={() => setVenta({...venta, tipo_pago: 'credito'})}
+                  onClick={() => {
+                    setVenta({...venta, tipo_pago: 'credito'});
+                    setMontoPagado('');
+                    setMostrarVuelto(false);
+                  }}
                   className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'credito' 
                       ? 'bg-green-600 border-green-500 text-white' 
@@ -1376,7 +1403,11 @@ export default function RegistroVenta() {
                 
                 <button
                   type="button"
-                  onClick={() => setVenta({...venta, tipo_pago: 'transferencia'})}
+                  onClick={() => {
+                    setVenta({...venta, tipo_pago: 'transferencia'});
+                    setMontoPagado('');
+                    setMostrarVuelto(false);
+                  }}
                   className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'transferencia' 
                       ? 'bg-green-600 border-green-500 text-white' 
@@ -1390,6 +1421,72 @@ export default function RegistroVenta() {
                 </button>
               </div>
             </div>
+
+            {/* Calculadora de Vuelto (solo para Efectivo) */}
+            {venta.tipo_pago === 'efectivo' && productosVenta.length > 0 && calcularTotalVenta() > 0 && (
+              <div className="mb-3 md:mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-3 md:p-4 lg:p-6 border border-blue-400/30">
+                <h4 className="text-blue-200 font-semibold mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2">
+                  <span className="text-xl">🧮</span>
+                  Calculadora de Vuelto
+                </h4>
+                
+                <div className="space-y-3 md:space-y-4">
+                  {/* Total de la venta (solo lectura) */}
+                  <div>
+                    <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      Total de la venta:
+                    </label>
+                    <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center">
+                      <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
+                        ${calcularTotalVenta().toLocaleString('es-CL')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Monto pagado por el cliente */}
+                  <div>
+                    <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      Monto pagado por el cliente:
+                    </label>
+                    <input
+                      type="number"
+                      value={montoPagado}
+                      onChange={(e) => {
+                        setMontoPagado(e.target.value);
+                        setMostrarVuelto(e.target.value !== '');
+                      }}
+                      placeholder="Ingresa el monto recibido"
+                      step="100"
+                      min="0"
+                      className="w-full p-2 md:p-3 lg:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    />
+                  </div>
+
+                  {/* Mostrar el vuelto */}
+                  {mostrarVuelto && montoPagado && (
+                    <div className="mt-3 md:mt-4">
+                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        Vuelto a entregar:
+                      </label>
+                      <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-3 md:p-4 text-center`}>
+                        <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-xl md:text-2xl lg:text-3xl font-bold`}>
+                          {calcularVuelto() >= 0 ? (
+                            `$${calcularVuelto().toLocaleString('es-CL')}`
+                          ) : (
+                            `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                          )}
+                        </p>
+                        {calcularVuelto() < 0 && (
+                          <p className="text-red-200 text-xs md:text-sm mt-2">
+                            ⚠️ El monto pagado es insuficiente
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Botón procesar venta - Responsive */}
             <div className="text-center">
