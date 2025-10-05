@@ -32,7 +32,7 @@ function Autoservicio() {
   const [productosInventario, setProductosInventario] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [productosFiltrados, setProductosFiltrados] = useState([]);
-  const [mostrarDropdown, setMostrarDropdown] = useState(false);
+  const [dropdownAbierto, setDropdownAbierto] = useState(false);
   
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
@@ -96,6 +96,7 @@ function Autoservicio() {
   const filtrarProductos = (busqueda) => {
     if (!busqueda.trim()) {
       setProductosFiltrados([]);
+      setDropdownAbierto(false);
       return;
     }
 
@@ -105,10 +106,15 @@ function Autoservicio() {
       producto.unidad.toLowerCase() !== 'kg'
     );
     setProductosFiltrados(filtrados);
+    setDropdownAbierto(filtrados.length > 0);
   };
 
   // Función para seleccionar un producto del inventario
   const seleccionarProducto = (producto) => {
+    // Cerrar dropdown inmediatamente
+    setDropdownAbierto(false);
+    
+    // Actualizar los estados
     setProductoActual({
       ...productoActual,
       producto: producto.producto,
@@ -116,8 +122,27 @@ function Autoservicio() {
       unidad: producto.unidad,
       subtotal: 0
     });
+    
     setBusquedaProducto(producto.producto);
     setProductosFiltrados([]);
+  };
+
+  // Función para manejar el cambio en la búsqueda de productos
+  const manejarBusquedaProducto = (valor) => {
+    setBusquedaProducto(valor);
+    
+    // Si se borra la búsqueda, limpiar todo
+    if (!valor.trim()) {
+      setProductosFiltrados([]);
+      setDropdownAbierto(false);
+      setProductoActual({
+        ...productoActual,
+        producto: '',
+        precio_unitario: '',
+        unidad: '',
+        subtotal: 0
+      });
+    }
   };
 
   // Función para calcular el subtotal cuando cambia cantidad o precio
@@ -144,7 +169,7 @@ function Autoservicio() {
 
     setProductosVenta([...productosVenta, nuevoProducto]);
     
-    // Limpiar el producto actual
+    // Limpiar el producto actual y la búsqueda
     setProductoActual({
       producto: '',
       cantidad: '',
@@ -153,6 +178,8 @@ function Autoservicio() {
       subtotal: 0,
     });
     setBusquedaProducto('');
+    setProductosFiltrados([]);
+    setDropdownAbierto(false);
   };
 
   // Función para eliminar producto de la venta
@@ -240,6 +267,8 @@ function Autoservicio() {
       });
       setProductosVenta([]);
       setBusquedaProducto('');
+      setProductosFiltrados([]);
+      setDropdownAbierto(false);
       
       // Recargar la lista de ventas de autoservicio
       await cargarVentas();
@@ -711,6 +740,9 @@ function Autoservicio() {
     setVentasMostradas(10);
   }, [filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
 
+
+
+
   return (
     <div className={`${pantallaCompleta ? 'fixed inset-0 z-50' : 'min-h-screen'}`} style={{ backgroundColor: '#1a3d1a' }}>
       <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'container mx-auto px-4 py-8'}`}>
@@ -779,14 +811,24 @@ function Autoservicio() {
                   <input
                     type="text"
                     value={busquedaProducto}
-                    onChange={(e) => setBusquedaProducto(e.target.value)}
+                    onChange={(e) => manejarBusquedaProducto(e.target.value)}
+                    onFocus={() => {
+                      // Si hay productos filtrados, mostrar dropdown al hacer foco
+                      if (productosFiltrados.length > 0) {
+                        setDropdownAbierto(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      // Cerrar dropdown cuando se pierde el foco (con un pequeño delay para permitir el click)
+                      setTimeout(() => setDropdownAbierto(false), 150);
+                    }}
                     className="w-full px-3 md:px-4 py-3 md:py-4 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base transition-all duration-200"
                     placeholder="🔍 Escribe el nombre del producto..."
                   />
                   
                   {/* Dropdown de productos filtrados */}
-                  {busquedaProducto && productosFiltrados.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                  {dropdownAbierto && productosFiltrados.length > 0 && (
+                    <div className="dropdown-productos absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
                       {productosFiltrados.map((producto, index) => (
                         <div
                           key={producto.id || index}
@@ -943,59 +985,62 @@ function Autoservicio() {
             </div>
 
 
-            {/* Sección de tipo de pago - Solo si hay productos */}
+            {/* Sección de tipo de pago y botón registrar - Solo si hay productos */}
             {productosVenta.length > 0 && (
               <div className="mb-3 md:mb-4">
                 <div className="flex items-center mb-2">
                   <span className="text-blue-400 text-lg md:text-xl mr-2">💳</span>
                   <h3 className="text-green-400 text-lg md:text-xl font-bold">Selecciona Forma de Pago</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-3 md:gap-4 max-w-md mx-auto">
-                  <button
-                    type="button"
-                    onClick={() => setVenta({...venta, tipo_pago: 'debito'})}
-                    className={`p-4 md:p-5 rounded-lg border transition-all duration-200 ${
-                      venta.tipo_pago === 'debito' 
-                        ? 'bg-green-600 border-green-500 text-white' 
-                        : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-blue-400 text-2xl md:text-3xl mb-2">💳</div>
-                      <p className="font-medium text-sm md:text-base">Débito</p>
-                    </div>
-                  </button>
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-start sm:items-center">
+                  {/* Botones de tipo de pago */}
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 flex-1 max-w-md">
+                    <button
+                      type="button"
+                      onClick={() => setVenta({...venta, tipo_pago: 'debito'})}
+                      className={`p-4 md:p-5 rounded-lg border transition-all duration-200 ${
+                        venta.tipo_pago === 'debito' 
+                          ? 'bg-green-600 border-green-500 text-white' 
+                          : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-blue-400 text-2xl md:text-3xl mb-2">💳</div>
+                        <p className="font-medium text-sm md:text-base">Débito</p>
+                      </div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setVenta({...venta, tipo_pago: 'transferencia'})}
+                      className={`p-4 md:p-5 rounded-lg border transition-all duration-200 ${
+                        venta.tipo_pago === 'transferencia' 
+                          ? 'bg-green-600 border-green-500 text-white' 
+                          : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-yellow-400 text-2xl md:text-3xl mb-2">📱</div>
+                        <p className="font-medium text-sm md:text-base">Transferencia</p>
+                      </div>
+                    </button>
+                  </div>
                   
-                  <button
-                    type="button"
-                    onClick={() => setVenta({...venta, tipo_pago: 'transferencia'})}
-                    className={`p-4 md:p-5 rounded-lg border transition-all duration-200 ${
-                      venta.tipo_pago === 'transferencia' 
-                        ? 'bg-green-600 border-green-500 text-white' 
-                        : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-yellow-400 text-2xl md:text-3xl mb-2">📱</div>
-                      <p className="font-medium text-sm md:text-base">Transferencia</p>
-                    </div>
-                  </button>
+                  {/* Botón de registrar venta - Posicionado al lado */}
+                  <div className="flex-1 flex justify-center sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={registrarVenta}
+                      disabled={productosVenta.length === 0 || !venta.tipo_pago || loading}
+                      className="px-6 py-4 md:px-8 md:py-5 bg-green-600 hover:bg-green-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold text-base md:text-lg rounded-lg transition-all duration-200 hover:scale-105 shadow-lg w-full sm:w-auto"
+                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    >
+                      {loading ? 'Procesando...' : '✅ Registrar Venta'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* Botón de registrar venta */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={registrarVenta}
-                disabled={productosVenta.length === 0 || !venta.tipo_pago || loading}
-                className="px-8 py-4 md:px-12 md:py-5 bg-green-600 hover:bg-green-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold text-lg md:text-xl rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-              >
-                {loading ? 'Procesando...' : '✅ Registrar Venta'}
-              </button>
-            </div>
           </form>
 
           {/* Sección de Ventas de Autoservicio Registradas */}

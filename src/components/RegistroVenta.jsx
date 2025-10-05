@@ -1504,15 +1504,15 @@ export default function RegistroVenta() {
                     setMontoPagado('');
                     setMostrarVuelto(false);
                   }}
-                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-2.5 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'efectivo' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-green-400 text-base md:text-lg lg:text-xl mb-1">💵</div>
-                    <p className="font-medium text-xs md:text-sm lg:text-base">Efectivo</p>
+                    <div className="text-green-400 text-sm md:text-base mb-1">💵</div>
+                    <p className="font-medium text-xs md:text-sm">Efectivo</p>
                   </div>
                 </button>
                 
@@ -1523,15 +1523,15 @@ export default function RegistroVenta() {
                     setMontoPagado('');
                     setMostrarVuelto(false);
                   }}
-                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-2.5 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'debito' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-blue-400 text-base md:text-lg lg:text-xl mb-1">💳</div>
-                    <p className="font-medium text-xs md:text-sm lg:text-base">Débito</p>
+                    <div className="text-blue-400 text-sm md:text-base mb-1">💳</div>
+                    <p className="font-medium text-xs md:text-sm">Débito</p>
                   </div>
                 </button>
                 
@@ -1542,15 +1542,15 @@ export default function RegistroVenta() {
                     setMontoPagado('');
                     setMostrarVuelto(false);
                   }}
-                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-2.5 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'credito' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-orange-400 text-base md:text-lg lg:text-xl mb-1">💳</div>
-                    <p className="font-medium text-xs md:text-sm lg:text-base">Crédito</p>
+                    <div className="text-orange-400 text-sm md:text-base mb-1">💳</div>
+                    <p className="font-medium text-xs md:text-sm">Crédito</p>
                   </div>
                 </button>
                 
@@ -1561,15 +1561,15 @@ export default function RegistroVenta() {
                     setMontoPagado('');
                     setMostrarVuelto(false);
                   }}
-                  className={`p-2 md:p-3 lg:p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`p-2 md:p-2.5 rounded-lg border-2 transition-all duration-200 ${
                     venta.tipo_pago === 'transferencia' 
                       ? 'bg-green-600 border-green-500 text-white' 
                       : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-purple-400 text-base md:text-lg lg:text-xl mb-1">📱</div>
-                    <p className="font-medium text-xs md:text-sm lg:text-base">Transferencia</p>
+                    <div className="text-purple-400 text-sm md:text-base mb-1">📱</div>
+                    <p className="font-medium text-xs md:text-sm">Transferencia</p>
                   </div>
                 </button>
               </div>
