@@ -994,34 +994,34 @@ function Autoservicio() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-start sm:items-center">
                   {/* Botones de tipo de pago */}
-                  <div className="grid grid-cols-2 gap-3 md:gap-4 flex-1 max-w-md">
+                  <div className="grid grid-cols-2 gap-2 md:gap-3 flex-1 max-w-md">
                     <button
                       type="button"
                       onClick={() => setVenta({...venta, tipo_pago: 'debito'})}
-                      className={`p-4 md:p-5 rounded-lg border transition-all duration-200 ${
+                      className={`px-6 py-4 md:px-8 md:py-5 rounded-lg border transition-all duration-200 text-base md:text-lg font-bold ${
                         venta.tipo_pago === 'debito' 
                           ? 'bg-green-600 border-green-500 text-white' 
                           : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                       }`}
                     >
                       <div className="text-center">
-                        <div className="text-blue-400 text-2xl md:text-3xl mb-2">💳</div>
-                        <p className="font-medium text-sm md:text-base">Débito</p>
+                        <div className="text-blue-400 text-lg md:text-xl mb-1">💳</div>
+                        <p className="font-bold">Débito</p>
                       </div>
                     </button>
                     
                     <button
                       type="button"
                       onClick={() => setVenta({...venta, tipo_pago: 'transferencia'})}
-                      className={`p-4 md:p-5 rounded-lg border transition-all duration-200 ${
+                      className={`px-6 py-4 md:px-8 md:py-5 rounded-lg border transition-all duration-200 text-base md:text-lg font-bold ${
                         venta.tipo_pago === 'transferencia' 
                           ? 'bg-green-600 border-green-500 text-white' 
                           : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                       }`}
                     >
                       <div className="text-center">
-                        <div className="text-yellow-400 text-2xl md:text-3xl mb-2">📱</div>
-                        <p className="font-medium text-sm md:text-base">Transferencia</p>
+                        <div className="text-yellow-400 text-lg md:text-xl mb-1">📱</div>
+                        <p className="font-bold">Transferencia</p>
                       </div>
                     </button>
                   </div>
