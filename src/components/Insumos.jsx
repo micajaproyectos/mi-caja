@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 import Footer from './Footer';
 
 function Insumos() {
@@ -13,6 +14,10 @@ function Insumos() {
     { nombre: '', unidad: 'kg', cantidad: '' }
   ]);
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
+  const [guardando, setGuardando] = useState(false);
+  const [recetasGuardadas, setRecetasGuardadas] = useState([]);
+  const [cargandoRecetas, setCargandoRecetas] = useState(false);
+  const [mostrarRecetas, setMostrarRecetas] = useState(false);
 
   const unidades = ['kg', 'gr', 'ml', 'Lt', 'pz', 'unidad', 'tazas', 'cucharadas', 'cucharaditas'];
 
@@ -159,6 +164,156 @@ function Insumos() {
   };
 
   const productosPosibles = calcularProductosPosibles();
+
+  // Función para guardar la receta en Supabase
+  const guardarReceta = async () => {
+    // Validar que los campos obligatorios estén completos
+    if (!nombreProducto.trim()) {
+      alert('Por favor ingresa el nombre del producto');
+      return;
+    }
+
+    const ingredientesConDatos = ingredientes.filter(ing => 
+      ing.nombre.trim() !== '' && ing.cantidad !== ''
+    );
+
+    if (ingredientesConDatos.length === 0) {
+      alert('Por favor agrega al menos un ingrediente con nombre y cantidad');
+      return;
+    }
+
+    setGuardando(true);
+
+    try {
+      // Obtener el usuario autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert('No hay usuario autenticado. Por favor inicia sesión.');
+        setGuardando(false);
+        return;
+      }
+
+      const recetaData = {
+        nombre_producto: nombreProducto.trim(),
+        cantidad_deseada: parseFloat(cantidadDeseada) || 0,
+        cantidad_base: parseFloat(cantidadBase) || 1,
+        ingredientes: ingredientesConDatos.map(ing => ({
+          nombre: ing.nombre.trim(),
+          unidad: ing.unidad,
+          cantidad: parseFloat(ing.cantidad) || 0
+        })),
+        fecha_cl: new Date().toISOString(),
+        usuario_id: user.id, // ID del usuario autenticado
+        cliente_id: user.id  // Por ahora usar el mismo ID, se puede ajustar según tu lógica
+      };
+
+      const { data, error } = await supabase
+        .from('recetas')
+        .insert([recetaData]);
+
+      if (error) {
+        console.error('Error al guardar la receta:', error);
+        alert('Error al guardar la receta. Por favor intenta de nuevo.');
+      } else {
+        alert('¡Receta guardada exitosamente!');
+        console.log('Receta guardada:', data);
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      alert('Error inesperado al guardar la receta.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Función para cargar recetas guardadas desde Supabase
+  const cargarRecetas = async () => {
+    setCargandoRecetas(true);
+    try {
+      const { data, error } = await supabase
+        .from('recetas')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error al cargar recetas:', error);
+        alert('Error al cargar las recetas guardadas.');
+      } else {
+        setRecetasGuardadas(data || []);
+        setMostrarRecetas(true);
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      alert('Error inesperado al cargar las recetas.');
+    } finally {
+      setCargandoRecetas(false);
+    }
+  };
+
+  // Función para cargar una receta seleccionada
+  const cargarReceta = (receta) => {
+    setNombreProducto(receta.nombre_producto);
+    setCantidadDeseada(receta.cantidad_deseada.toString());
+    setCantidadBase(receta.cantidad_base.toString());
+    
+    // Cargar ingredientes
+    const ingredientesCargados = receta.ingredientes.map(ing => ({
+      nombre: ing.nombre,
+      unidad: ing.unidad,
+      cantidad: ing.cantidad.toString()
+    }));
+    
+    // Asegurar que hay al menos 3 filas de ingredientes
+    while (ingredientesCargados.length < 3) {
+      ingredientesCargados.push({ nombre: '', unidad: 'kg', cantidad: '' });
+    }
+    
+    setIngredientes(ingredientesCargados);
+    setMostrarRecetas(false);
+    
+    alert(`Receta "${receta.nombre_producto}" cargada exitosamente.`);
+  };
+
+  // Función para eliminar una receta
+  const eliminarReceta = async (recetaId, nombreReceta) => {
+    const confirmar = window.confirm(`¿Estás seguro de que quieres eliminar la receta "${nombreReceta}"?\n\nEsta acción no se puede deshacer.`);
+    
+    if (!confirmar) return;
+
+    try {
+      const { error } = await supabase
+        .from('recetas')
+        .delete()
+        .eq('id', recetaId);
+
+      if (error) {
+        console.error('Error al eliminar la receta:', error);
+        alert('Error al eliminar la receta. Por favor intenta de nuevo.');
+      } else {
+        alert('Receta eliminada exitosamente.');
+        // Actualizar la lista de recetas
+        const recetasActualizadas = recetasGuardadas.filter(receta => receta.id !== recetaId);
+        setRecetasGuardadas(recetasActualizadas);
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      alert('Error inesperado al eliminar la receta.');
+    }
+  };
+
+  // Función para limpiar el formulario
+  const limpiarFormulario = () => {
+    setNombreProducto('');
+    setCantidadDeseada('');
+    setCantidadBase('1');
+    setIngredientes([
+      { nombre: '', unidad: 'kg', cantidad: '' },
+      { nombre: '', unidad: 'kg', cantidad: '' },
+      { nombre: '', unidad: 'kg', cantidad: '' }
+    ]);
+    setIngredientesDisponibles([]);
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a3d1a' }}>
@@ -327,8 +482,8 @@ function Insumos() {
                   </table>
                 </div>
 
-                {/* Botón Agregar Ingrediente */}
-                <div className="flex justify-center pt-4">
+                {/* Botones de Acción */}
+                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
                   <button
                     type="button"
                     onClick={agregarIngrediente}
@@ -340,8 +495,143 @@ function Insumos() {
                     </svg>
                     Agregar ingrediente
                   </button>
+                  
+                  <button
+                    type="button"
+                    onClick={cargarRecetas}
+                    disabled={cargandoRecetas}
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    {cargandoRecetas ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Cargando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Cargar recetas
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={guardarReceta}
+                    disabled={guardando || !nombreProducto.trim()}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    {guardando ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Guardar receta
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={limpiarFormulario}
+                    className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Limpiar
+                  </button>
                 </div>
               </div>
+
+              {/* Modal de Recetas Guardadas */}
+              {mostrarRecetas && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          📚 Recetas Guardadas
+                        </h3>
+                        <button
+                          onClick={() => setMostrarRecetas(false)}
+                          className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {recetasGuardadas.length === 0 ? (
+                        <div className="text-center py-8">
+                          <div className="text-6xl mb-4">📝</div>
+                          <p className="text-gray-600 text-lg">No hay recetas guardadas</p>
+                          <p className="text-gray-500">Crea y guarda tu primera receta para verla aquí.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                          {recetasGuardadas.map((receta) => (
+                            <div
+                              key={receta.id}
+                              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200 relative group"
+                            >
+                              {/* Botón de eliminar */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Evitar que se active el onClick del contenedor
+                                  eliminarReceta(receta.id, receta.nombre_producto);
+                                }}
+                                className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+                                title="Eliminar receta"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+
+                              {/* Contenido de la receta */}
+                              <div 
+                                className="cursor-pointer"
+                                onClick={() => cargarReceta(receta)}
+                              >
+                                <h4 className="font-bold text-gray-800 mb-2 truncate pr-8" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                  {receta.nombre_producto}
+                                </h4>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                  <p><span className="font-semibold">Base:</span> {receta.cantidad_base} unidad</p>
+                                  <p><span className="font-semibold">Ingredientes:</span> {receta.ingredientes.length}</p>
+                                  <p><span className="font-semibold">Creada:</span> {new Date(receta.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between">
+                                  <span className="text-xs text-gray-500">Haz clic para cargar</span>
+                                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Resumen de Ingredientes Necesarios */}
               {cantidadDeseada && parseFloat(cantidadDeseada) > 0 && (
@@ -459,7 +749,11 @@ function Insumos() {
                       ¡Puedes hacer {productosPosibles} {productosPosibles === 1 ? 'producto' : 'productos'}!
                     </h4>
                     <p className="text-green-200">
-                      Con los ingredientes disponibles puedes producir <span className="font-bold text-white">{productosPosibles}</span> unidades de{' '}
+                      Con los ingredientes disponibles puedes producir <span className="font-bold text-white">{productosPosibles}</span> preparaciones de{' '}
+                      <span className="font-bold text-white">{nombreProducto || 'tu producto'}</span>
+                    </p>
+                    <p className="text-green-200 mt-2">
+                      Esto equivale a <span className="font-bold text-white">{productosPosibles * parseFloat(cantidadBase || 1)}</span> unidades de{' '}
                       <span className="font-bold text-white">{nombreProducto || 'tu producto'}</span>
                     </p>
                   </div>

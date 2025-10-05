@@ -79,7 +79,7 @@ export default function Home() {
     },
     {
       id: 'insumos',
-      icon: '🛒',
+      icon: '🧑‍🍳',
       label: 'Insumos',
       route: '/insumos'
     },
