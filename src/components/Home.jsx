@@ -106,6 +106,12 @@ export default function Home() {
       icon: '🔍',
       label: 'Auditoría',
       route: '/auditoria'
+    },
+    {
+      id: 'autoservicio',
+      icon: '🛒',
+      label: 'Autoservicio',
+      route: '/autoservicio'
     }
   ], []);
 

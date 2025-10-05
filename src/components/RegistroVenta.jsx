@@ -106,6 +106,9 @@ export default function RegistroVenta() {
     tipo_pago: ''
   });
 
+  // Estado para pantalla completa
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+
   // Estados para búsqueda de productos del inventario
   const [productosInventario, setProductosInventario] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');
@@ -471,6 +474,11 @@ export default function RegistroVenta() {
     return opcion || { value: valor, label: valor, icon: '❓' };
   };
 
+  // Función para alternar pantalla completa
+  const togglePantallaCompleta = () => {
+    setPantallaCompleta(!pantallaCompleta);
+  };
+
   // Función para calcular estadísticas dinámicas según filtros aplicados
   const calcularEstadisticasDinamicas = useCallback(() => {
     let ventasFiltradas = [...ventasRegistradas];
@@ -672,10 +680,12 @@ export default function RegistroVenta() {
       }
 
       // Intentar consulta con fecha_cl primero, fallback a fecha
+      // Excluir ventas de autoservicio (donde autoservicio = 'autoservicio')
       let { data, error } = await supabase
         .from('ventas')
         .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
+        .is('autoservicio', null) // 🔒 EXCLUIR VENTAS DE AUTOSERVICIO
         .order('fecha_cl', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -686,6 +696,7 @@ export default function RegistroVenta() {
           .from('ventas')
           .select('id, fecha, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
+          .is('autoservicio', null) // 🔒 EXCLUIR VENTAS DE AUTOSERVICIO
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
         
@@ -1151,7 +1162,7 @@ export default function RegistroVenta() {
 
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
+    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -1169,23 +1180,52 @@ export default function RegistroVenta() {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-4 md:p-8">
-        <div className="max-w-sm mx-auto sm:max-w-lg md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
+      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
+        <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-sm mx-auto sm:max-w-lg md:max-w-4xl lg:max-w-6xl xl:max-w-7xl'}`}>
           {/* Botón de regreso */}
-          <div className="mb-4 md:mb-6">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-            >
-              <span className="text-lg md:text-xl">←</span>
-              <span>Volver al Inicio</span>
-            </button>
-          </div>
+          {!pantallaCompleta && (
+            <div className="mb-4 md:mb-6">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+              >
+                <span className="text-lg md:text-xl">←</span>
+                <span>Volver al Inicio</span>
+              </button>
+            </div>
+          )}
           
-          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            Registro de Venta
-          </h1>
+          {/* Header */}
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1"></div>
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  Registro de Venta
+                </h1>
+              </div>
+              <div className="flex-1 flex justify-end">
+                <button
+                  onClick={togglePantallaCompleta}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
+                >
+                  {pantallaCompleta ? (
+                    <span className="flex items-center gap-2">
+                      <span>📱</span>
+                      <span className="hidden md:inline">Salir</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span>🔍</span>
+                      <span className="hidden md:inline">Expandir</span>
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
           
           {/* Nuevo diseño del formulario de venta */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20 mb-4 md:mb-6">
@@ -2101,7 +2141,7 @@ export default function RegistroVenta() {
       </div>
       
       {/* Footer */}
-      <Footer />
+      {!pantallaCompleta && <Footer />}
     </div>
   );
 } 
