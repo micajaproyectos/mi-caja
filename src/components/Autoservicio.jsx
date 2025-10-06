@@ -36,6 +36,44 @@ function Autoservicio() {
   
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  
+  // Estado para notificación de dispositivos táctiles
+  const [notificacionTactil, setNotificacionTactil] = useState(false);
+
+  // Función para detectar dispositivos táctiles (tablets/móviles) y navegadores específicos
+  const esDispositivoTactil = () => {
+    // Detectar iOS/iPadOS
+    const esIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Detectar Android tablets
+    const esAndroidTablet = /Android/.test(navigator.userAgent) && !/Mobile/.test(navigator.userAgent);
+    
+    // Detectar Chrome en tablets/dispositivos táctiles
+    const esChromeEnTablet = /Chrome/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+    
+    // Detectar cualquier dispositivo táctil
+    const esDeviceTactil = navigator.maxTouchPoints > 1 || 'ontouchstart' in window;
+    
+    return esIOS || esAndroidTablet || esChromeEnTablet || esDeviceTactil;
+  };
+  
+  // Función para obtener información específica del navegador/dispositivo  
+  const obtenerInfoDispositivo = () => {
+    const userAgent = navigator.userAgent;
+    
+    if (/Chrome/.test(userAgent) && navigator.maxTouchPoints > 1) {
+      return { navegador: 'Chrome', tipo: 'tablet' };
+    }
+    if (/Safari/.test(userAgent) && /iPhone|iPad|iPod/.test(userAgent)) {
+      return { navegador: 'Safari', tipo: 'iOS' };
+    }
+    if (/Android/.test(userAgent)) {
+      return { navegador: 'Android', tipo: 'tablet' };
+    }
+    
+    return { navegador: 'Navegador', tipo: 'dispositivo táctil' };
+  };
 
   // Estados para ventas registradas de autoservicio
   const [ventasRegistradas, setVentasRegistradas] = useState([]);
@@ -288,6 +326,12 @@ function Autoservicio() {
         // Entrar a pantalla completa
         await document.documentElement.requestFullscreen();
         setPantallaCompleta(true);
+        
+        // Mostrar notificación específica para dispositivos táctiles
+        if (esDispositivoTactil()) {
+          setNotificacionTactil(true);
+          setTimeout(() => setNotificacionTactil(false), 5000);
+        }
       } else {
         // Salir de pantalla completa
         await document.exitFullscreen();
@@ -757,8 +801,21 @@ function Autoservicio() {
   // Escuchar cambios en el estado de pantalla completa
   useEffect(() => {
     const handleFullscreenChange = () => {
+      const estaEnFullscreen = !!document.fullscreenElement;
+      const estadoAnterior = pantallaCompleta;
+      
       // Sincronizar el estado con el estado real de fullscreen
-      setPantallaCompleta(!!document.fullscreenElement);
+      setPantallaCompleta(estaEnFullscreen);
+      
+      // Si estamos en un dispositivo táctil y se salió automáticamente de fullscreen 
+      // (no fue por acción del usuario), mostrar notificación
+      if (esDispositivoTactil() && estadoAnterior && !estaEnFullscreen) {
+        setNotificacionTactil(false); // Ocultar notificación anterior si existe
+        setTimeout(() => {
+          setNotificacionTactil(true);
+          setTimeout(() => setNotificacionTactil(false), 4000);
+        }, 500);
+      }
     };
 
     // Agregar el listener para cambios de fullscreen
@@ -768,13 +825,25 @@ function Autoservicio() {
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, []);
+  }, [pantallaCompleta]);
 
 
 
 
   return (
     <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
+      {/* Notificación para dispositivos táctiles */}
+      {notificacionTactil && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
+          <div className="flex items-center gap-2">
+            <span>📱</span>
+            <div className="text-sm">
+              <div className="font-semibold">{obtenerInfoDispositivo().navegador} en {obtenerInfoDispositivo().tipo}</div>
+              <div className="text-xs opacity-90">Los filtros pueden cerrar la pantalla completa</div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'container mx-auto px-4 py-8'}`}>
         <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-6xl mx-auto'}`}>
           {/* Botón Volver al Inicio */}
