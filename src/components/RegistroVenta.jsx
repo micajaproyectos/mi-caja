@@ -474,9 +474,23 @@ export default function RegistroVenta() {
     return opcion || { value: valor, label: valor, icon: '❓' };
   };
 
-  // Función para alternar pantalla completa
-  const togglePantallaCompleta = () => {
-    setPantallaCompleta(!pantallaCompleta);
+  // Función para alternar pantalla completa usando la API del navegador
+  const togglePantallaCompleta = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Entrar a pantalla completa
+        await document.documentElement.requestFullscreen();
+        setPantallaCompleta(true);
+      } else {
+        // Salir de pantalla completa
+        await document.exitFullscreen();
+        setPantallaCompleta(false);
+      }
+    } catch (error) {
+      console.error('Error al cambiar modo pantalla completa:', error);
+      // Fallback al comportamiento anterior si la API no está disponible
+      setPantallaCompleta(!pantallaCompleta);
+    }
   };
 
   // Función para calcular estadísticas dinámicas según filtros aplicados
@@ -809,6 +823,22 @@ export default function RegistroVenta() {
       window.removeEventListener('resize', handleScrollResize);
     };
   }, [mostrarDropdown]);
+
+  // Escuchar cambios en el estado de pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Sincronizar el estado con el estado real de fullscreen
+      setPantallaCompleta(!!document.fullscreenElement);
+    };
+
+    // Agregar el listener para cambios de fullscreen
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
 
 
@@ -1162,7 +1192,7 @@ export default function RegistroVenta() {
 
 
   return (
-    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: '#1a3d1a' }}>
+    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -1209,17 +1239,17 @@ export default function RegistroVenta() {
                 <button
                   onClick={togglePantallaCompleta}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                  title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
+                  title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
                 >
                   {pantallaCompleta ? (
                     <span className="flex items-center gap-2">
-                      <span>📱</span>
+                      <span>⛶</span>
                       <span className="hidden md:inline">Salir</span>
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      <span>🔍</span>
-                      <span className="hidden md:inline">Expandir</span>
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Pantalla Completa</span>
                     </span>
                   )}
                 </button>

@@ -83,6 +83,9 @@ export default function Pedidos() {
     tipo_pago: '',
     estado: ''
   });
+
+  // Estado para pantalla completa
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
   
 
   // Estados para estadísticas de pedidos
@@ -819,6 +822,25 @@ export default function Pedidos() {
     }));
   };
 
+  // Función para alternar pantalla completa usando la API del navegador
+  const togglePantallaCompleta = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Entrar a pantalla completa
+        await document.documentElement.requestFullscreen();
+        setPantallaCompleta(true);
+      } else {
+        // Salir de pantalla completa
+        await document.exitFullscreen();
+        setPantallaCompleta(false);
+      }
+    } catch (error) {
+      console.error('Error al cambiar modo pantalla completa:', error);
+      // Fallback al comportamiento anterior si la API no está disponible
+      setPantallaCompleta(!pantallaCompleta);
+    }
+  };
+
   // Función para guardar edición
   const guardarEdicion = async (id) => {
     try {
@@ -1122,6 +1144,22 @@ export default function Pedidos() {
     setEstadisticasPedidos(nuevasEstadisticas);
   }, [calcularEstadisticasPedidos]);
 
+  // Escuchar cambios en el estado de pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Sincronizar el estado con el estado real de fullscreen
+      setPantallaCompleta(!!document.fullscreenElement);
+    };
+
+    // Agregar el listener para cambios de fullscreen
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Opciones de unidad
   const opcionesUnidad = [
     { value: 'unidad', label: 'Unidad', icon: '📦' },
@@ -1129,7 +1167,7 @@ export default function Pedidos() {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
+    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -1147,23 +1185,52 @@ export default function Pedidos() {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
+      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
+        <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-7xl mx-auto'}`}>
           {/* Botón de regreso */}
-          <div className="mb-4 md:mb-6">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-            >
-              <span className="text-lg md:text-xl">←</span>
-              <span>Volver al Inicio</span>
-            </button>
-          </div>
+          {!pantallaCompleta && (
+            <div className="mb-4 md:mb-6">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+              >
+                <span className="text-lg md:text-xl">←</span>
+                <span>Volver al Inicio</span>
+              </button>
+            </div>
+          )}
 
-          <h1 className="text-2xl md:text-4xl font-bold text-white text-center drop-shadow-lg mb-6 md:mb-8 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            Sistema de Pedidos
-          </h1>
+          {/* Header con título y botón pantalla completa */}
+          <div className="text-center mb-6 md:mb-8 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1"></div>
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  Sistema de Pedidos
+                </h1>
+              </div>
+              <div className="flex-1 flex justify-end">
+                <button
+                  onClick={togglePantallaCompleta}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
+                >
+                  {pantallaCompleta ? (
+                    <span className="flex items-center gap-2">
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Salir</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Pantalla Completa</span>
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
 
                      {/* Formulario de Pedido */}
            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
@@ -2102,7 +2169,7 @@ export default function Pedidos() {
        </div>
        
        {/* Footer */}
-       <Footer />
+       {!pantallaCompleta && <Footer />}
      </div>
    );
  }

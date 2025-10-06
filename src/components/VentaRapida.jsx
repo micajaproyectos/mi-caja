@@ -34,6 +34,9 @@ const VentaRapida = () => {
     tipo_pago: ''
   });
 
+  // Estado para pantalla completa
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+
   // Función para cargar ventas rápidas registradas
   const cargarVentasRapidas = async () => {
     setLoadingVentas(true);
@@ -83,6 +86,22 @@ const VentaRapida = () => {
     }));
     recargarDatos();
   }, [recargarDatos]);
+
+  // Escuchar cambios en el estado de pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Sincronizar el estado con el estado real de fullscreen
+      setPantallaCompleta(!!document.fullscreenElement);
+    };
+
+    // Agregar el listener para cambios de fullscreen
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -443,6 +462,25 @@ const VentaRapida = () => {
     }
   };
 
+  // Función para alternar pantalla completa usando la API del navegador
+  const togglePantallaCompleta = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Entrar a pantalla completa
+        await document.documentElement.requestFullscreen();
+        setPantallaCompleta(true);
+      } else {
+        // Salir de pantalla completa
+        await document.exitFullscreen();
+        setPantallaCompleta(false);
+      }
+    } catch (error) {
+      console.error('Error al cambiar modo pantalla completa:', error);
+      // Fallback al comportamiento anterior si la API no está disponible
+      setPantallaCompleta(!pantallaCompleta);
+    }
+  };
+
   // Función para eliminar venta
   const eliminarVenta = async (id) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta venta rápida?')) {
@@ -475,7 +513,7 @@ const VentaRapida = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
+    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -493,31 +531,59 @@ const VentaRapida = () => {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
+        <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-4xl mx-auto'}`}>
           {/* Botón de regreso */}
-          <div className="mb-4 md:mb-6">
-            <button
-              onClick={() => window.history.back()}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-            >
-              <span className="text-lg md:text-xl">←</span>
-              <span>Volver al Inicio</span>
-            </button>
-          </div>
-
-          {/* Título con icono de rayo */}
-          <div className="text-center mb-6 md:mb-8">
-            <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <span className="text-5xl md:text-6xl">⚡</span>
+          {!pantallaCompleta && (
+            <div className="mb-4 md:mb-6">
+              <button
+                onClick={() => window.history.back()}
+                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+              >
+                <span className="text-lg md:text-xl">←</span>
+                <span>Volver al Inicio</span>
+              </button>
             </div>
-            <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Venta Rápida
-            </h1>
-            <p className="text-gray-300 text-sm md:text-base mt-2">
-              Registra tus ventas diarias de forma simple y rápida
-            </p>
+          )}
+
+          {/* Header con título y botón de pantalla completa */}
+          <div className="text-center mb-6 md:mb-8 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1"></div>
+              <div className="flex-1">
+                <div className="inline-flex items-center justify-center gap-3 mb-4">
+                  <span className="text-5xl md:text-6xl">⚡</span>
+                </div>
+                <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  Venta Rápida
+                </h1>
+              </div>
+              <div className="flex-1 flex justify-end">
+                <button
+                  onClick={togglePantallaCompleta}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
+                >
+                  {pantallaCompleta ? (
+                    <span className="flex items-center gap-2">
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Salir</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Pantalla Completa</span>
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+            {!pantallaCompleta && (
+              <p className="text-gray-300 text-sm md:text-base mt-2">
+                Registra tus ventas diarias de forma simple y rápida
+              </p>
+            )}
           </div>
 
           {/* Formulario de Venta Rápida */}
@@ -1036,7 +1102,7 @@ const VentaRapida = () => {
       </div>
       
       {/* Footer */}
-      <Footer />
+      {!pantallaCompleta && <Footer />}
     </div>
   );
 };

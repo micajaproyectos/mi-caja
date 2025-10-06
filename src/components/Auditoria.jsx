@@ -18,6 +18,9 @@ const Auditoria = () => {
   // Estados para detalles expandidos
   const [registroExpandido, setRegistroExpandido] = useState(null);
 
+  // Estado para pantalla completa de la tabla
+  const [pantallaCompletaTabla, setPantallaCompletaTabla] = useState(false);
+
   // Función para formatear fecha y hora en zona horaria de Chile
   const formatearFechaHoraChile = (fechaUTC) => {
     if (!fechaUTC) return { fecha: '-', hora: '-' };
@@ -172,6 +175,22 @@ const Auditoria = () => {
     cargarAuditoria();
   }, []);
 
+  // Escuchar cambios en el estado de pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Sincronizar el estado con el estado real de fullscreen
+      setPantallaCompletaTabla(!!document.fullscreenElement);
+    };
+
+    // Agregar el listener para cambios de fullscreen
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Aplicar filtros
   useEffect(() => {
     let registrosFiltrados = [...registrosAuditoria];
@@ -228,8 +247,27 @@ const Auditoria = () => {
     setRegistroExpandido(registroExpandido === id ? null : id);
   };
 
+  // Función para alternar pantalla completa de la tabla usando la API del navegador
+  const togglePantallaCompletaTabla = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Entrar a pantalla completa
+        await document.documentElement.requestFullscreen();
+        setPantallaCompletaTabla(true);
+      } else {
+        // Salir de pantalla completa
+        await document.exitFullscreen();
+        setPantallaCompletaTabla(false);
+      }
+    } catch (error) {
+      console.error('Error al cambiar modo pantalla completa:', error);
+      // Fallback al comportamiento anterior si la API no está disponible
+      setPantallaCompletaTabla(!pantallaCompletaTabla);
+    }
+  };
+
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
+    <div className={`${pantallaCompletaTabla ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompletaTabla ? '#000000' : '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -247,35 +285,40 @@ const Auditoria = () => {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Botón de regreso */}
-          <div className="mb-4 md:mb-6">
-            <button
-              onClick={() => window.history.back()}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-            >
-              <span className="text-lg md:text-xl">←</span>
-              <span>Volver al Inicio</span>
-            </button>
-          </div>
-
-          {/* Título con icono */}
-          <div className="text-center mb-6 md:mb-8">
-            <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <span className="text-5xl md:text-6xl">🔍</span>
+      <div className={`${pantallaCompletaTabla ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
+        <div className={`${pantallaCompletaTabla ? 'h-full px-4 py-4' : 'max-w-7xl mx-auto'}`}>
+          {/* Botón de regreso - oculto en pantalla completa */}
+          {!pantallaCompletaTabla && (
+            <div className="mb-4 md:mb-6">
+              <button
+                onClick={() => window.history.back()}
+                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+              >
+                <span className="text-lg md:text-xl">←</span>
+                <span>Volver al Inicio</span>
+              </button>
             </div>
-            <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Auditoría
-            </h1>
-            <p className="text-gray-300 text-sm md:text-base mt-2">
-              Control y seguimiento de operaciones
-            </p>
-          </div>
+          )}
 
-          {/* Filtros */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
+          {/* Título con icono - oculto en pantalla completa */}
+          {!pantallaCompletaTabla && (
+            <div className="text-center mb-6 md:mb-8">
+              <div className="inline-flex items-center justify-center gap-3 mb-4">
+                <span className="text-5xl md:text-6xl">🔍</span>
+              </div>
+              <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                Auditoría
+              </h1>
+              <p className="text-gray-300 text-sm md:text-base mt-2">
+                Control y seguimiento de operaciones
+              </p>
+            </div>
+          )}
+
+          {/* Filtros - ocultos en pantalla completa */}
+          {!pantallaCompletaTabla && (
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
             <h3 className="text-lg md:text-xl font-semibold text-yellow-400 mb-4 text-center">
               Filtros
             </h3>
@@ -376,21 +419,41 @@ const Auditoria = () => {
                 </button>
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Tabla de auditoría */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+          <div className={`bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 ${pantallaCompletaTabla ? 'h-full flex flex-col' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl md:text-2xl font-semibold text-yellow-400">
                 Registros de Auditoría ({registrosFiltrados.length})
               </h2>
-              <button
-                onClick={cargarAuditoria}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-              >
-                🔄 Actualizar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={cargarAuditoria}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  🔄 Actualizar
+                </button>
+                <button
+                  onClick={togglePantallaCompletaTabla}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  title={pantallaCompletaTabla ? "Salir de pantalla completa (ESC)" : "Expandir tabla a pantalla completa"}
+                >
+                  {pantallaCompletaTabla ? (
+                    <span className="flex items-center gap-2">
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Salir</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Expandir</span>
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -409,8 +472,9 @@ const Auditoria = () => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs md:text-sm">
+              <div className={`overflow-x-auto ${pantallaCompletaTabla ? 'flex-1 h-0' : ''}`}>
+                <div className={`${pantallaCompletaTabla ? 'h-full overflow-y-auto border border-white/10 rounded-lg' : ''}`}>
+                  <table className="w-full text-xs md:text-sm">
                   <thead>
                     <tr className="bg-white/10 backdrop-blur-sm">
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
@@ -515,7 +579,8 @@ const Auditoria = () => {
                       );
                     })}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -523,7 +588,7 @@ const Auditoria = () => {
       </div>
       
       {/* Footer */}
-      <Footer />
+      {!pantallaCompletaTabla && <Footer />}
     </div>
   );
 };

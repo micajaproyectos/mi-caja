@@ -281,9 +281,23 @@ function Autoservicio() {
     }
   };
 
-  // Función para alternar pantalla completa
-  const togglePantallaCompleta = () => {
-    setPantallaCompleta(!pantallaCompleta);
+  // Función para alternar pantalla completa usando la API del navegador
+  const togglePantallaCompleta = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Entrar a pantalla completa
+        await document.documentElement.requestFullscreen();
+        setPantallaCompleta(true);
+      } else {
+        // Salir de pantalla completa
+        await document.exitFullscreen();
+        setPantallaCompleta(false);
+      }
+    } catch (error) {
+      console.error('Error al cambiar modo pantalla completa:', error);
+      // Fallback al comportamiento anterior si la API no está disponible
+      setPantallaCompleta(!pantallaCompleta);
+    }
   };
 
   // Función para formatear fechas
@@ -740,11 +754,27 @@ function Autoservicio() {
     setVentasMostradas(10);
   }, [filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
 
+  // Escuchar cambios en el estado de pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Sincronizar el estado con el estado real de fullscreen
+      setPantallaCompleta(!!document.fullscreenElement);
+    };
+
+    // Agregar el listener para cambios de fullscreen
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
 
 
 
   return (
-    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50' : 'min-h-screen'}`} style={{ backgroundColor: '#1a3d1a' }}>
+    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
       <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'container mx-auto px-4 py-8'}`}>
         <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-6xl mx-auto'}`}>
           {/* Botón Volver al Inicio */}
@@ -774,17 +804,17 @@ function Autoservicio() {
                 <button
                   onClick={togglePantallaCompleta}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                  title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
+                  title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
                 >
                   {pantallaCompleta ? (
                     <span className="flex items-center gap-2">
-                      <span>📱</span>
+                      <span>⛶</span>
                       <span className="hidden md:inline">Salir</span>
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      <span>🔍</span>
-                      <span className="hidden md:inline">Expandir</span>
+                      <span>⛶</span>
+                      <span className="hidden md:inline">Pantalla Completa</span>
                     </span>
                   )}
                 </button>
@@ -1493,44 +1523,6 @@ function Autoservicio() {
                   );
                 })()}
 
-                {/* Información adicional */}
-                <div className="mt-4 md:mt-6 p-3 md:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
-                    <div>
-                      <div className="text-blue-200 text-sm font-medium">🎯 Filtros Aplicados</div>
-                      <div className="text-gray-300 text-xs md:text-sm mt-1">
-                        {!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago ? (
-                          'Mostrando ventas del día actual'
-                        ) : (
-                          <>
-                            {filtroDia && `Día: ${(() => {
-                              const [year, month, day] = filtroDia.split('-');
-                              return `${day}/${month}/${year}`;
-                            })()}`}
-                            {filtroMes && `Mes: ${obtenerMesesUnicos()[parseInt(filtroMes) - 1]?.label}`}
-                            {filtroAnio && `Año: ${filtroAnio}`}
-                            {filtroTipoPago && `Pago: ${obtenerInfoTipoPago(filtroTipoPago).label}`}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-green-200 text-sm font-medium">📊 Estadísticas</div>
-                      <div className="text-gray-300 text-xs md:text-sm mt-1">
-                        {(() => {
-                          const resumen = calcularResumenVentas();
-                          const ventasCompletas = ventasFiltradas.filter(venta => 
-                            venta.total_final && 
-                            venta.total_final !== null && 
-                            venta.total_final !== '' &&
-                            (venta.tipo_pago === 'debito' || venta.tipo_pago === 'transferencia')
-                          );
-                          return `${ventasCompletas.length} ventas completas de ${ventasFiltradas.length} registros`;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
