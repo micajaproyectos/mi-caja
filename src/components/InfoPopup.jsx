@@ -17,12 +17,12 @@ const InfoPopup = ({ item, onClose }) => {
   // Definir descripciones para cada componente
   const getDescription = (id) => {
     const descriptions = {
-      'ventas': 'Registra todas las ventas diarias de tu negocio. Controla productos, cantidades, precios y formas de pago de manera organizada.',
-      'asistencia': 'Controla el registro de entrada y salida de tus empleados. Gestiona horarios de trabajo y calcula horas laboradas.',
+      'ventas': 'Registra todas las ventas diarias de tu negocio. Controla productos, cantidades, precios y formas de pago de manera organizada. Si realizas una venta, se descontará desde tu inventario actual.',
+      'asistencia': 'Controla el registro de entrada y salida de tus trabajadores. Gestiona la cantidad de horas laborales.',
       'gastos': 'Registra y categoriza todos los gastos de tu negocio. Mantén control total sobre tus egresos y presupuesto.',
       'inventario': 'Agrega productos a tu inventario con precios, costos y cantidades. Base fundamental para el control de stock.',
       'proveedores': 'Administra la información de tus proveedores. Contactos, productos que suministran y historial de compras.',
-      'stock': 'Visualiza el inventario actual de todos tus productos. Control rápido de cantidades disponibles y valores.',
+      'stock': 'Visualiza el inventario actual de todos tus productos. Genera las alertas de bajo stock, identifica el producto más vendido y reconoce aquellos que no se venden.',
       'inventario-ia': 'Carga de manera automática tu inventario con procesamiento de IA. Agrega un PDF o JPG y el sistema reconocerá los productos para incluirlos en el inventario.',
       'clientes': 'Gestiona tu base de datos de clientes. Información de contacto, historial de compras y segmentación.',
       'pedidos': 'Crea y administra pedidos de tus clientes. Controla estado, productos solicitados y tiempos de entrega.',
@@ -31,7 +31,7 @@ const InfoPopup = ({ item, onClose }) => {
       'seguimiento': 'Analiza el rendimiento de tu negocio con gráficos y reportes. Toma decisiones basadas en datos.',
       'venta-rapida': 'Sistema de ventas acelerado para transacciones rápidas. Ideal para quienes necesiten registrar ventas sin inventario.',
       'auditoria': 'Revisa todos los cambios y actividades realizadas en el sistema. Control completo de modificaciones.',
-      'autoservicio': 'Abre otro punto de venta independiente para que tus clientes puedan realizar sus compras de manera más rápida y expedita.'
+      'autoservicio': 'Abre otro punto de venta independiente para que tus clientes puedan realizar sus compras de manera más rápida y expedita, actualizando tu inventario actual.'
     };
     return descriptions[id] || 'Descripción no disponible.';
   };
