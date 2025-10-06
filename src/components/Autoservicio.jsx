@@ -1563,7 +1563,7 @@ function Autoservicio() {
                       <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm rounded-xl p-4 border border-blue-500/30 shadow-lg">
                         <div className="text-center">
                           <div className="text-blue-300 text-sm md:text-base font-medium mb-1">
-                            💳 Débito ({resumen.distribucionDebito.toFixed(1)}%)
+                            💳 Débito
                           </div>
                           <div className="text-blue-100 text-xl md:text-2xl font-bold">
                             ${resumen.totalDebito.toLocaleString()}
@@ -1578,7 +1578,7 @@ function Autoservicio() {
                       <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 backdrop-blur-sm rounded-xl p-4 border border-yellow-500/30 shadow-lg">
                         <div className="text-center">
                           <div className="text-yellow-300 text-sm md:text-base font-medium mb-1">
-                            📱 Transferencia ({resumen.distribucionTransferencia.toFixed(1)}%)
+                            📱 Transferencia
                           </div>
                           <div className="text-yellow-100 text-xl md:text-2xl font-bold">
                             ${resumen.totalTransferencia.toLocaleString()}
