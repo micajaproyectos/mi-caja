@@ -1615,14 +1615,14 @@ export default function Clientes() {
                   <table className="w-full text-left">
                     <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
                       <tr className="border-b border-white/20">
-                          <th className="text-white font-semibold p-3 text-sm">📅 Fecha</th>
-                        <th className="text-white font-semibold p-3 text-sm">🏢 Empresa</th>
-                          <th className="text-white font-semibold p-3 text-sm">📦 Producto</th>
-                          <th className="text-white font-semibold p-3 text-sm">🔢 Cantidad</th>
-                          <th className="text-white font-semibold p-3 text-sm">💰 Precio Unit.</th>
-                          <th className="text-white font-semibold p-3 text-sm">🧮 Sub Total</th>
-                          <th className="text-white font-semibold p-3 text-sm">💵 Total Final</th>
-                          <th className="text-white font-semibold p-3 text-sm">⚙️ Acciones</th>
+                          <th className="text-white font-semibold p-3 text-sm">Fecha</th>
+                        <th className="text-white font-semibold p-3 text-sm">Empresa</th>
+                          <th className="text-white font-semibold p-3 text-sm">Producto</th>
+                          <th className="text-white font-semibold p-3 text-sm">Cantidad</th>
+                          <th className="text-white font-semibold p-3 text-sm">Precio Unit.</th>
+                          <th className="text-white font-semibold p-3 text-sm">Sub Total</th>
+                          <th className="text-white font-semibold p-3 text-sm">Total Final</th>
+                          <th className="text-white font-semibold p-3 text-sm">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
