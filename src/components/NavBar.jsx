@@ -4,6 +4,7 @@ import { authService } from '../lib/authService.js';
 import { sessionManager } from '../lib/sessionManager.js';
 import { supabase } from '../lib/supabaseClient.js';
 import SubscriptionNotification from './SubscriptionNotification.jsx';
+import NewFeaturesNotification from './NewFeaturesNotification.jsx';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const NavBar = () => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [showSubscriptionNotification, setShowSubscriptionNotification] = useState(false);
   const [showVisualNotification, setShowVisualNotification] = useState(false);
+  const [showNewFeaturesNotification, setShowNewFeaturesNotification] = useState(false);
+  const [showNewFeaturesVisualNotification, setShowNewFeaturesVisualNotification] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -60,6 +63,20 @@ const NavBar = () => {
     markNotificationAsShown();
     // Activar la notificación visual después de cerrar el popup
     setShowVisualNotification(true);
+  };
+
+  // Función para cerrar la notificación de nuevas funcionalidades
+  const closeNewFeaturesNotification = () => {
+    setShowNewFeaturesNotification(false);
+    markNewFeaturesNotificationAsShown();
+    // Activar la notificación visual después de cerrar el popup
+    setShowNewFeaturesVisualNotification(true);
+  };
+
+  // Función para abrir manualmente la notificación de nuevas funcionalidades
+  const openNewFeaturesNotification = () => {
+    setShowNewFeaturesNotification(true);
+    setIsMenuOpen(false); // Cerrar el menú
   };
 
   // Función para verificar si debe mostrar la notificación de suscripción
@@ -122,6 +139,31 @@ const NavBar = () => {
     localStorage.setItem('subscriptionNotificationLastShown', todayString);
   };
 
+  // Función para verificar si debe mostrar la notificación de nuevas funcionalidades
+  const shouldShowNewFeaturesNotification = () => {
+    // Verificar si ya se mostró en esta sesión
+    const sessionShown = sessionStorage.getItem('newFeaturesNotificationShown');
+    return !sessionShown;
+  };
+
+  // Función para verificar si debe mostrar la notificación visual de nuevas funcionalidades
+  const shouldShowNewFeaturesVisualNotification = () => {
+    // Verificar si ya se mostró el popup en esta sesión pero no se ha ocultado permanentemente
+    const sessionShown = sessionStorage.getItem('newFeaturesNotificationShown');
+    const permanentlyDismissed = localStorage.getItem('newFeaturesNotificationDismissed');
+    return sessionShown && !permanentlyDismissed;
+  };
+
+  // Función para marcar la notificación de nuevas funcionalidades como mostrada
+  const markNewFeaturesNotificationAsShown = () => {
+    sessionStorage.setItem('newFeaturesNotificationShown', 'true');
+    // Para ocultar permanentemente la notificación visual después de un tiempo
+    setTimeout(() => {
+      localStorage.setItem('newFeaturesNotificationDismissed', 'true');
+      setShowNewFeaturesVisualNotification(false);
+    }, 7 * 24 * 60 * 60 * 1000); // 7 días
+  };
+
   // Cargar datos básicos del usuario al montar el componente
   useEffect(() => {
     const loadBasicUserInfo = async () => {
@@ -156,13 +198,25 @@ const NavBar = () => {
     return unsubscribe;
   }, []);
 
-  // Verificar si debe mostrar la notificación de suscripción al montar el componente
+  // Verificar si debe mostrar las notificaciones al montar el componente
   useEffect(() => {
+    // Verificar notificación de suscripción
     if (shouldShowSubscriptionNotification()) {
       setShowSubscriptionNotification(true);
     } else if (shouldShowVisualNotification()) {
       // Si no debe mostrar el popup pero sí la notificación visual
       setShowVisualNotification(true);
+    }
+
+    // Verificar notificación de nuevas funcionalidades
+    if (shouldShowNewFeaturesNotification()) {
+      // Pequeño delay para que aparezca después de que se cargue la página
+      setTimeout(() => {
+        setShowNewFeaturesNotification(true);
+      }, 1500);
+    } else if (shouldShowNewFeaturesVisualNotification()) {
+      // Si no debe mostrar el popup pero sí la notificación visual
+      setShowNewFeaturesVisualNotification(true);
     }
   }, []);
 
@@ -208,7 +262,7 @@ const NavBar = () => {
               </div>
               
               {/* Indicador de notificación */}
-              {showVisualNotification && (
+              {(showVisualNotification || showNewFeaturesVisualNotification) && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"
                      style={{ boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)' }}>
                 </div>
@@ -238,6 +292,27 @@ const NavBar = () => {
                           <p className="text-white text-xs font-medium">Recordatorio de Suscripción</p>
                           <p className="text-gray-300 text-xs mt-1">
                             No olvides cancelar tu suscripción mensual. Si ya has cancelado omite esta notificación.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notificación de nuevas funcionalidades en el menú */}
+                  {showNewFeaturesVisualNotification && (
+                    <div className="mb-4 p-3 rounded-lg border-l-4 cursor-pointer hover:bg-white/5 transition-colors"
+                         style={{ 
+                           backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+                           borderLeftColor: '#22c55e',
+                           border: '1px solid rgba(34, 197, 94, 0.2)'
+                         }}
+                         onClick={openNewFeaturesNotification}>
+                      <div className="flex items-center">
+                        <span className="text-lg mr-2">🎉</span>
+                        <div>
+                          <p className="text-white text-xs font-medium">¡Nuevas Mejoras Disponibles!</p>
+                          <p className="text-gray-300 text-xs mt-1">
+                            Descubre las nuevas funciones: Pantalla Completa, Autoservicio e Insumos. ¡Haz clic para ver más!
                           </p>
                         </div>
                       </div>
@@ -325,6 +400,11 @@ const NavBar = () => {
       {/* Notificación de suscripción */}
       {showSubscriptionNotification && (
         <SubscriptionNotification onClose={closeSubscriptionNotification} />
+      )}
+
+      {/* Notificación de nuevas funcionalidades */}
+      {showNewFeaturesNotification && (
+        <NewFeaturesNotification onClose={closeNewFeaturesNotification} />
       )}
     </>
   );
