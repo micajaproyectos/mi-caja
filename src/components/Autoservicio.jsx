@@ -831,7 +831,7 @@ function Autoservicio() {
 
 
   return (
-    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
+    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50' : 'min-h-screen'}`} style={{ backgroundColor: '#1a3d1a' }}>
       {/* Notificación para dispositivos táctiles */}
       {notificacionTactil && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
