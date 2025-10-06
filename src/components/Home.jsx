@@ -3,10 +3,12 @@ import { useState, useEffect, useMemo } from 'react';
 import logo from '../assets/logo.png';
 import Footer from './Footer';
 import { authService } from '../lib/authService.js';
+import InfoPopup from './InfoPopup.jsx';
 
 export default function Home() {
   const navigate = useNavigate();
   const [nombreUsuario, setNombreUsuario] = useState('');
+  const [activeInfoPopup, setActiveInfoPopup] = useState(null);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -20,6 +22,17 @@ export default function Home() {
     };
     loadUserData();
   }, []);
+
+  // Función para mostrar el popup de información
+  const showInfoPopup = (item, e) => {
+    e.stopPropagation(); // Evitar que se ejecute la navegación
+    setActiveInfoPopup(item);
+  };
+
+  // Función para cerrar el popup de información
+  const closeInfoPopup = () => {
+    setActiveInfoPopup(null);
+  };
 
   // Memoizar menuItems para evitar recreaciones innecesarias
   const menuItems = useMemo(() => [
@@ -185,6 +198,15 @@ export default function Home() {
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}
               >
+                {/* Botón de información */}
+                <button
+                  onClick={(e) => showInfoPopup(item, e)}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xs font-bold transition-all duration-200 hover:scale-110 z-10"
+                  title={`Información sobre ${item.label}`}
+                >
+                  i
+                </button>
+
                 <div className="text-5xl mb-4 transition-transform duration-200 group-hover:scale-110 group-active:scale-95 drop-shadow-sm">
                   {item.icon}
                 </div>
@@ -205,6 +227,14 @@ export default function Home() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Popup de información */}
+      {activeInfoPopup && (
+        <InfoPopup 
+          item={activeInfoPopup} 
+          onClose={closeInfoPopup} 
+        />
+      )}
     </div>
   );
 }  
