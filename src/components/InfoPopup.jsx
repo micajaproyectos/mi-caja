@@ -22,7 +22,7 @@ const InfoPopup = ({ item, onClose }) => {
       'gastos': 'Registra y categoriza todos los gastos de tu negocio. Mantén control total sobre tus egresos y presupuesto.',
       'inventario': 'Agrega productos a tu inventario con precios, costos y cantidades. Base fundamental para el control de stock.',
       'proveedores': 'Administra la información de tus proveedores. Contactos, productos que suministran y historial de compras.',
-      'stock': 'Visualiza el inventario actual de todos tus productos. Genera las alertas de bajo stock, identifica el producto más vendido y reconoce aquellos que no se venden.',
+      'stock': 'Visualiza el inventario actual de todos tus productos. Genera las alertas de bajo stock, identifica el producto más vendido y encuentra los artículos que no se venden por +30 días.',
       'inventario-ia': 'Carga de manera automática tu inventario con procesamiento de IA. Agrega un PDF o JPG y el sistema reconocerá los productos para incluirlos en el inventario.',
       'clientes': 'Gestiona tu base de datos de clientes. Información de contacto, historial de compras y segmentación.',
       'pedidos': 'Crea y administra pedidos de tus clientes. Controla estado, productos solicitados y tiempos de entrega.',

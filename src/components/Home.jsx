@@ -99,7 +99,7 @@ export default function Home() {
     {
       id: 'comunidad',
       icon: '💬',
-      label: 'Comunidad',
+      label: 'Comunidad Mi Caja',
       route: '/comunidad'
     },
     {
