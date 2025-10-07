@@ -54,6 +54,16 @@ export default function Seguimiento() {
   const [loadingPedidosAcumulados, setLoadingPedidosAcumulados] = useState(false);
   const [errorPedidosAcumulados, setErrorPedidosAcumulados] = useState(null);
 
+  // Estados para el gráfico de ventas rápidas acumuladas mensuales
+  const [datosVentasRapidasAcumuladas, setDatosVentasRapidasAcumuladas] = useState([]);
+  const [loadingVentasRapidasAcumuladas, setLoadingVentasRapidasAcumuladas] = useState(false);
+  const [errorVentasRapidasAcumuladas, setErrorVentasRapidasAcumuladas] = useState(null);
+
+  // Estados para el gráfico de tipos de pago de ventas rápidas
+  const [datosTiposPagoVentasRapidas, setDatosTiposPagoVentasRapidas] = useState([]);
+  const [loadingTiposPagoVentasRapidas, setLoadingTiposPagoVentasRapidas] = useState(false);
+  const [errorTiposPagoVentasRapidas, setErrorTiposPagoVentasRapidas] = useState(null);
+
   // Función para obtener el mes y año actual
   const obtenerMesAnioActual = () => {
     const fecha = new Date();
@@ -674,6 +684,107 @@ export default function Seguimiento() {
     }
   };
 
+  // Función para cargar datos de ventas rápidas acumuladas mensuales
+  const cargarVentasRapidasAcumuladas = async () => {
+    try {
+      if (!clienteId) {
+        return;
+      }
+
+      setLoadingVentasRapidasAcumuladas(true);
+      setErrorVentasRapidasAcumuladas(null);
+      
+      // Crear array base con los 12 meses del año
+      const mesesBase = [
+        { mes: 'Ene', mes_num: 1, totalAcum: 0, totalMes: 0 },
+        { mes: 'Feb', mes_num: 2, totalAcum: 0, totalMes: 0 },
+        { mes: 'Mar', mes_num: 3, totalAcum: 0, totalMes: 0 },
+        { mes: 'Abr', mes_num: 4, totalAcum: 0, totalMes: 0 },
+        { mes: 'May', mes_num: 5, totalAcum: 0, totalMes: 0 },
+        { mes: 'Jun', mes_num: 6, totalAcum: 0, totalMes: 0 },
+        { mes: 'Jul', mes_num: 7, totalAcum: 0, totalMes: 0 },
+        { mes: 'Ago', mes_num: 8, totalAcum: 0, totalMes: 0 },
+        { mes: 'Sep', mes_num: 9, totalAcum: 0, totalMes: 0 },
+        { mes: 'Oct', mes_num: 10, totalAcum: 0, totalMes: 0 },
+        { mes: 'Nov', mes_num: 11, totalAcum: 0, totalMes: 0 },
+        { mes: 'Dic', mes_num: 12, totalAcum: 0, totalMes: 0 }
+      ];
+
+      // Consultar la vista venta_rapida_mensual_acum_v2
+      const { data: ventasRapidasData, error: ventasRapidasError } = await supabase
+        .from('venta_rapida_mensual_acum_v2')
+        .select('mes_num, total_acumulado, total_mes')
+        .eq('cliente_id', clienteId)
+        .eq('anio', anioGrafico)
+        .order('mes_num', { ascending: true });
+
+      if (ventasRapidasError) {
+        console.error('[chart] Error al consultar venta_rapida_mensual_acum_v2:', ventasRapidasError);
+        setErrorVentasRapidasAcumuladas('Error al cargar datos de ventas rápidas');
+        return;
+      }
+
+      // Mapear los datos recibidos a los meses base
+      const datosMapeados = mesesBase.map(mesBase => {
+        const datoEncontrado = ventasRapidasData?.find(d => d.mes_num === mesBase.mes_num);
+        return {
+          ...mesBase,
+          totalAcum: datoEncontrado ? parseFloat(datoEncontrado.total_acumulado) || 0 : 0,
+          totalMes: datoEncontrado ? parseFloat(datoEncontrado.total_mes) || 0 : 0
+        };
+      });
+
+      setDatosVentasRapidasAcumuladas(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar ventas rápidas acumuladas:', error);
+      setErrorVentasRapidasAcumuladas('Error inesperado al cargar datos');
+    } finally {
+      setLoadingVentasRapidasAcumuladas(false);
+    }
+  };
+
+  // Función para cargar datos de tipos de pago de ventas rápidas mensuales
+  const cargarTiposPagoVentasRapidas = async () => {
+    try {
+      if (!clienteId) return;
+
+      setLoadingTiposPagoVentasRapidas(true);
+      setErrorTiposPagoVentasRapidas(null);
+
+      // Consultar la vista venta_rapida_tipo_pago_mensual
+      const { data: tiposPagoVentasRapidasData, error: tiposPagoVentasRapidasError } = await supabase
+        .from('venta_rapida_tipo_pago_mensual')
+        .select('tipo_pago, cantidad, porcentaje_mes')
+        .eq('cliente_id', clienteId)
+        .eq('anio', anioGrafico)
+        .eq('mes_num', filtroMes)
+        .order('cantidad', { ascending: false });
+
+      if (tiposPagoVentasRapidasError) {
+        console.error('[chart] Error al consultar venta_rapida_tipo_pago_mensual:', tiposPagoVentasRapidasError);
+        setErrorTiposPagoVentasRapidas('Error al cargar datos de tipos de pago de ventas rápidas');
+        return;
+      }
+
+      // Mapear los datos para el gráfico circular
+      const datosMapeados = tiposPagoVentasRapidasData?.map(item => ({
+        name: item.tipo_pago.charAt(0).toUpperCase() + item.tipo_pago.slice(1),
+        value: parseInt(item.cantidad),
+        porcentaje: parseFloat(item.porcentaje_mes) * 100, // Convertir decimal a porcentaje
+        tipo: item.tipo_pago
+      })) || [];
+
+      setDatosTiposPagoVentasRapidas(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar tipos de pago de ventas rápidas:', error);
+      setErrorTiposPagoVentasRapidas('Error inesperado al cargar datos');
+    } finally {
+      setLoadingTiposPagoVentasRapidas(false);
+    }
+  };
+
 
   // Cargar totales al montar el componente (solo una vez)
   useEffect(() => {
@@ -701,6 +812,7 @@ export default function Seguimiento() {
     if (clienteId) {
       cargarVentasAcumuladas();
       cargarPedidosAcumulados(); // Cargar pedidos acumulados también
+      cargarVentasRapidasAcumuladas(); // Cargar ventas rápidas acumuladas también
       cargarAniosGraficoDisponibles(); // Cargar años disponibles para el gráfico
     }
   }, [clienteId]);
@@ -710,6 +822,7 @@ export default function Seguimiento() {
     if (clienteId) {
       cargarVentasAcumuladas();
       cargarPedidosAcumulados(); // Cargar pedidos acumulados también
+      cargarVentasRapidasAcumuladas(); // Cargar ventas rápidas acumuladas también
     }
   }, [anioGrafico, clienteId]);
 
@@ -718,6 +831,7 @@ export default function Seguimiento() {
     if (clienteId) {
       cargarTiposPago();
       cargarTiposPagoPedidos();
+      cargarTiposPagoVentasRapidas();
     }
   }, [clienteId, anioGrafico, filtroMes]);
 
@@ -1627,6 +1741,329 @@ export default function Seguimiento() {
                   <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de tipos de pago de pedidos</p>
                   <p className="text-green-200 text-sm">
                     No se encontraron pedidos para el mes seleccionado
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+
+          {/* Estadísticas de Ventas Rápidas */}
+          <div className="mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Estadísticas de Ventas Rápidas
+            </h2>
+            <p className="text-green-200 text-center text-sm md:text-base">
+              Análisis detallado del rendimiento de ventas rápidas
+            </p>
+          </div>
+
+          {/* Gráficos de Ventas Rápidas - Separados pero en la misma línea */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            {/* Gráfico de Ventas Rápidas Mensuales */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+              <div className="text-center mb-6">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                  <h3 className="text-xl md:text-2xl font-bold text-white">
+                    Ventas Rápidas Mensuales
+                  </h3>
+                  {/* Filtro de año para el gráfico */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-white font-medium text-sm md:text-base">
+                      Año:
+                    </label>
+                    <select
+                      value={anioGrafico}
+                      onChange={(e) => setAnioGrafico(parseInt(e.target.value))}
+                      className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      {aniosGraficoDisponibles.map(anio => (
+                        <option key={anio} value={anio} className="bg-gray-800 text-white">
+                          {anio}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-green-200 text-sm md:text-base">
+                  Total generado mensualmente en ventas rápidas
+                </p>
+              </div>
+
+              {loadingVentasRapidasAcumuladas ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                  <span className="ml-3 text-green-200">Cargando...</span>
+                </div>
+              ) : errorVentasRapidasAcumuladas ? (
+                <div className="text-center py-8">
+                  <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-red-300 text-sm">{errorVentasRapidasAcumuladas}</p>
+                  </div>
+                </div>
+              ) : datosVentasRapidasAcumuladas.length > 0 ? (
+                <div className="h-64 md:h-80 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={datosVentasRapidasAcumuladas}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                      aria-label="Gráfico de ventas rápidas acumuladas"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                      <XAxis 
+                        dataKey="mes" 
+                        stroke="rgba(255, 255, 255, 0.7)"
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        stroke="rgba(255, 255, 255, 0.7)"
+                        fontSize={12}
+                        tickFormatter={(value) => new Intl.NumberFormat('es-CL').format(value)}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          color: 'white'
+                        }}
+                        formatter={(value, name, props) => {
+                          // Usar el total_mes directamente desde los datos mapeados
+                          const mesActual = props.payload.mes_num;
+                          const mesData = datosVentasRapidasAcumuladas.find(d => d.mes_num === mesActual);
+                          
+                          return [
+                            <div key="tooltip-content">
+                              <div style={{ marginBottom: '8px' }}>
+                                <strong>Total del Mes:</strong><br />
+                                {new Intl.NumberFormat('es-CL', {
+                                  style: 'currency',
+                                  currency: 'CLP',
+                                  minimumFractionDigits: 0
+                                }).format(value)}
+                              </div>
+                              <div>
+                                <strong>Total Acumulado:</strong><br />
+                                {new Intl.NumberFormat('es-CL', {
+                                  style: 'currency',
+                                  currency: 'CLP',
+                                  minimumFractionDigits: 0
+                                }).format(mesData?.totalAcum || 0)}
+                              </div>
+                            </div>
+                          ];
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="totalMes"
+                        stroke="transparent"
+                        strokeWidth={0}
+                        dot={{
+                          fill: '#f59e0b',
+                          stroke: 'white',
+                          strokeWidth: 2,
+                          r: 8
+                        }}
+                        activeDot={{
+                          fill: '#f59e0b',
+                          stroke: 'white',
+                          strokeWidth: 3,
+                          r: 10
+                        }}
+                        label={{
+                          position: 'top',
+                          fill: 'white',
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          offset: 15,
+                          formatter: (value) => new Intl.NumberFormat('es-CL', {
+                            style: 'currency',
+                            currency: 'CLP',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(value)
+                        }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  
+                  {/* Información adicional del gráfico */}
+                  <div className="mt-6 text-center">
+                    <div className="inline-flex flex-wrap items-center justify-center gap-4 text-sm text-green-200">
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                        Total del año: {formatearMoneda(datosVentasRapidasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0))}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
+                        Promedio mensual: {formatearMoneda(datosVentasRapidasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-yellow-400 text-4xl mb-4">⚡</div>
+                  <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de ventas rápidas mensuales</p>
+                  <p className="text-green-200 text-sm">
+                    El gráfico mostrará los 12 meses con valores en 0
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Gráfico Circular de Tipos de Pago de Ventas Rápidas */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+              <div className="text-center mb-6">
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                  Ventas Rápidas por Tipo de Pago
+                </h2>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                  <h3 className="text-lg md:text-xl font-medium text-green-200">
+                    Distribución Mensual
+                  </h3>
+                  {/* Filtros para el gráfico circular de ventas rápidas */}
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Filtro de mes */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-white font-medium text-sm md:text-base">
+                        Mes:
+                      </label>
+                      <select
+                        value={filtroMes}
+                        onChange={(e) => setFiltroMes(parseInt(e.target.value))}
+                        className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        <option value="1" className="bg-gray-800 text-white">Enero</option>
+                        <option value="2" className="bg-gray-800 text-white">Febrero</option>
+                        <option value="3" className="bg-gray-800 text-white">Marzo</option>
+                        <option value="4" className="bg-gray-800 text-white">Abril</option>
+                        <option value="5" className="bg-gray-800 text-white">Mayo</option>
+                        <option value="6" className="bg-gray-800 text-white">Junio</option>
+                        <option value="7" className="bg-gray-800 text-white">Julio</option>
+                        <option value="8" className="bg-gray-800 text-white">Agosto</option>
+                        <option value="9" className="bg-gray-800 text-white">Septiembre</option>
+                        <option value="10" className="bg-gray-800 text-white">Octubre</option>
+                        <option value="11" className="bg-gray-800 text-white">Noviembre</option>
+                        <option value="12" className="bg-gray-800 text-white">Diciembre</option>
+                      </select>
+                    </div>
+
+                    {/* Filtro de año */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-white font-medium text-sm md:text-base">
+                        Año:
+                      </label>
+                      <select
+                        value={filtroAnio}
+                        onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
+                        className="px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        {aniosDisponibles.map(anio => (
+                          <option key={anio} value={anio} className="bg-gray-800 text-white">
+                            {anio}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {loadingTiposPagoVentasRapidas ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                  <span className="ml-3 text-green-200">Cargando...</span>
+                </div>
+              ) : errorTiposPagoVentasRapidas ? (
+                <div className="text-center py-8">
+                  <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-red-300 text-sm">{errorTiposPagoVentasRapidas}</p>
+                  </div>
+                </div>
+              ) : datosTiposPagoVentasRapidas.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  {/* Gráfico Circular */}
+                  <div className="h-64 md:h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={datosTiposPagoVentasRapidas}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {datosTiposPagoVentasRapidas.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={coloresTiposPago[entry.tipo] || '#8884d8'} 
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value, name, props) => [
+                            `${value} ventas rápidas`,
+                            `${props.payload.name} (${props.payload.porcentaje.toFixed(1)}%)`
+                          ]}
+                          contentStyle={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            color: 'white'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Leyenda y Estadísticas */}
+                  <div className="space-y-4">
+                    <div className="text-center lg:text-left">
+                      <h4 className="text-lg font-semibold text-white mb-4">Resumen del Mes</h4>
+                      <div className="space-y-3">
+                        {datosTiposPagoVentasRapidas.map((item, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: coloresTiposPago[item.tipo] || '#8884d8' }}
+                              ></div>
+                              <span className="text-white font-medium">{item.name}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-green-300 font-bold">{item.value} ventas rápidas</div>
+                              <div className="text-green-200 text-sm">{item.porcentaje.toFixed(1)}%</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Total de ventas rápidas del mes */}
+                      <div className="mt-6 p-4 bg-green-500/20 rounded-lg border border-green-400/30">
+                        <div className="text-center">
+                          <div className="text-green-200 text-sm font-medium">Total de Ventas Rápidas del Mes</div>
+                          <div className="text-green-300 text-2xl font-bold">
+                            {datosTiposPagoVentasRapidas.reduce((sum, item) => sum + item.value, 0)} ventas rápidas
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-yellow-400 text-4xl mb-4">⚡</div>
+                  <p className="text-gray-300 text-lg font-medium mb-2">No hay datos de tipos de pago de ventas rápidas</p>
+                  <p className="text-green-200 text-sm">
+                    No se encontraron ventas rápidas para el mes seleccionado
                   </p>
                 </div>
               )}
