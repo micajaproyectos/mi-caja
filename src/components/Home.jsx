@@ -176,9 +176,34 @@ export default function Home() {
           <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-4 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
             Inicio
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto animate-fade-in-delayed italic" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            Tu negocio en un solo lugar
-          </p>
+          {/* Instagram con texto descriptivo */}
+          <a 
+            href="https://instagram.com/micajaempresa" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="group flex items-center justify-center gap-3 text-gray-300 hover:text-pink-300 transition-all duration-300 animate-fade-in-delayed max-w-2xl mx-auto"
+            title="Síguenos en Instagram"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 p-1.5 group-hover:scale-110 transition-transform duration-300">
+              <svg 
+                className="w-full h-full text-white" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path 
+                  fillRule="evenodd" 
+                  d="M12.017 0C8.396 0 7.929.013 6.71.066 5.493.119 4.677.278 3.982.598c-.719.275-1.253.635-1.759 1.141C1.717 2.245 1.357 2.779 1.082 3.498c-.32.695-.479 1.511-.532 2.728C.013 7.445 0 7.912 0 11.533s.013 4.088.066 5.307c.053 1.217.212 2.033.532 2.728.275.719.635 1.253 1.141 1.759.506.506 1.04.866 1.759 1.141.695.32 1.511.479 2.728.532C7.445 23.987 7.912 24 11.533 24s4.088-.013 5.307-.066c1.217-.053 2.033-.212 2.728-.532.719-.275 1.253-.635 1.759-1.141.506-.506.866-1.04 1.141-1.759.32-.695.479-1.511.532-2.728.053-1.219.066-1.686.066-5.307s-.013-4.088-.066-5.307c-.053-1.217-.212-2.033-.532-2.728a4.902 4.902 0 00-1.141-1.759A4.902 4.902 0 0019.562.598c-.695-.32-1.511-.479-2.728-.532C15.615.013 15.148 0 11.527 0h.49zm-.964 2.168c3.572 0 3.993.014 5.402.066 1.304.059 2.012.274 2.482.456.624.243 1.07.533 1.539 1.002.469.469.759.915 1.002 1.539.182.47.397 1.178.456 2.482.052 1.409.066 1.83.066 5.402s-.014 3.993-.066 5.402c-.059 1.304-.274 2.012-.456 2.482a4.147 4.147 0 01-1.002 1.539 4.147 4.147 0 01-1.539 1.002c-.47.182-1.178.397-2.482.456-1.409.052-1.83.066-5.402.066s-3.993-.014-5.402-.066c-1.304-.059-2.012-.274-2.482-.456a4.147 4.147 0 01-1.539-1.002 4.147 4.147 0 01-1.002-1.539c-.182-.47-.397-1.178-.456-2.482-.052-1.409-.066-1.83-.066-5.402s.014-3.993.066-5.402c.059-1.304.274-2.012.456-2.482a4.147 4.147 0 011.002-1.539A4.147 4.147 0 016.562 2.624c.47-.182 1.178-.397 2.482-.456 1.409-.052 1.83-.066 5.402-.066l.571-.004zm0 3.27a6.533 6.533 0 100 13.065 6.533 6.533 0 000-13.065zM12 16a4 4 0 110-8 4 4 0 010 8zm7.846-10.405a1.441 1.441 0 01-2.88 0 1.441 1.441 0 012.88 0z" 
+                  clipRule="evenodd" 
+                />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-medium group-hover:underline" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                Síguenos en Instagram como <span className="text-pink-400 font-semibold">@micajaempresa</span>
+              </p>
+            </div>
+          </a>
         </div>
       </div>
 
