@@ -36,6 +36,7 @@ export default function Home() {
 
   // Memoizar menuItems para evitar recreaciones innecesarias
   const menuItems = useMemo(() => [
+    // Primera fila: Registro de Venta, Venta Rápida, Pedidos, Autoservicio
     {
       id: 'ventas',
       icon: '🤝',
@@ -43,28 +44,29 @@ export default function Home() {
       route: '/ventas'
     },
     {
-      id: 'asistencia',
-      icon: '📋',
-      label: 'Registro de Asistencia',
-      route: '/asistencia'
+      id: 'venta-rapida',
+      icon: '⚡',
+      label: 'Venta Rápida',
+      route: '/venta-rapida'
     },
     {
-      id: 'gastos',
-      icon: '💰',
-      label: 'Gastos',
-      route: '/gastos'
+      id: 'pedidos',
+      icon: '🍴',
+      label: 'Pedidos',
+      route: '/pedidos'
     },
+    {
+      id: 'autoservicio',
+      icon: '🛒',
+      label: 'Autoservicio',
+      route: '/autoservicio'
+    },
+    // Segunda fila: Inventario, Stock, Inventario IA, Insumos
     {
       id: 'inventario',
       icon: '📦',
       label: 'Inventario',
       route: '/inventario'
-    },
-    {
-      id: 'proveedores',
-      icon: '🚚',
-      label: 'Proveedor',
-      route: '/proveedores'
     },
     {
       id: 'stock',
@@ -79,40 +81,42 @@ export default function Home() {
       route: '/inventario-ia'
     },
     {
-      id: 'clientes',
-      icon: '👥',
-      label: 'Clientes',
-      route: '/clientes'
-    },
-    {
-      id: 'pedidos',
-      icon: '🍴',
-      label: 'Pedidos',
-      route: '/pedidos'
-    },
-    {
       id: 'insumos',
       icon: '🧑‍🍳',
       label: 'Insumos',
       route: '/insumos'
     },
+    // Tercera fila: Registro de Asistencia, Gastos, Proveedor, Clientes
     {
-      id: 'comunidad',
-      icon: '💬',
-      label: 'Comunidad Mi Caja',
-      route: '/comunidad'
+      id: 'asistencia',
+      icon: '📋',
+      label: 'Registro de Asistencia',
+      route: '/asistencia'
     },
+    {
+      id: 'gastos',
+      icon: '💰',
+      label: 'Gastos',
+      route: '/gastos'
+    },
+    {
+      id: 'proveedores',
+      icon: '🚚',
+      label: 'Proveedor',
+      route: '/proveedores'
+    },
+    {
+      id: 'clientes',
+      icon: '👥',
+      label: 'Clientes',
+      route: '/clientes'
+    },
+    // Cuarta fila: Seguimiento, Auditoría, Comunidad Mi Caja
     {
       id: 'seguimiento',
       icon: '📊',
       label: 'Seguimiento',
       route: '/seguimiento'
-    },
-    {
-      id: 'venta-rapida',
-      icon: '⚡',
-      label: 'Venta Rápida',
-      route: '/venta-rapida'
     },
     {
       id: 'auditoria',
@@ -121,10 +125,10 @@ export default function Home() {
       route: '/auditoria'
     },
     {
-      id: 'autoservicio',
-      icon: '🛒',
-      label: 'Autoservicio',
-      route: '/autoservicio'
+      id: 'comunidad',
+      icon: '💬',
+      label: 'Comunidad Mi Caja',
+      route: '/comunidad'
     }
   ], []);
 
@@ -200,6 +204,7 @@ export default function Home() {
             </div>
             <div className="text-center">
               <p className="text-lg font-medium group-hover:underline" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+
                 Síguenos en Instagram como <span className="text-pink-400 font-semibold">@micajaempresa</span>
               </p>
             </div>
