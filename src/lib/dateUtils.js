@@ -109,8 +109,11 @@ export const formatearFechaChile = (fechaISO) => {
   if (!fechaISO) return '';
   
   try {
+    // Extraer solo la parte de fecha (YYYY-MM-DD) si viene con timestamp
+    const fechaSolo = fechaISO.split('T')[0];
+    
     // Crear fecha desde string ISO sin problemas de zona horaria
-    const [year, month, day] = fechaISO.split('-').map(Number);
+    const [year, month, day] = fechaSolo.split('-').map(Number);
     const fecha = new Date(year, month - 1, day);
     
     return fecha.toLocaleDateString('es-CL', {
@@ -134,7 +137,10 @@ export const formatearFechaCortaChile = (fechaISO) => {
   if (!fechaISO) return '';
   
   try {
-    const [year, month, day] = fechaISO.split('-').map(Number);
+    // Extraer solo la parte de fecha (YYYY-MM-DD) si viene con timestamp
+    const fechaSolo = fechaISO.split('T')[0];
+    
+    const [year, month, day] = fechaSolo.split('-').map(Number);
     const fecha = new Date(year, month - 1, day);
     
     return fecha.toLocaleDateString('es-CL', {

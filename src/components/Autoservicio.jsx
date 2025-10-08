@@ -344,15 +344,21 @@ function Autoservicio() {
     }
   };
 
-  // Función para formatear fechas
+  // Función para mostrar fecha en formato DD-MM-YYYY
   const formatearFecha = (fechaString) => {
-    if (!fechaString) return 'Fecha inválida';
-    try {
-      const fecha = new Date(fechaString);
-      return fecha.toLocaleDateString('es-CL');
-    } catch (error) {
-      return 'Fecha inválida';
-    }
+    if (!fechaString) return 'Sin fecha';
+    // Extraer solo la parte de fecha (YYYY-MM-DD) si tiene timestamp
+    const fechaSolo = fechaString.split('T')[0];
+    // Separar componentes y reorganizar a DD-MM-YYYY
+    const [year, month, day] = fechaSolo.split('-');
+    return `${day}-${month}-${year}`;
+  };
+
+  // Función para normalizar fecha (extraer solo YYYY-MM-DD)
+  const normalizarFecha = (fechaString) => {
+    if (!fechaString) return null;
+    // Extraer solo la parte de fecha (YYYY-MM-DD) eliminando hora si existe
+    return fechaString.split('T')[0];
   };
 
   // Función para filtrar ventas de autoservicio
@@ -363,14 +369,14 @@ function Autoservicio() {
     // Si no hay filtros activos, mostrar solo las ventas del día actual
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
       ventasFiltradas = ventasFiltradas.filter(venta => {
-        const fechaVenta = venta.fecha_cl || venta.fecha;
+        const fechaVenta = normalizarFecha(venta.fecha_cl || venta.fecha);
         return fechaVenta === fechaActual;
       });
     } else {
       // Filtrar por día específico (si se selecciona)
       if (filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          const fechaVenta = venta.fecha_cl || venta.fecha;
+          const fechaVenta = normalizarFecha(venta.fecha_cl || venta.fecha);
           return fechaVenta === filtroDia;
         });
       }
@@ -378,11 +384,10 @@ function Autoservicio() {
       // Filtrar por mes (si se selecciona)
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          let fechaVenta = venta.fecha_cl || venta.fecha;
+          let fechaVenta = normalizarFecha(venta.fecha_cl || venta.fecha);
           
           if (!fechaVenta && venta.created_at) {
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
+            fechaVenta = normalizarFecha(venta.created_at);
           }
           
           if (!fechaVenta) return false;
@@ -397,11 +402,10 @@ function Autoservicio() {
       // Filtrar por año (si se selecciona)
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          let fechaVenta = venta.fecha_cl || venta.fecha;
+          let fechaVenta = normalizarFecha(venta.fecha_cl || venta.fecha);
           
           if (!fechaVenta && venta.created_at) {
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
+            fechaVenta = normalizarFecha(venta.created_at);
           }
           
           if (!fechaVenta) return false;
@@ -413,11 +417,10 @@ function Autoservicio() {
       // Si hay mes y año seleccionados (sin día específico)
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          let fechaVenta = venta.fecha_cl || venta.fecha;
+          let fechaVenta = normalizarFecha(venta.fecha_cl || venta.fecha);
           
           if (!fechaVenta && venta.created_at) {
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
+            fechaVenta = normalizarFecha(venta.created_at);
           }
           
           if (!fechaVenta) return false;
