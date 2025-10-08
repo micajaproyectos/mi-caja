@@ -109,6 +109,12 @@ export default function RegistroVenta() {
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
+  // Estado para notificaciones personalizadas en pantalla completa
+  const [notificacionPersonalizada, setNotificacionPersonalizada] = useState(null);
+  
+  // Estado para confirmaciones personalizadas en pantalla completa
+  const [confirmacionPersonalizada, setConfirmacionPersonalizada] = useState(null);
+
   // Estados para búsqueda de productos del inventario
   const [productosInventario, setProductosInventario] = useState([]);
   const [busquedaProducto, setBusquedaProducto] = useState('');
@@ -232,7 +238,7 @@ export default function RegistroVenta() {
   // Función para agregar un producto a la venta
   const agregarProducto = () => {
     if (!productoActual.producto || !productoActual.cantidad || !productoActual.precio_unitario) {
-      alert('Por favor completa todos los campos del producto');
+      mostrarNotificacion('Por favor completa todos los campos del producto', 'error');
       return;
     }
 
@@ -693,7 +699,7 @@ export default function RegistroVenta() {
   // Función para exportar datos filtrados
   const exportarDatosFiltrados = () => {
     if (ventasFiltradas.length === 0) {
-      alert('No hay datos para exportar');
+      mostrarNotificacion('No hay datos para exportar', 'error');
       return;
     }
 
@@ -872,19 +878,25 @@ export default function RegistroVenta() {
   useEffect(() => {
     const handleFullscreenChange = () => {
       const estaEnFullscreen = !!document.fullscreenElement;
-      const estadoAnterior = pantallaCompleta;
       
-      // Sincronizar el estado con el estado real de fullscreen
-      setPantallaCompleta(estaEnFullscreen);
-      
-      // Si estamos en un dispositivo táctil y se salió automáticamente de fullscreen 
-      // (no fue por acción del usuario), mostrar notificación
-      if (esDispositivoTactil() && estadoAnterior && !estaEnFullscreen) {
-        setNotificacionTactil(false); // Ocultar notificación anterior si existe
-        setTimeout(() => {
-          setNotificacionTactil(true);
-          setTimeout(() => setNotificacionTactil(false), 4000);
-        }, 500);
+      // Si el usuario quiere estar en pantalla completa pero el navegador salió automáticamente,
+      // intentar re-entrar a pantalla completa
+      if (pantallaCompleta && !estaEnFullscreen) {
+        // Re-entrar a pantalla completa después de un breve delay
+        setTimeout(async () => {
+          try {
+            if (!document.fullscreenElement && pantallaCompleta) {
+              await document.documentElement.requestFullscreen();
+            }
+          } catch (error) {
+            console.log('No se pudo re-entrar a pantalla completa:', error);
+            // Solo actualizar el estado si realmente no se puede entrar a fullscreen
+            setPantallaCompleta(false);
+          }
+        }, 100);
+      } else if (!pantallaCompleta && estaEnFullscreen) {
+        // El usuario salió intencionalmente (ESC o botón), sincronizar estado
+        setPantallaCompleta(false);
       }
     };
 
@@ -966,6 +978,42 @@ export default function RegistroVenta() {
     }
   }, [productoActual.unidad]);
 
+  // Función para mostrar notificaciones (inteligente según modo pantalla completa)
+  const mostrarNotificacion = (mensaje, tipo = 'info') => {
+    if (pantallaCompleta) {
+      // Mostrar notificación personalizada en pantalla completa
+      setNotificacionPersonalizada({ mensaje, tipo });
+      // Auto-ocultar después de 4 segundos
+      setTimeout(() => setNotificacionPersonalizada(null), 4000);
+    } else {
+      // Usar alert nativo fuera de pantalla completa
+      alert(mensaje);
+    }
+  };
+
+  // Función para mostrar confirmaciones (inteligente según modo pantalla completa)
+  const mostrarConfirmacion = (mensaje) => {
+    return new Promise((resolve) => {
+      if (pantallaCompleta) {
+        // Mostrar confirmación personalizada en pantalla completa
+        setConfirmacionPersonalizada({
+          mensaje,
+          onConfirm: () => {
+            setConfirmacionPersonalizada(null);
+            resolve(true);
+          },
+          onCancel: () => {
+            setConfirmacionPersonalizada(null);
+            resolve(false);
+          }
+        });
+      } else {
+        // Usar confirm nativo fuera de pantalla completa
+        resolve(confirm(mensaje));
+      }
+    });
+  };
+
   // Función para validar formato de fecha
 
   // Handler para el botón de balanza
@@ -1017,19 +1065,19 @@ export default function RegistroVenta() {
     
     // Validar fecha primero
     if (!validarFecha(venta.fecha)) {
-      alert('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD');
+      mostrarNotificacion('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD', 'error');
       return;
     }
     
     // Validar que todos los campos requeridos estén llenos
     if (!venta.fecha || !venta.tipo_pago) {
-      alert('❌ Por favor completa la fecha y tipo de pago');
+      mostrarNotificacion('❌ Por favor completa la fecha y tipo de pago', 'error');
       return;
     }
 
     // Validar que haya al menos un producto
     if (productosVenta.length === 0) {
-      alert('❌ Por favor agrega al menos un producto a la venta');
+      mostrarNotificacion('❌ Por favor agrega al menos un producto a la venta', 'error');
       return;
     }
 
@@ -1039,7 +1087,7 @@ export default function RegistroVenta() {
     // Obtener el usuario_id del usuario autenticado
     const usuarioId = await authService.getCurrentUserId();
     if (!usuarioId) {
-      alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+      mostrarNotificacion('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.', 'error');
       return;
     }
 
@@ -1071,12 +1119,12 @@ export default function RegistroVenta() {
 
         if (error) {
           console.error('❌ Error al registrar producto:', error);
-          alert('❌ Error al registrar venta: ' + error.message);
+          mostrarNotificacion('❌ Error al registrar venta: ' + error.message, 'error');
           return;
         }
       }
 
-      alert(`✅ Venta registrada correctamente con ${productosVenta.length} productos. Total: $${totalVenta.toLocaleString()}`);
+      mostrarNotificacion(`✅ Venta registrada correctamente con ${productosVenta.length} productos. Total: $${totalVenta.toLocaleString()}`, 'success');
       
       // Limpiar el formulario
       setVenta({
@@ -1101,13 +1149,14 @@ export default function RegistroVenta() {
       cargarVentas();
     } catch (error) {
       console.error('❌ Error general al registrar venta:', error);
-      alert('❌ Error al registrar venta: ' + error.message);
+      mostrarNotificacion('❌ Error al registrar venta: ' + error.message, 'error');
     }
   };
 
   // Función para eliminar una venta (solo del usuario actual)
   const eliminarVenta = async (id) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta venta? Esta acción no se puede deshacer.')) {
+    const confirmado = await mostrarConfirmacion('¿Estás seguro de que quieres eliminar esta venta? Esta acción no se puede deshacer.');
+    if (!confirmado) {
       return;
     }
 
@@ -1117,7 +1166,7 @@ export default function RegistroVenta() {
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
-        alert('❌ Error: Usuario no autenticado');
+        mostrarNotificacion('❌ Error: Usuario no autenticado', 'error');
         return;
       }
       
@@ -1129,18 +1178,18 @@ export default function RegistroVenta() {
 
       if (error) {
         console.error('❌ Error al eliminar venta:', error);
-        alert('❌ Error al eliminar la venta: ' + error.message);
+        mostrarNotificacion('❌ Error al eliminar la venta: ' + error.message, 'error');
         return;
       }
 
-      alert('✅ Venta eliminada exitosamente');
+      mostrarNotificacion('✅ Venta eliminada exitosamente', 'success');
       
       // Recargar la lista de ventas
       await cargarVentas();
       
     } catch (error) {
       console.error('❌ Error inesperado al eliminar venta:', error);
-      alert('❌ Error inesperado al eliminar la venta');
+      mostrarNotificacion('❌ Error inesperado al eliminar la venta', 'error');
     } finally {
       setLoading(false);
     }
@@ -1190,17 +1239,17 @@ export default function RegistroVenta() {
       // Validaciones
       if (!valoresEdicion.fecha_cl || !valoresEdicion.producto || !valoresEdicion.cantidad || 
           !valoresEdicion.unidad || !valoresEdicion.precio_unitario || !valoresEdicion.tipo_pago) {
-        alert('⚠️ Todos los campos son obligatorios');
+        mostrarNotificacion('⚠️ Todos los campos son obligatorios', 'error');
         return;
       }
 
       if (parseFloat(valoresEdicion.cantidad) <= 0) {
-        alert('⚠️ La cantidad debe ser mayor a 0');
+        mostrarNotificacion('⚠️ La cantidad debe ser mayor a 0', 'error');
         return;
       }
 
       if (parseFloat(valoresEdicion.precio_unitario) <= 0) {
-        alert('⚠️ El precio unitario debe ser mayor a 0');
+        mostrarNotificacion('⚠️ El precio unitario debe ser mayor a 0', 'error');
         return;
       }
 
@@ -1209,7 +1258,7 @@ export default function RegistroVenta() {
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
-        alert('❌ Error: Usuario no autenticado');
+        mostrarNotificacion('❌ Error: Usuario no autenticado', 'error');
         return;
       }
 
@@ -1230,17 +1279,17 @@ export default function RegistroVenta() {
 
       if (error) {
         console.error('❌ Error al actualizar venta:', error);
-        alert('❌ Error al actualizar la venta: ' + error.message);
+        mostrarNotificacion('❌ Error al actualizar la venta: ' + error.message, 'error');
         return;
       }
 
-      alert('✅ Venta actualizada exitosamente');
+      mostrarNotificacion('✅ Venta actualizada exitosamente', 'success');
       cancelarEdicion();
       await cargarVentas();
 
     } catch (error) {
       console.error('❌ Error inesperado al actualizar venta:', error);
-      alert('❌ Error inesperado al actualizar la venta');
+      mostrarNotificacion('❌ Error inesperado al actualizar la venta', 'error');
     } finally {
       setLoading(false);
     }
@@ -1258,6 +1307,62 @@ export default function RegistroVenta() {
             <div className="text-sm">
               <div className="font-semibold">{obtenerInfoDispositivo().navegador} en {obtenerInfoDispositivo().tipo}</div>
               <div className="text-xs opacity-90">La pantalla completa puede cerrarse al usar campos de texto</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notificaciones personalizadas para pantalla completa */}
+      {notificacionPersonalizada && (
+        <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] backdrop-blur-md text-white px-6 py-4 rounded-xl shadow-2xl border max-w-md text-center animate-bounce ${
+          notificacionPersonalizada.tipo === 'success' ? 'bg-green-600/95 border-green-400/30' :
+          notificacionPersonalizada.tipo === 'error' ? 'bg-red-600/95 border-red-400/30' :
+          'bg-blue-600/95 border-blue-400/30'
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className="text-xl">
+              {notificacionPersonalizada.tipo === 'success' ? '✅' :
+               notificacionPersonalizada.tipo === 'error' ? '❌' : 'ℹ️'}
+            </span>
+            <div className="flex-1">
+              <div className="text-sm font-medium leading-relaxed">
+                {notificacionPersonalizada.mensaje}
+              </div>
+            </div>
+            <button
+              onClick={() => setNotificacionPersonalizada(null)}
+              className="text-white/70 hover:text-white text-lg leading-none"
+              title="Cerrar"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmaciones personalizadas para pantalla completa */}
+      {confirmacionPersonalizada && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-gray-800/95 backdrop-blur-md text-white p-6 rounded-xl shadow-2xl border border-gray-600/30 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <div className="text-yellow-400 text-3xl mb-3">⚠️</div>
+              <div className="text-lg font-medium leading-relaxed">
+                {confirmacionPersonalizada.mensaje}
+              </div>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={confirmacionPersonalizada.onCancel}
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                ❌ Cancelar
+              </button>
+              <button
+                onClick={confirmacionPersonalizada.onConfirm}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                ✅ Confirmar
+              </button>
             </div>
           </div>
         </div>
@@ -1592,13 +1697,14 @@ export default function RegistroVenta() {
 
 
 
-            {/* Sección de tipo de pago - Compacta */}
+            {/* Sección de tipo de pago y procesar venta - En la misma línea */}
             <div className="mb-3 md:mb-4">
               <div className="flex items-center mb-2">
                 <span className="text-blue-400 text-lg md:text-xl mr-2"></span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Tipo de Pago</h3>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3 items-stretch">
+                {/* Botones de tipo de pago más angostos */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1674,6 +1780,17 @@ export default function RegistroVenta() {
                     <p className="font-medium text-xs md:text-sm">Transferencia</p>
                   </div>
                 </button>
+
+                {/* Botón procesar venta en la misma fila */}
+                <button
+                  type="button"
+                  onClick={registrarVenta}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold p-2 md:p-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm shadow-lg hover:shadow-xl col-span-2 sm:col-span-1 flex items-center justify-center gap-1 md:gap-2"
+                >
+                  <span className="text-yellow-400">💰</span>
+                  <span className="hidden md:inline">Procesar Venta</span>
+                  <span className="md:hidden">Procesar</span>
+                </button>
               </div>
             </div>
 
@@ -1743,18 +1860,6 @@ export default function RegistroVenta() {
               </div>
             )}
 
-            {/* Botón procesar venta - Responsive */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={registrarVenta}
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 md:py-3 lg:py-4 px-4 md:px-6 lg:px-10 rounded-lg md:rounded-xl transition-all duration-300 transform hover:scale-105 text-sm md:text-lg lg:text-xl shadow-lg md:shadow-2xl hover:shadow-green-500/25"
-              >
-                <span className="text-yellow-400 mr-1 md:mr-2">💰</span>
-                <span className="hidden sm:inline">Procesar Venta</span>
-                <span className="sm:hidden">Procesar</span>
-              </button>
-            </div>
           </div>
 
 
