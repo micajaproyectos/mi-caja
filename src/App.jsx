@@ -19,6 +19,7 @@ import Insumos from './components/Insumos';
 import VentaRapida from './components/VentaRapida';
 import Auditoria from './components/Auditoria';
 import Autoservicio from './components/Autoservicio';
+import GestionCocina from './components/GestionCocina';
 
 // Componentes placeholder para las otras secciones
 const Inventario = () => {
@@ -129,6 +130,11 @@ function App() {
           <Route path="/autoservicio" element={
             <RutaPrivada>
               <Autoservicio />
+            </RutaPrivada>
+          } />
+          <Route path="/gestion-cocina" element={
+            <RutaPrivada>
+              <GestionCocina />
             </RutaPrivada>
           } />
         </Routes>

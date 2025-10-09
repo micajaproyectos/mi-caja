@@ -86,7 +86,13 @@ export default function Home() {
       label: 'Insumos',
       route: '/insumos'
     },
-    // Tercera fila: Registro de Asistencia, Gastos, Proveedor, Clientes
+    // Tercera fila: Gestión Cocina, Registro de Asistencia, Gastos, Proveedor
+    {
+      id: 'gestion-cocina',
+      icon: '🍳',
+      label: 'Gestión Cocina',
+      route: '/gestion-cocina'
+    },
     {
       id: 'asistencia',
       icon: '📋',
@@ -105,13 +111,13 @@ export default function Home() {
       label: 'Proveedor',
       route: '/proveedores'
     },
+    // Cuarta fila: Clientes, Seguimiento, Auditoría, Comunidad Mi Caja
     {
       id: 'clientes',
       icon: '👥',
       label: 'Clientes',
       route: '/clientes'
     },
-    // Cuarta fila: Seguimiento, Auditoría, Comunidad Mi Caja
     {
       id: 'seguimiento',
       icon: '📊',

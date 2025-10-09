@@ -1063,35 +1063,47 @@ export default function RegistroVenta() {
       e.preventDefault();
     }
     
-    // Validar fecha primero
-    if (!validarFecha(venta.fecha)) {
-      mostrarNotificacion('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD', 'error');
+    // 🔒 PROTECCIÓN: Evitar múltiples clics durante el proceso
+    if (loading) {
       return;
     }
     
-    // Validar que todos los campos requeridos estén llenos
-    if (!venta.fecha || !venta.tipo_pago) {
-      mostrarNotificacion('❌ Por favor completa la fecha y tipo de pago', 'error');
-      return;
-    }
-
-    // Validar que haya al menos un producto
-    if (productosVenta.length === 0) {
-      mostrarNotificacion('❌ Por favor agrega al menos un producto a la venta', 'error');
-      return;
-    }
-
-    // Calcular el total de la venta
-    const totalVenta = calcularTotalVenta();
-
-    // Obtener el usuario_id del usuario autenticado
-    const usuarioId = await authService.getCurrentUserId();
-    if (!usuarioId) {
-      mostrarNotificacion('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.', 'error');
-      return;
-    }
-
+    // ⚡ IMPORTANTE: Activar loading INMEDIATAMENTE para bloquear clics rápidos
+    setLoading(true);
+    
     try {
+      // Validar fecha primero
+      if (!validarFecha(venta.fecha)) {
+        mostrarNotificacion('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD', 'error');
+        setLoading(false);
+        return;
+      }
+      
+      // Validar que todos los campos requeridos estén llenos
+      if (!venta.fecha || !venta.tipo_pago) {
+        mostrarNotificacion('❌ Por favor completa la fecha y tipo de pago', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Validar que haya al menos un producto
+      if (productosVenta.length === 0) {
+        mostrarNotificacion('❌ Por favor agrega al menos un producto a la venta', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Calcular el total de la venta
+      const totalVenta = calcularTotalVenta();
+
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        mostrarNotificacion('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.', 'error');
+        setLoading(false);
+        return;
+      }
+
       // Calcular el total final de la venta (suma de todos los subtotales)
       const totalFinal = calcularTotalVenta();
       
@@ -1120,6 +1132,7 @@ export default function RegistroVenta() {
         if (error) {
           console.error('❌ Error al registrar producto:', error);
           mostrarNotificacion('❌ Error al registrar venta: ' + error.message, 'error');
+          setLoading(false);
           return;
         }
       }
@@ -1147,9 +1160,13 @@ export default function RegistroVenta() {
       
       // Recargar la lista de ventas
       cargarVentas();
+      
     } catch (error) {
       console.error('❌ Error general al registrar venta:', error);
       mostrarNotificacion('❌ Error al registrar venta: ' + error.message, 'error');
+    } finally {
+      // Desactivar estado de carga
+      setLoading(false);
     }
   };
 
@@ -1785,11 +1802,22 @@ export default function RegistroVenta() {
                 <button
                   type="button"
                   onClick={registrarVenta}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold p-2 md:p-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm shadow-lg hover:shadow-xl col-span-2 sm:col-span-1 flex items-center justify-center gap-1 md:gap-2"
+                  disabled={loading}
+                  className={`${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-bold p-2 md:p-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm shadow-lg hover:shadow-xl col-span-2 sm:col-span-1 flex items-center justify-center gap-1 md:gap-2 disabled:opacity-70 disabled:transform-none`}
                 >
-                  <span className="text-yellow-400">💰</span>
-                  <span className="hidden md:inline">Procesar Venta</span>
-                  <span className="md:hidden">Procesar</span>
+                  {loading ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span className="hidden md:inline">Procesando...</span>
+                      <span className="md:hidden">Procesando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-yellow-400">💰</span>
+                      <span className="hidden md:inline">Procesar Venta</span>
+                      <span className="md:hidden">Procesar</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
