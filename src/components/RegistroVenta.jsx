@@ -93,6 +93,9 @@ export default function RegistroVenta() {
   // Estado para controlar la cantidad de ventas mostradas
   const [ventasMostradas, setVentasMostradas] = useState(10);
 
+  // Estados para eliminación múltiple
+  const [ventasSeleccionadas, setVentasSeleccionadas] = useState([]);
+
   // Estados para edición inline
   const [editandoId, setEditandoId] = useState(null);
   const [valoresEdicion, setValoresEdicion] = useState({
@@ -1212,6 +1215,81 @@ export default function RegistroVenta() {
     }
   };
 
+  // Función para eliminar ventas seleccionadas
+  const eliminarVentasSeleccionadas = async () => {
+    if (ventasSeleccionadas.length === 0) {
+      mostrarNotificacion('⚠️ Por favor selecciona al menos una venta para eliminar', 'error');
+      return;
+    }
+
+    const confirmado = await mostrarConfirmacion(`¿Estás seguro de que quieres eliminar ${ventasSeleccionadas.length} venta(s) seleccionada(s)? Esta acción no se puede deshacer.`);
+    if (!confirmado) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        mostrarNotificacion('❌ Error: Usuario no autenticado', 'error');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('ventas')
+        .delete()
+        .in('id', ventasSeleccionadas)
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo eliminar ventas del usuario actual
+
+      if (error) {
+        console.error('❌ Error al eliminar ventas:', error);
+        mostrarNotificacion('❌ Error al eliminar las ventas: ' + error.message, 'error');
+        return;
+      }
+
+      mostrarNotificacion(`✅ ${ventasSeleccionadas.length} venta(s) eliminada(s) exitosamente`, 'success');
+      
+      // Limpiar selección
+      setVentasSeleccionadas([]);
+      
+      // Recargar la lista de ventas
+      await cargarVentas();
+      
+    } catch (error) {
+      console.error('❌ Error inesperado al eliminar ventas:', error);
+      mostrarNotificacion('❌ Error inesperado al eliminar las ventas', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para manejar selección individual
+  const toggleSeleccionVenta = (id) => {
+    setVentasSeleccionadas(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(ventaId => ventaId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  // Función para seleccionar/deseleccionar todas las ventas visibles
+  const toggleSeleccionarTodas = () => {
+    const ventasVisibles = obtenerVentasAMostrar();
+    const idsVisibles = ventasVisibles.map(v => v.id);
+    
+    if (ventasSeleccionadas.length === idsVisibles.length) {
+      // Si todas están seleccionadas, deseleccionar todas
+      setVentasSeleccionadas([]);
+    } else {
+      // Seleccionar todas las visibles
+      setVentasSeleccionadas(idsVisibles);
+    }
+  };
+
   // Función para iniciar edición
   const iniciarEdicion = (venta) => {
     setEditandoId(venta.id);
@@ -1987,8 +2065,8 @@ export default function RegistroVenta() {
                 </div>
               </div>
 
-              {/* Botón limpiar filtros */}
-              <div className="mt-3 md:mt-4 flex justify-center">
+              {/* Botones de acción */}
+              <div className="mt-3 md:mt-4 flex justify-center gap-3">
                 <button
                   onClick={limpiarFiltros}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -1996,6 +2074,16 @@ export default function RegistroVenta() {
                 >
                   🧹 Limpiar Filtros
                 </button>
+                {ventasSeleccionadas.length > 0 && (
+                  <button
+                    onClick={eliminarVentasSeleccionadas}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                  >
+                    Eliminar seleccionados ({ventasSeleccionadas.length})
+                  </button>
+                )}
               </div>
 
               {/* Información de filtros activos */}
@@ -2047,6 +2135,15 @@ export default function RegistroVenta() {
                     <table className="w-full text-left">
                       <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
                         <tr className="border-b border-white/20">
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">
+                            <input
+                              type="checkbox"
+                              checked={ventasSeleccionadas.length === obtenerVentasAMostrar().length && obtenerVentasAMostrar().length > 0}
+                              onChange={toggleSeleccionarTodas}
+                              className="w-4 h-4 cursor-pointer accent-green-500"
+                              title="Seleccionar todas"
+                            />
+                          </th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Cantidad</th>
@@ -2067,6 +2164,17 @@ export default function RegistroVenta() {
                                 <tr key={index} className={`hover:bg-white/5 transition-colors ${
                                   venta.total_final ? 'border-b-2 border-white/20' : ''
                                 }`}>
+                                  {/* Checkbox de selección */}
+                                  <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
+                                    <input
+                                      type="checkbox"
+                                      checked={ventasSeleccionadas.includes(venta.id)}
+                                      onChange={() => toggleSeleccionVenta(venta.id)}
+                                      disabled={estaEditando}
+                                      className="w-4 h-4 cursor-pointer accent-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    />
+                                  </td>
+                                  
                                   {/* Fecha */}
                                   <td className="text-gray-200 p-2 md:p-3 text-xs md:text-sm">
                                     {estaEditando ? (
