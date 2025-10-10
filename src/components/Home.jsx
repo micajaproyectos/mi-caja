@@ -235,13 +235,21 @@ export default function Home() {
                 }}
               >
                 {/* Botón de información */}
-                <button
+                <div
                   onClick={(e) => showInfoPopup(item, e)}
-                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xs font-bold transition-all duration-200 hover:scale-110 z-10"
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xs font-bold transition-all duration-200 hover:scale-110 z-10 cursor-pointer"
                   title={`Información sobre ${item.label}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      showInfoPopup(item, e);
+                    }
+                  }}
                 >
                   i
-                </button>
+                </div>
 
                 <div className="text-5xl mb-4 transition-transform duration-200 group-hover:scale-110 group-active:scale-95 drop-shadow-sm">
                   {item.icon}

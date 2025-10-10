@@ -17,7 +17,7 @@ const InfoPopup = ({ item, onClose }) => {
   // Definir descripciones para cada componente
   const getDescription = (id) => {
     const descriptions = {
-      'ventas': 'Registra todas las ventas diarias de tu negocio. Controla productos, cantidades, precios y formas de pago de manera organizada. Si realizas una venta, se descontará desde tu inventario actual.',
+      'ventas': 'Registra todas las ventas diarias de tu negocio. Controla productos, cantidades, precios y formas de pago de manera organizada. Incluye eliminación simultánea de ventas mediante selectores para mayor eficiencia. Si realizas una venta, se descontará desde tu inventario actual.',
       'asistencia': 'Controla el registro de entrada y salida de tus trabajadores. Gestiona la cantidad de horas laborales.',
       'gastos': 'Registra y categoriza todos los gastos de tu negocio. Mantén control total sobre tus egresos y presupuesto.',
       'inventario': 'Agrega productos a tu inventario con precios, costos y cantidades. Base fundamental para el control de stock.',
@@ -31,7 +31,8 @@ const InfoPopup = ({ item, onClose }) => {
       'seguimiento': 'Analiza el rendimiento de tu negocio con gráficos y reportes. Toma decisiones basadas en datos.',
       'venta-rapida': 'Sistema de ventas acelerado para transacciones rápidas. Ideal para quienes necesiten registrar ventas sin inventario.',
       'auditoria': 'Revisa todos los cambios y actividades realizadas en el sistema. Control completo de modificaciones.',
-      'autoservicio': 'Abre otro punto de venta independiente para que tus clientes puedan realizar sus compras de manera más rápida y expedita, actualizando tu inventario actual.'
+      'autoservicio': 'Abre otro punto de venta independiente para que tus clientes puedan realizar sus compras de manera más rápida y expedita, actualizando tu inventario actual.',
+      'gestion-cocina': 'Sistema de gestión de pedidos en tiempo real para cocina. Conecta automáticamente con Pedidos, muestra pedidos pendientes en tarjetas, controla tiempos de preparación, marca como terminado o anulado, y mantiene historial completo con filtros por día, mes, año y estado. Ideal para coordinar meseros y cocineros en el mismo negocio.'
     };
     return descriptions[id] || 'Descripción no disponible.';
   };

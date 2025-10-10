@@ -67,6 +67,9 @@ export default function Pedidos() {
   // Estados para la tabla de pedidos registrados
   const [pedidosRegistrados, setPedidosRegistrados] = useState([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
+  
+  // Estado para control de envío a cocina
+  const [enviandoACocina, setEnviandoACocina] = useState(false);
 
   // Estados para edición inline
   const [editandoId, setEditandoId] = useState(null);
@@ -966,6 +969,88 @@ export default function Pedidos() {
     }
   };
 
+  // Función para enviar pedido a cocina (INDEPENDIENTE del pago)
+  const enviarACocina = async (mesa) => {
+    // Validar que haya productos en la mesa
+    if (!productosPorMesa[mesa] || productosPorMesa[mesa].length === 0) {
+      alert('❌ No hay productos en esta mesa para enviar a cocina');
+      return;
+    }
+
+    try {
+      setEnviandoACocina(true);
+
+      // Obtener usuario_id
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Obtener cliente_id
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('Error al obtener cliente_id:', usuarioError);
+        alert('❌ Error al obtener información del usuario');
+        return;
+      }
+
+      const cliente_id = usuarioData.cliente_id;
+
+      // Calcular fecha_cl en zona horaria de Chile
+      const fechaChile = new Date().toLocaleString("en-US", {timeZone: "America/Santiago"});
+      const fechaCl = new Date(fechaChile).toISOString().split('T')[0];
+
+      // Extraer número de mesa
+      const numeroMesa = parseInt(mesa.replace('Mesa ', ''));
+
+      // Insertar cada producto en pedidos_cocina
+      for (let i = 0; i < productosPorMesa[mesa].length; i++) {
+        const producto = productosPorMesa[mesa][i];
+        
+        const pedidoCocina = {
+          usuario_id: usuarioId,
+          cliente_id: cliente_id,
+          fecha_cl: fechaCl,
+          mesa: numeroMesa,  // Todas las filas tienen mesa (para agrupar)
+          // hora_inicio_pedido se genera automáticamente con DEFAULT de la tabla
+          producto: producto.producto,
+          unidad: producto.unidad,
+          cantidad: parseFloat(producto.cantidad) || 0
+        };
+
+        // Solo la primera fila tiene estado (igual que total_final en RegistroVenta)
+        if (i === 0) {
+          pedidoCocina.estado = 'pendiente';
+        }
+
+        const { error } = await supabase
+          .from('pedidos_cocina')
+          .insert([pedidoCocina]);
+
+        if (error) {
+          console.error('❌ Error al enviar a cocina:', error);
+          alert('❌ Error al enviar pedido a cocina: ' + error.message);
+          return;
+        }
+      }
+
+      alert(`✅ Pedido de ${mesa} enviado a cocina exitosamente`);
+      console.log(`🍳 ${productosPorMesa[mesa].length} productos enviados a cocina`);
+
+    } catch (error) {
+      console.error('❌ Error inesperado al enviar a cocina:', error);
+      alert('❌ Error al enviar a cocina');
+    } finally {
+      setEnviandoACocina(false);
+    }
+  };
+
   // Función para registrar pedido en Supabase
   const registrarPedido = async (mesa) => {
     // Validar fecha primero
@@ -1721,18 +1806,35 @@ export default function Pedidos() {
               </div>
             )}
 
-                         {/* Botón Registrar Pedido */}
+                         {/* Botones de Acción: Enviar a Cocina y Registrar Pedido */}
              {mesaSeleccionada && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && (
-               <div className="text-center mt-6">
-                 <button
-                   onClick={() => registrarPedido(mesaSeleccionada)}
-                   className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-lg shadow-lg"
-                 >
-                   📝 Registrar Pedido de {mesaSeleccionada}
-                 </button>
-                 <p className="text-gray-400 text-sm mt-2">
-                   Registra el pedido completo de la mesa en Supabase
-                 </p>
+               <div className="text-center mt-6 space-y-4">
+                 {/* Botón NUEVO: Enviar a Cocina (INDEPENDIENTE del pago) */}
+                 <div>
+                   <button
+                     onClick={() => enviarACocina(mesaSeleccionada)}
+                     disabled={enviandoACocina}
+                     className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:scale-100 text-lg shadow-lg"
+                   >
+                     {enviandoACocina ? '⏳ Enviando a cocina...' : '🍳 Enviar a Cocina'}
+                   </button>
+                   <p className="text-gray-400 text-sm mt-2">
+                     Envía el pedido a la cocina (sin procesar pago)
+                   </p>
+                 </div>
+
+                 {/* Botón EXISTENTE: Registrar Pedido (para pago) */}
+                 <div>
+                   <button
+                     onClick={() => registrarPedido(mesaSeleccionada)}
+                     className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-lg shadow-lg"
+                   >
+                     📝 Registrar Pedido de {mesaSeleccionada}
+                   </button>
+                   <p className="text-gray-400 text-sm mt-2">
+                     Registra el pedido completo con pago
+                   </p>
+                 </div>
                </div>
                            )}
            </div>

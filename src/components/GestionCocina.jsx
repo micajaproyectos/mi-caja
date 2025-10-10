@@ -1,9 +1,337 @@
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
+import { obtenerFechaHoyChile } from '../lib/dateUtils.js';
 import Footer from './Footer';
 
 export default function GestionCocina() {
   const navigate = useNavigate();
+  
+  // Estados
+  const [pedidosCocina, setPedidosCocina] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actualizandoPedido, setActualizandoPedido] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  
+  // Estados para filtros
+  const [filtroDia, setFiltroDia] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState(''); // '', 'pendiente', 'terminado', 'anulado'
+  const [pedidosFiltrados, setPedidosFiltrados] = useState([]);
+
+  // Función para cargar pedidos desde la base de datos
+  const cargarPedidosCocina = async () => {
+    try {
+      setLoading(true);
+
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('pedidos_cocina')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('hora_inicio_pedido', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error al cargar pedidos:', error);
+        return;
+      }
+
+      setPedidosCocina(data || []);
+      console.log('✅ Pedidos de cocina cargados:', data?.length || 0);
+
+    } catch (error) {
+      console.error('❌ Error inesperado:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para cambiar estado de un pedido
+  const cambiarEstadoPedido = async (pedidoId, nuevoEstado) => {
+    try {
+      setActualizandoPedido(pedidoId);
+
+      if (nuevoEstado === 'terminado') {
+        // Usar función RPC que guarda hora de Santiago (igual que hora_inicio)
+        const { error } = await supabase.rpc('marcar_pedido_terminado', {
+          pedido_id: pedidoId
+        });
+
+        if (error) {
+          console.error('❌ Error al marcar terminado:', error);
+          alert('❌ Error al actualizar el estado del pedido');
+          return;
+        }
+      } else {
+        // Marcar como pendiente y limpiar hora_termino
+        const { error } = await supabase
+          .from('pedidos_cocina')
+          .update({ 
+            estado: 'pendiente',
+            hora_termino: null 
+          })
+          .eq('id', pedidoId);
+
+        if (error) {
+          console.error('❌ Error al actualizar estado:', error);
+          alert('❌ Error al actualizar el estado del pedido');
+          return;
+        }
+      }
+
+      console.log(`✅ Pedido ${pedidoId} marcado como ${nuevoEstado}`);
+
+    } catch (error) {
+      console.error('❌ Error inesperado:', error);
+    } finally {
+      setActualizandoPedido(null);
+    }
+  };
+
+  // Cargar datos al montar y configurar suscripción en tiempo real
+  useEffect(() => {
+    cargarPedidosCocina();
+
+    // Configurar suscripción en tiempo real
+    const channel = supabase
+      .channel('pedidos_cocina_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pedidos_cocina'
+        },
+        (payload) => {
+          console.log('🔄 Cambio detectado en pedidos_cocina:', payload);
+          cargarPedidosCocina(); // Recargar pedidos
+        }
+      )
+      .subscribe();
+
+    // Cleanup
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Función para filtrar pedidos
+  const filtrarPedidos = useCallback(() => {
+    let pedidosFiltrados = [...pedidosCocina];
+    const fechaActual = obtenerFechaHoyChile();
+
+    // Si no hay filtros activos, mostrar solo pedidos del día actual
+    if (!filtroDia && !filtroMes && !filtroAnio && !filtroEstado) {
+      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+        return pedido.fecha_cl === fechaActual;
+      });
+    } else {
+      // Filtrar por día específico
+      if (filtroDia) {
+        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+          return pedido.fecha_cl === filtroDia;
+        });
+      }
+
+      // Filtrar por mes
+      if (filtroMes && !filtroDia) {
+        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+          const [year, month] = pedido.fecha_cl.split('-');
+          return parseInt(month) === parseInt(filtroMes);
+        });
+      }
+
+      // Filtrar por año
+      if (filtroAnio && !filtroDia) {
+        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+          const [year] = pedido.fecha_cl.split('-');
+          return parseInt(year) === parseInt(filtroAnio);
+        });
+      }
+
+      // Mes y año juntos
+      if (filtroMes && filtroAnio && !filtroDia) {
+        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+          const [year, month] = pedido.fecha_cl.split('-');
+          return parseInt(month) === parseInt(filtroMes) && parseInt(year) === parseInt(filtroAnio);
+        });
+      }
+
+      // Filtrar por estado
+      if (filtroEstado) {
+        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+          return pedido.estado === filtroEstado;
+        });
+      }
+    }
+
+    setPedidosFiltrados(pedidosFiltrados);
+  }, [pedidosCocina, filtroDia, filtroMes, filtroAnio, filtroEstado]);
+
+  // Aplicar filtros cuando cambien los datos o filtros
+  useEffect(() => {
+    filtrarPedidos();
+  }, [filtrarPedidos]);
+
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setFiltroDia('');
+    setFiltroMes('');
+    setFiltroAnio('');
+    setFiltroEstado('');
+  };
+
+  // Función para obtener años únicos de los pedidos
+  const obtenerAniosUnicos = () => {
+    const anios = new Set();
+    anios.add(2025); // Año por defecto
+    
+    pedidosCocina.forEach(pedido => {
+      if (pedido.fecha_cl) {
+        const anio = parseInt(pedido.fecha_cl.split('-')[0]);
+        if (!isNaN(anio) && anio > 2025) {
+          anios.add(anio);
+        }
+      }
+    });
+    
+    return Array.from(anios).sort((a, b) => b - a);
+  };
+
+  // Nombres de meses
+  const nombresMeses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  // Separar pedidos filtrados por estado (solo los que tienen estado definido)
+  const pedidosPendientes = pedidosFiltrados.filter(p => p.estado === 'pendiente');
+  const pedidosTerminados = pedidosFiltrados.filter(p => p.estado === 'terminado');
+  const pedidosAnulados = pedidosFiltrados.filter(p => p.estado === 'anulado');
+  
+  // Obtener TODOS los productos de un pedido (incluyendo filas sin estado)
+  const obtenerProductosCompletosDelPedido = (pedidoPrincipal) => {
+    return pedidosCocina.filter(p => 
+      p.mesa === pedidoPrincipal.mesa && 
+      p.fecha_cl === pedidoPrincipal.fecha_cl &&
+      Math.abs(new Date(p.hora_inicio_pedido) - new Date(pedidoPrincipal.hora_inicio_pedido)) < 5000 // Mismo grupo (dentro de 5 segundos)
+    );
+  };
+
+  // Agrupar pedidos por mesa (solo para tarjetas - PENDIENTES)
+  const agruparPorMesa = (pedidos) => {
+    const grupos = {};
+    pedidos.forEach(pedidoPrincipal => {
+      const mesaKey = `Mesa ${pedidoPrincipal.mesa}_${pedidoPrincipal.hora_inicio_pedido}`;
+      if (!grupos[mesaKey]) {
+        // Obtener TODOS los productos de este pedido (incluyendo filas sin estado)
+        const todosLosProductos = obtenerProductosCompletosDelPedido(pedidoPrincipal);
+        
+        grupos[mesaKey] = {
+          mesa: pedidoPrincipal.mesa,
+          pedidos: todosLosProductos,
+          hora_inicio: pedidoPrincipal.hora_inicio_pedido,
+          estado: pedidoPrincipal.estado,
+          id_principal: pedidoPrincipal.id
+        };
+      }
+    });
+    return Object.values(grupos);
+  };
+
+  // Agrupar solo PENDIENTES para las tarjetas
+  const mesasAgrupadasPendientes = agruparPorMesa(pedidosPendientes);
+
+  // Contar totales (calculados a partir de las listas separadas)
+  const totalPendientes = pedidosPendientes.length;
+  const totalTerminados = pedidosTerminados.length;
+  const totalAnulados = pedidosAnulados.length;
+
+  // Función para calcular tiempo transcurrido
+  const calcularTiempoTranscurrido = (horaInicio) => {
+    if (!horaInicio) return '0s';
+    
+    // La hora guardada es Santiago marcada como UTC
+    // Obtenemos hora actual de Santiago
+    const ahora = new Date();
+    const ahoraEnSantiago = new Date(ahora.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+    
+    // El timestamp guardado tiene hora de Santiago pero está marcado como UTC
+    // Lo parseamos directamente como está
+    const inicio = new Date(horaInicio);
+    
+    // Ajustamos sumando 3 horas al inicio para compensar el offset
+    const inicioAjustado = new Date(inicio.getTime() + (3 * 60 * 60 * 1000));
+    
+    // Ahora calculamos la diferencia
+    const diff = Math.floor((ahoraEnSantiago - inicioAjustado) / 1000);
+    
+    if (diff < 0) return '0s'; // Por si acaso
+    
+    const horas = Math.floor(diff / 3600);
+    const minutos = Math.floor((diff % 3600) / 60);
+    const segundos = diff % 60;
+    
+    if (horas > 0) {
+      return `${horas}h ${minutos}m ${segundos}s`;
+    } else if (minutos > 0) {
+      return `${minutos}m ${segundos}s`;
+    }
+    return `${segundos}s`;
+  };
+
+  // Actualizar temporizadores cada segundo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Forzar re-render para actualizar los temporizadores
+      setPedidosCocina(prev => [...prev]);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Función para cambiar estado de todos los pedidos de una mesa
+  const cambiarEstadoMesa = async (mesa, nuevoEstado) => {
+    const pedidosMesa = pedidosCocina.filter(p => p.mesa === mesa.mesa);
+    
+    for (const pedido of pedidosMesa) {
+      await cambiarEstadoPedido(pedido.id, nuevoEstado);
+    }
+  };
+
+  // Función para anular un pedido (cambiar estado de terminado a anulado)
+  const anularPedido = async (pedidoId) => {
+    try {
+      setActualizandoPedido(pedidoId);
+
+      const { error } = await supabase
+        .from('pedidos_cocina')
+        .update({ estado: 'anulado' })
+        .eq('id', pedidoId);
+
+      if (error) {
+        console.error('❌ Error al anular pedido:', error);
+        alert('❌ Error al anular el pedido');
+        return;
+      }
+
+      console.log(`✅ Pedido ${pedidoId} anulado`);
+      setEditandoId(null);
+
+    } catch (error) {
+      console.error('❌ Error inesperado:', error);
+      alert('❌ Error al anular el pedido');
+    } finally {
+      setActualizandoPedido(null);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#1a3d1a' }}>
@@ -28,38 +356,434 @@ export default function GestionCocina() {
       </div>
 
       {/* Título principal */}
-      <div className="relative z-10 text-center py-8 md:py-12">
+      <div className="relative z-10 text-center py-6 md:py-8">
         <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-lg mb-4">
-          Gestión Cocina
+          Gestión de Cocina
         </h1>
-        <p className="text-gray-300 text-lg md:text-xl mt-2 px-4">
-          Organiza y controla las operaciones de tu cocina
+        <p className="text-gray-300 text-lg md:text-xl px-4">
+          Pedidos en tiempo real
         </p>
       </div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 flex-1 py-8 px-4 md:px-6">
+      <div className="relative z-10 flex-1 py-4 px-4 md:px-6 pb-20">
         <div className="max-w-7xl mx-auto">
-          {/* Card principal con glassmorphism */}
-          <div 
-            className="rounded-2xl p-8 md:p-12"
-            style={{
-              backgroundColor: 'rgba(31, 74, 31, 0.6)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-              border: '1px solid rgba(255, 255, 255, 0.18)'
-            }}
-          >
-            <div className="text-center">
-              {/* Mensaje de bienvenida */}
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                Módulo en Construcción
-              </h2>
-              <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto">
-                Este espacio está preparado para gestionar todas las operaciones de tu cocina.
-                Próximamente podrás administrar pedidos, recetas, preparaciones y más.
+          
+          {/* Estadísticas y botón recargar */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Contadores (reflejan filtros activos) */}
+            <div className="flex gap-4 flex-wrap justify-center">
+              <div className="px-6 py-3 rounded-lg bg-orange-600 shadow-lg">
+                <span className="text-white font-bold text-lg">⏳ Pendientes: {totalPendientes}</span>
+              </div>
+              <div className="px-6 py-3 rounded-lg bg-green-600 shadow-lg">
+                <span className="text-white font-bold text-lg">✅ Terminados: {totalTerminados}</span>
+              </div>
+              <div className="px-6 py-3 rounded-lg bg-red-600 shadow-lg">
+                <span className="text-white font-bold text-lg">❌ Anulados: {totalAnulados}</span>
+              </div>
+            </div>
+
+            {/* Botón recargar */}
+            <button
+              onClick={cargarPedidosCocina}
+              disabled={loading}
+              className="bg-white/20 hover:bg-white/30 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
+            >
+              {loading ? '⏳ Cargando...' : '🔄 Recargar'}
+            </button>
+          </div>
+
+          {/* Título sección de tarjetas */}
+          <h2 className="text-2xl md:text-3xl font-bold text-orange-400 mb-4 text-center">
+            ⏳ Pedidos Pendientes
+          </h2>
+
+          {/* Grid de pedidos PENDIENTES (agrupados por mesa) */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+              <p className="text-white text-xl">Cargando pedidos...</p>
+            </div>
+          ) : mesasAgrupadasPendientes.length === 0 ? (
+            <div className="text-center py-12 mb-8">
+              <div className="text-6xl mb-4">✅</div>
+              <p className="text-gray-300 text-2xl font-bold mb-2">
+                No hay pedidos pendientes
+              </p>
+              <p className="text-gray-400 text-lg">
+                Los pedidos nuevos aparecerán aquí en tiempo real
               </p>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {mesasAgrupadasPendientes.map((mesa) => (
+                <div 
+                  key={mesa.id_principal}
+                  className={`rounded-2xl p-6 border-4 shadow-2xl transition-all duration-300 hover:scale-105 ${
+                    mesa.estado === 'pendiente' 
+                      ? 'bg-orange-500/20 border-orange-500' 
+                      : 'bg-green-500/20 border-green-500'
+                  }`}
+                >
+                  {/* Header de la mesa */}
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-3xl font-bold text-white">
+                      Mesa {mesa.mesa}
+                    </h3>
+                    <span className={`px-4 py-2 rounded-full text-sm font-bold ${
+                      mesa.estado === 'pendiente'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-green-600 text-white'
+                    }`}>
+                      {mesa.estado === 'pendiente' ? '⏳ Pendiente' : '✅ Terminado'}
+                    </span>
+                  </div>
+
+                  {/* Temporizador */}
+                  <div className="mb-4 text-center">
+                    <div className={`text-4xl font-bold ${
+                      mesa.estado === 'pendiente' ? 'text-orange-300' : 'text-green-300'
+                    }`}>
+                      ⏱️ {calcularTiempoTranscurrido(mesa.hora_inicio)}
+                    </div>
+                    <p className="text-gray-300 text-sm mt-1">
+                      Inicio: {(() => {
+                        // Mostrar hora UTC tal como está en Supabase (sin conversión)
+                        const timestamp = new Date(mesa.hora_inicio).toISOString();
+                        // Extraer solo HH:mm:ss del formato ISO (YYYY-MM-DDTHH:mm:ss.sssZ)
+                        return timestamp.split('T')[1].split('.')[0];
+                      })()}
+                    </p>
+                  </div>
+
+                  {/* Lista de productos */}
+                  <div className="mb-4 bg-black/30 rounded-xl p-4 max-h-64 overflow-y-auto">
+                    <h4 className="text-white font-bold text-lg mb-3 sticky top-0 bg-black/50 py-2 rounded">
+                      Productos ({mesa.pedidos.length}):
+                    </h4>
+                    {mesa.pedidos.map((pedido, idx) => (
+                      <div 
+                        key={pedido.id} 
+                        className="text-gray-200 py-2 px-3 mb-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-lg">{pedido.producto}</span>
+                          <span className="text-2xl font-bold text-yellow-300">x{pedido.cantidad}</span>
+                        </div>
+                        <div className="text-sm text-gray-400 mt-1">
+                          Unidad: {pedido.unidad}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Botones de acción */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => cambiarEstadoMesa(mesa, 'pendiente')}
+                      disabled={mesa.estado === 'pendiente' || actualizandoPedido}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 disabled:scale-100"
+                    >
+                      ⏳ Pendiente
+                    </button>
+                    <button
+                      onClick={() => cambiarEstadoMesa(mesa, 'terminado')}
+                      disabled={mesa.estado === 'terminado' || actualizandoPedido}
+                      className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 disabled:scale-100"
+                    >
+                      ✅ Terminado
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tabla de Historial (Terminados y Anulados) */}
+          <div className="mt-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-green-400 mb-4 text-center">
+              Historial de Pedidos
+            </h2>
+            
+            {/* Filtros integrados a la tabla */}
+            <div className="mb-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+              <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 text-center">
+                Filtros de Búsqueda
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {/* Filtro por día específico */}
+                <div>
+                  <label className="block text-gray-200 font-medium mb-2 text-xs md:text-sm">
+                    Día específico:
+                  </label>
+                  <input
+                    type="date"
+                    value={filtroDia}
+                    onChange={(e) => setFiltroDia(e.target.value)}
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                  />
+                </div>
+
+                {/* Filtro por mes */}
+                <div>
+                  <label className="block text-gray-200 font-medium mb-2 text-xs md:text-sm">
+                    Mes:
+                  </label>
+                  <select
+                    value={filtroMes}
+                    onChange={(e) => setFiltroMes(e.target.value)}
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="" className="bg-gray-800 text-white">Todos los meses</option>
+                    {nombresMeses.map((mes, index) => (
+                      <option key={index + 1} value={index + 1} className="bg-gray-800 text-white">
+                        {mes}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Filtro por año */}
+                <div>
+                  <label className="block text-gray-200 font-medium mb-2 text-xs md:text-sm">
+                    Año:
+                  </label>
+                  <select
+                    value={filtroAnio}
+                    onChange={(e) => setFiltroAnio(e.target.value)}
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="" className="bg-gray-800 text-white">Todos los años</option>
+                    {obtenerAniosUnicos().map(anio => (
+                      <option key={anio} value={anio} className="bg-gray-800 text-white">
+                        {anio}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Filtro por estado */}
+                <div>
+                  <label className="block text-gray-200 font-medium mb-2 text-xs md:text-sm">
+                    Estado:
+                  </label>
+                  <select
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                    className="w-full px-2 md:px-3 py-2 rounded-lg border border-white/20 bg-gray-800/80 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="" className="bg-gray-800 text-white">Todos los estados</option>
+                    <option value="pendiente" className="bg-gray-800 text-white">⏳ Pendiente</option>
+                    <option value="terminado" className="bg-gray-800 text-white">✅ Terminado</option>
+                    <option value="anulado" className="bg-gray-800 text-white">❌ Anulado</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Botón limpiar filtros */}
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={limpiarFiltros}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  🧹 Limpiar Filtros
+                </button>
+              </div>
+
+              {/* Información de filtros activos */}
+              <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+                <p className="text-blue-200 text-xs md:text-sm text-center">
+                  {!filtroDia && !filtroMes && !filtroAnio && !filtroEstado ? (
+                    <strong>Mostrando pedidos del día actual</strong>
+                  ) : (
+                    <>
+                      <strong>Filtros activos:</strong>
+                      {filtroDia && ` Día: ${(() => {
+                        const [year, month, day] = filtroDia.split('-');
+                        return `${day}/${month}/${year}`;
+                      })()}`}
+                      {filtroMes && ` Mes: ${nombresMeses[parseInt(filtroMes) - 1]}`}
+                      {filtroAnio && ` Año: ${filtroAnio}`}
+                      {filtroEstado && ` Estado: ${filtroEstado === 'pendiente' ? '⏳ Pendiente' : filtroEstado === 'terminado' ? '✅ Terminado' : '❌ Anulado'}`}
+                    </>
+                  )}
+                  {` | Mostrando ${pedidosFiltrados.length} de ${pedidosCocina.length} registros totales`}
+                </p>
+              </div>
+            </div>
+            
+            {pedidosTerminados.length === 0 && pedidosAnulados.length === 0 ? (
+              <div className="text-center py-8 bg-white/5 rounded-xl border border-white/10">
+                <p className="text-gray-400 text-lg">
+                  No hay pedidos en el historial aún
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-900/95 backdrop-blur-sm">
+                      <tr className="border-b border-white/20">
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Fecha</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Mesa</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Producto</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Cantidad</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Hora Inicio</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Hora Término</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Estado</th>
+                        <th className="text-gray-200 font-semibold p-3 text-sm">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        // Agrupar pedidos terminados Y anulados por pedido completo
+                        const gruposHistorial = [];
+                        
+                        // Agregar terminados
+                        pedidosTerminados.forEach(pedidoPrincipal => {
+                          const productosDelPedido = obtenerProductosCompletosDelPedido(pedidoPrincipal);
+                          gruposHistorial.push({
+                            pedidoPrincipal: pedidoPrincipal,
+                            productos: productosDelPedido,
+                            hora_termino: pedidoPrincipal.hora_termino
+                          });
+                        });
+                        
+                        // Agregar anulados
+                        pedidosAnulados.forEach(pedidoPrincipal => {
+                          const productosDelPedido = obtenerProductosCompletosDelPedido(pedidoPrincipal);
+                          gruposHistorial.push({
+                            pedidoPrincipal: pedidoPrincipal,
+                            productos: productosDelPedido,
+                            hora_termino: pedidoPrincipal.hora_termino
+                          });
+                        });
+                        
+                        // Ordenar GRUPOS por hora_termino descendente (más recientes primero)
+                        gruposHistorial.sort((a, b) => {
+                          return new Date(b.hora_termino) - new Date(a.hora_termino);
+                        });
+
+                        // Renderizar cada grupo completo
+                        const filas = [];
+                        gruposHistorial.forEach((grupo) => {
+                          grupo.productos.forEach((pedido, indexEnGrupo) => {
+                            const esUltimoDelGrupo = indexEnGrupo === grupo.productos.length - 1;
+                            const esPrimeroDelGrupo = indexEnGrupo === 0;
+
+                            filas.push(
+                              <tr 
+                                key={pedido.id} 
+                                className={`hover:bg-white/5 transition-colors ${
+                                  esUltimoDelGrupo ? 'border-b-2 border-white/20' : 'border-b border-white/10'
+                                }`}
+                              >
+                          <td className="text-gray-200 p-3 text-sm">
+                            {(() => {
+                              const [year, month, day] = pedido.fecha_cl.split('-');
+                              return `${day}/${month}/${year}`;
+                            })()}
+                          </td>
+                          <td className="text-gray-200 p-3 text-sm font-bold">
+                            {pedido.estado ? `Mesa ${pedido.mesa}` : ''}
+                          </td>
+                          <td className="text-white p-3 text-sm font-medium">
+                            {pedido.producto}
+                          </td>
+                          <td className="text-gray-200 p-3 text-sm">
+                            {pedido.cantidad} {pedido.unidad}
+                          </td>
+                          <td className="text-gray-300 p-3 text-sm">
+                            {pedido.estado && pedido.hora_inicio_pedido ? (() => {
+                              const timestamp = new Date(pedido.hora_inicio_pedido).toISOString();
+                              return timestamp.split('T')[1].split('.')[0];
+                            })() : ''}
+                          </td>
+                          <td className="text-green-300 p-3 text-sm font-medium">
+                            {pedido.estado && pedido.hora_termino ? (() => {
+                              const timestamp = new Date(pedido.hora_termino).toISOString();
+                              return timestamp.split('T')[1].split('.')[0];
+                            })() : ''}
+                          </td>
+                          <td className="p-3">
+                            {pedido.estado && (
+                              editandoId === pedido.id ? (
+                                <select
+                                  value={pedido.estado}
+                                  onChange={(e) => {
+                                    if (e.target.value === 'anulado' && pedido.estado === 'terminado') {
+                                      if (confirm('¿Estás seguro de anular este pedido?')) {
+                                        anularPedido(pedido.id);
+                                      }
+                                    }
+                                  }}
+                                  className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs"
+                                >
+                                  <option value="terminado">✅ Terminado</option>
+                                  <option value="anulado">❌ Anulado</option>
+                                </select>
+                              ) : (
+                                <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                                  pedido.estado === 'terminado' ? 'bg-green-600' : 'bg-red-600'
+                                } text-white`}>
+                                  {pedido.estado === 'terminado' ? '✅ Terminado' : '❌ Anulado'}
+                                </span>
+                              )
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {pedido.estado && (
+                              editandoId === pedido.id ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setEditandoId(null)}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs transition-all"
+                                  >
+                                    ❌
+                                  </button>
+                                </div>
+                              ) : pedido.estado === 'terminado' ? (
+                                <button
+                                  onClick={() => setEditandoId(pedido.id)}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-all"
+                                >
+                                  ✏️ Editar
+                                </button>
+                              ) : (
+                                <span className="text-gray-500 text-xs">-</span>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                            );
+                          });
+                        });
+                        
+                        return filas;
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Contador de historial */}
+                <div className="mt-4 text-center flex gap-6 justify-center">
+                  <p className="text-gray-300 text-sm">
+                    Terminados: <span className="font-bold text-green-400">{pedidosTerminados.length}</span>
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    Anulados: <span className="font-bold text-red-400">{pedidosAnulados.length}</span>
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    Total: <span className="font-bold text-blue-400">{pedidosTerminados.length + pedidosAnulados.length}</span>
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -69,4 +793,3 @@ export default function GestionCocina() {
     </div>
   );
 }
-

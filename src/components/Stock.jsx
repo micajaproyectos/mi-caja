@@ -71,27 +71,32 @@ export default function Stock() {
       setLoadingSinVentas(true);
       setErrorSinVentas(null);
 
-      console.log('🔄 Cargando productos sin ventas desde productos_sin_ventas_30d_view...');
+      console.log('🔄 Cargando productos sin ventas...');
 
-      // Consultar directamente la vista optimizada
+      // TODO: Implementar paginación con .range() o limit/offset si se necesita más de 50 registros
       const { data, error } = await supabase
         .from('productos_sin_ventas_30d_view')
-        .select('*')
-        .order('fecha_ingreso', { ascending: true });
+        .select('producto, fecha_ingreso, stock_restante')
+        .order('fecha_ingreso', { ascending: true })
+        .limit(50);
 
       if (error) {
-        console.error('❌ Error al cargar productos sin ventas:', error);
+        console.error('❌ Error al cargar productos sin ventas:', {
+          code: error.code,
+          message: error.message
+        });
         setErrorSinVentas('Error al cargar productos sin ventas');
+        setProductosSinVentas([]);
         return;
       }
 
-      console.log('📊 Productos sin ventas encontrados:', data?.length || 0);
-
+      console.log('✅ Productos sin ventas cargados:', data?.length || 0);
       setProductosSinVentas(data || []);
 
     } catch (error) {
       console.error('❌ Error inesperado al cargar productos sin ventas:', error);
       setErrorSinVentas('Error inesperado al cargar productos sin ventas');
+      setProductosSinVentas([]);
     } finally {
       setLoadingSinVentas(false);
     }
