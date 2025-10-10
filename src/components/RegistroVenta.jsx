@@ -933,8 +933,8 @@ export default function RegistroVenta() {
       return;
     }
 
-    // Aplicar umbral ≥ 0.1 (revalidar por seguridad)
-    if (kg < 0.1) {
+    // Aplicar umbral ≥ 0.003 kg (3 gramos) (revalidar por seguridad)
+    if (kg < 0.003) {
       return;
     }
 
