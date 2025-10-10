@@ -222,7 +222,23 @@ export default function Stock() {
     }
   };
 
-  // Función para formatear números
+  // Función para formatear números enteros (sin decimales)
+  const formatearNumeroEntero = (numero) => {
+    return Number(numero).toLocaleString('es-ES', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+  };
+
+  // Función para formatear números con 1 decimal
+  const formatearNumeroUnDecimal = (numero) => {
+    return Number(numero).toLocaleString('es-ES', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    });
+  };
+
+  // Función para formatear números con 2 decimales
   const formatearNumero = (numero) => {
     return Number(numero).toLocaleString('es-ES', {
       minimumFractionDigits: 2,
@@ -404,13 +420,13 @@ export default function Stock() {
                               {item.producto || 'Sin nombre'}
                             </td>
                             <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                              {formatearNumero(item.total_ingresado || 0)}
+                              {formatearNumeroEntero(item.total_ingresado || 0)}
                             </td>
                             <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                              {formatearNumero(item.total_vendido || 0)}
+                              {formatearNumeroEntero(item.total_vendido || 0)}
                             </td>
                             <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                              {formatearNumero(item.stock_restante || 0)}
+                              {formatearNumeroUnDecimal(item.stock_restante || 0)}
                             </td>
                             <td className="p-2 md:p-4">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerEstiloEstado(calcularEstado(item.stock_restante))}`}>
@@ -627,7 +643,7 @@ export default function Stock() {
                               })}
                             </td>
                             <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                              {formatearNumero(item.stock_restante || 0)}
+                              {formatearNumeroUnDecimal(item.stock_restante || 0)}
                             </td>
                             <td className="p-2 md:p-4">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerEstiloEstado(calcularEstado(item.stock_restante))}`}>
