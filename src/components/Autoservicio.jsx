@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { obtenerFechaHoyChile } from '../lib/dateUtils.js';
@@ -33,6 +34,14 @@ function Autoservicio() {
   const [busquedaProducto, setBusquedaProducto] = useState('');
   const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [dropdownAbierto, setDropdownAbierto] = useState(false);
+  
+  // Refs y estado para el portal del dropdown
+  const searchInputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  
+  // Estado para navegación por teclado
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
   
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
@@ -151,6 +160,7 @@ function Autoservicio() {
   const seleccionarProducto = (producto) => {
     // Cerrar dropdown inmediatamente
     setDropdownAbierto(false);
+    setIndiceSeleccionado(-1);
     
     // Actualizar los estados
     setProductoActual({
@@ -173,6 +183,7 @@ function Autoservicio() {
     if (!valor.trim()) {
       setProductosFiltrados([]);
       setDropdownAbierto(false);
+      setIndiceSeleccionado(-1);
       setProductoActual({
         ...productoActual,
         producto: '',
@@ -180,6 +191,19 @@ function Autoservicio() {
         unidad: '',
         subtotal: 0
       });
+    } else {
+      // Resetear índice al cambiar búsqueda
+      setIndiceSeleccionado(-1);
+      
+      // Calcular posición del dropdown SOLO si no está visible
+      if (!dropdownAbierto && searchInputRef.current) {
+        const rect = searchInputRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      }
     }
   };
 
@@ -218,6 +242,7 @@ function Autoservicio() {
     setBusquedaProducto('');
     setProductosFiltrados([]);
     setDropdownAbierto(false);
+    setIndiceSeleccionado(-1);
   };
 
   // Función para eliminar producto de la venta
@@ -307,6 +332,7 @@ function Autoservicio() {
       setBusquedaProducto('');
       setProductosFiltrados([]);
       setDropdownAbierto(false);
+      setIndiceSeleccionado(-1);
       
       // Recargar la lista de ventas de autoservicio
       await cargarVentas();
@@ -786,6 +812,124 @@ function Autoservicio() {
     filtrarProductos(busquedaProducto);
   }, [busquedaProducto, productosInventario]);
 
+  // Cerrar dropdown cuando se haga clic fuera de él
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownAbierto && 
+          !event.target.closest('[data-search-input]') && 
+          !event.target.closest('[data-dropdown-portal]')) {
+        setDropdownAbierto(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownAbierto]);
+
+  // Navegación por teclado en el dropdown
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!dropdownAbierto || productosFiltrados.length === 0) return;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setIndiceSeleccionado(prev => {
+            const nuevoIndice = prev < productosFiltrados.length - 1 ? prev + 1 : prev;
+            // Auto-scroll al elemento seleccionado
+            setTimeout(() => {
+              if (dropdownRef.current) {
+                const items = dropdownRef.current.querySelectorAll('[data-dropdown-item]');
+                if (items[nuevoIndice]) {
+                  items[nuevoIndice].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+              }
+            }, 0);
+            return nuevoIndice;
+          });
+          break;
+
+        case 'ArrowUp':
+          e.preventDefault();
+          setIndiceSeleccionado(prev => {
+            const nuevoIndice = prev > 0 ? prev - 1 : 0;
+            // Auto-scroll al elemento seleccionado
+            setTimeout(() => {
+              if (dropdownRef.current) {
+                const items = dropdownRef.current.querySelectorAll('[data-dropdown-item]');
+                if (items[nuevoIndice]) {
+                  items[nuevoIndice].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+              }
+            }, 0);
+            return nuevoIndice;
+          });
+          break;
+
+        case 'Enter':
+          e.preventDefault();
+          if (indiceSeleccionado >= 0 && indiceSeleccionado < productosFiltrados.length) {
+            seleccionarProducto(productosFiltrados[indiceSeleccionado]);
+          }
+          break;
+
+        case 'Escape':
+          e.preventDefault();
+          setDropdownAbierto(false);
+          setIndiceSeleccionado(-1);
+          break;
+
+        default:
+          break;
+      }
+    };
+
+    if (dropdownAbierto) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [dropdownAbierto, productosFiltrados, indiceSeleccionado]);
+
+  // Recalcular posición del dropdown cuando se hace scroll o resize (con throttle)
+  useEffect(() => {
+    let throttleTimeout = null;
+    
+    const handleScrollResize = () => {
+      // Throttle: solo ejecutar cada 100ms
+      if (throttleTimeout) return;
+      
+      throttleTimeout = setTimeout(() => {
+        if (dropdownAbierto && searchInputRef.current) {
+          const rect = searchInputRef.current.getBoundingClientRect();
+          setDropdownPosition({
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width
+          });
+        }
+        throttleTimeout = null;
+      }, 100);
+    };
+
+    if (dropdownAbierto) {
+      window.addEventListener('scroll', handleScrollResize, { passive: true });
+      window.addEventListener('resize', handleScrollResize, { passive: true });
+    }
+    
+    return () => {
+      window.removeEventListener('scroll', handleScrollResize);
+      window.removeEventListener('resize', handleScrollResize);
+      if (throttleTimeout) {
+        clearTimeout(throttleTimeout);
+      }
+    };
+  }, [dropdownAbierto]);
+
   // Calcular subtotal cuando cambian cantidad o precio
   useEffect(() => {
     calcularSubtotal();
@@ -909,43 +1053,110 @@ function Autoservicio() {
               </div>
               
                 {/* Campo de búsqueda de producto */}
-                <div className="relative mb-4">
+                <div className="mb-4">
                   <input
+                    ref={searchInputRef}
+                    data-search-input
                     type="text"
                     value={busquedaProducto}
                     onChange={(e) => manejarBusquedaProducto(e.target.value)}
-                    onFocus={() => {
-                      // Si hay productos filtrados, mostrar dropdown al hacer foco
-                      if (productosFiltrados.length > 0) {
-                        setDropdownAbierto(true);
-                      }
-                    }}
-                    onBlur={() => {
-                      // Cerrar dropdown cuando se pierde el foco (con un pequeño delay para permitir el click)
-                      setTimeout(() => setDropdownAbierto(false), 150);
-                    }}
                     className="w-full px-3 md:px-4 py-3 md:py-4 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base transition-all duration-200"
                     placeholder="🔍 Escribe el nombre del producto..."
                   />
-                  
-                  {/* Dropdown de productos filtrados */}
-                  {dropdownAbierto && productosFiltrados.length > 0 && (
-                    <div className="dropdown-productos absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                      {productosFiltrados.map((producto, index) => (
-                        <div
-                          key={producto.id || index}
-                          onClick={() => seleccionarProducto(producto)}
-                          className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0 transition-all duration-200"
-                        >
-                          <div className="text-white font-medium text-sm md:text-base">{producto.producto}</div>
-                          <div className="text-gray-400 text-xs md:text-sm">
-                            ${parseFloat(producto.precio_venta).toLocaleString()} - {producto.unidad}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
+                
+                {/* Dropdown de productos filtrados - Portal */}
+                {dropdownAbierto && productosFiltrados.length > 0 && createPortal(
+                  <div 
+                    ref={dropdownRef}
+                    data-dropdown-portal
+                    className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl overflow-hidden"
+                    style={{ 
+                      top: dropdownPosition.top + 12,
+                      left: dropdownPosition.left,
+                      width: dropdownPosition.width
+                    }}
+                  >
+                    {/* Hint de navegación por teclado */}
+                    <div className="bg-blue-600/20 px-4 py-2 border-b border-blue-400/30">
+                      <p className="text-blue-200 text-xs text-center">
+                        <span className="font-semibold">💡 Tip:</span> Usa ↑↓ para navegar, Enter para seleccionar, Esc para cerrar
+                      </p>
+                    </div>
+                    
+                    {/* Lista de productos */}
+                    <div className="max-h-80 overflow-y-auto">
+                      {productosFiltrados.map((producto, index) => {
+                        const estaSeleccionado = index === indiceSeleccionado;
+                        
+                        return (
+                          <div
+                            key={producto.id || index}
+                            data-dropdown-item
+                            onClick={() => seleccionarProducto(producto)}
+                            className={`px-6 py-4 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors duration-150 ${
+                              estaSeleccionado 
+                                ? 'bg-blue-600/50 border-blue-400' 
+                                : 'hover:bg-blue-600/30'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="text-white font-bold text-lg mb-1">
+                                  {producto.producto}
+                                  {estaSeleccionado && <span className="ml-2 text-yellow-300">←</span>}
+                                </div>
+                                <div className="flex items-center space-x-4 text-sm">
+                                  <span className="text-green-300 font-medium">
+                                    ${parseFloat(producto.precio_venta).toLocaleString()}
+                                  </span>
+                                  <span className="text-blue-300 font-medium">
+                                    {producto.unidad}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-blue-400 text-xl">→</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>,
+                  document.body
+                )}
+                
+                {/* Mensaje cuando no hay productos - Portal */}
+                {dropdownAbierto && productosFiltrados.length === 0 && busquedaProducto.trim() && createPortal(
+                  <div 
+                    data-dropdown-portal
+                    className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl p-6"
+                    style={{ 
+                      top: dropdownPosition.top + 12,
+                      left: dropdownPosition.left,
+                      width: dropdownPosition.width
+                    }}
+                  >
+                    <div className="text-center mb-4">
+                      <div className="text-gray-300 text-lg mb-2">
+                        No se encontraron productos con "<strong>{busquedaProducto}</strong>"
+                      </div>
+                      <div className="text-gray-400 text-sm">
+                        Agrega el producto al inventario para poder usarlo aquí
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Redirigir al componente Inventario para agregar el producto
+                        navigate('/inventario');
+                      }}
+                      className="w-full px-6 py-3 md:py-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg"
+                    >
+                      ➕ Agregar producto al Inventario
+                    </button>
+                  </div>,
+                  document.body
+                )}
                 
                 {/* Campos del producto - Responsive y adaptativo */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
