@@ -16,7 +16,7 @@ class ScaleService {
     // Higiene y ruido: dedupe + throttle
     this.lastFrameHash = null;
     this.frameThrottleCount = 0;
-    this.frameThrottleInterval = 50; // Mostrar 1 cada 50 frames
+    this.frameThrottleInterval = 5; // Mostrar 1 cada 5 frames (respuesta rápida)
     
     // Apagado limpio
     this.shuttingDown = false;
@@ -281,20 +281,19 @@ class ScaleService {
   // 3.1-3.5 Parser completo con todas las reglas de negocio - AHORA PARA FRAMES
   parseFrame(frame) {
     try {
-      // Higiene: dedupe de frames idénticos
+      // Higiene: dedupe de frames idénticos (solo para logs, no bloquear procesamiento)
       const frameHash = this.hashFrame(frame);
-      if (frameHash === this.lastFrameHash) {
+      const isFrameDuplicate = frameHash === this.lastFrameHash;
+      
+      if (isFrameDuplicate) {
         this.frameThrottleCount++;
-        if (this.frameThrottleCount % this.frameThrottleInterval !== 0) {
-          return; // Ignorar frame duplicado
-        }
       } else {
         this.frameThrottleCount = 0;
         this.lastFrameHash = frameHash;
       }
       
-      // Throttle de logs: mostrar solo 1 cada N frames
-      if (this.frameThrottleCount % this.frameThrottleInterval === 0) {
+      // Throttle de logs: mostrar solo 1 cada N frames duplicados (no afecta procesamiento)
+      if (!isFrameDuplicate || this.frameThrottleCount % this.frameThrottleInterval === 0) {
         console.log('[scale] frame:', frame);
       }
       
@@ -354,14 +353,18 @@ class ScaleService {
       }
       
       if (stabilityFlag === 'S') {
-        // Aplicar umbral mínimo de 3 gramos
-        if (kgValue < 0.003) {
-          console.log(`[scale] stable:${kgValue} (ignored <0.003kg)`);
+        // Aplicar umbral mínimo de 1 gramo
+        if (kgValue < 0.001) {
+          console.log(`[scale] stable:${kgValue} (ignored <0.001kg)`);
           return;
         }
         
-        // Redondear a 1 decimal
-        const roundedKg = Math.round(kgValue * 10) / 10;
+        // Redondeo inteligente según el peso:
+        // - Pesos >= 0.1 kg (100g): redondear a 1 decimal (ej: 1.5 kg)
+        // - Pesos < 0.1 kg: redondear a 3 decimales (ej: 0.035 kg = 35g)
+        const roundedKg = kgValue >= 0.1 
+          ? Math.round(kgValue * 10) / 10      // 1 decimal para pesos grandes
+          : Math.round(kgValue * 1000) / 1000; // 3 decimales para pesos pequeños
         this.lastStableKg = roundedKg;
         
         // 3.4 Publicación condicionada por sampling
@@ -390,10 +393,10 @@ class ScaleService {
       return;
     }
 
-    // Timer de debounce ~200ms
+    // Timer de debounce ~50ms (respuesta rápida manteniendo filtro de ruido)
     this.debounceTimer = setTimeout(() => {
       this.publishStable(kgValue);
-    }, 200);
+    }, 50);
   }
 
   // Publicar valor estable

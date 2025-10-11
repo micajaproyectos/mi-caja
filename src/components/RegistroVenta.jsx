@@ -1020,13 +1020,15 @@ export default function RegistroVenta() {
       return;
     }
 
-    // Aplicar umbral ≥ 0.003 kg (3 gramos) (revalidar por seguridad)
-    if (kg < 0.003) {
+    // Aplicar umbral ≥ 0.001 kg (1 gramo) (revalidar por seguridad)
+    if (kg < 0.001) {
       return;
     }
 
-    // Formatear a 1 decimal con punto
-    const formattedKg = kg.toFixed(1);
+    // Formateo inteligente según el peso:
+    // - Pesos >= 0.1 kg (100g): mostrar 1 decimal (ej: 1.5 kg)
+    // - Pesos < 0.1 kg: mostrar 3 decimales (ej: 0.035 kg = 35g)
+    const formattedKg = kg >= 0.1 ? kg.toFixed(1) : kg.toFixed(3);
     
     // Actualizar productoActual.cantidad
     setProductoActual(prev => {
