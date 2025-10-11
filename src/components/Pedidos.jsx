@@ -44,6 +44,9 @@ export default function Pedidos() {
   const [cantidadMesas, setCantidadMesas] = useState(4);
   const [productosPorMesa, setProductosPorMesa] = useState({});
   
+  // Estados para selección de productos para enviar a cocina
+  const [productosSeleccionadosParaCocina, setProductosSeleccionadosParaCocina] = useState({});
+  
   // Estados para propina
   const [propinaActiva, setPropinaActiva] = useState(false);
   const [porcentajePropina, setPorcentajePropina] = useState(10);
@@ -359,6 +362,50 @@ export default function Pedidos() {
       ...prev,
       [mesa]: prev[mesa].filter(p => p.id !== productoId)
     }));
+    
+    // También eliminar de seleccionados si estaba seleccionado
+    setProductosSeleccionadosParaCocina(prev => {
+      const nuevosSeleccionados = { ...prev };
+      if (nuevosSeleccionados[mesa]) {
+        nuevosSeleccionados[mesa] = nuevosSeleccionados[mesa].filter(id => id !== productoId);
+      }
+      return nuevosSeleccionados;
+    });
+  };
+
+  // Función para alternar selección de un producto para cocina
+  const toggleSeleccionProductoCocina = (mesa, productoId) => {
+    setProductosSeleccionadosParaCocina(prev => {
+      const mesaSeleccionados = prev[mesa] || [];
+      const yaSeleccionado = mesaSeleccionados.includes(productoId);
+      
+      return {
+        ...prev,
+        [mesa]: yaSeleccionado 
+          ? mesaSeleccionados.filter(id => id !== productoId)
+          : [...mesaSeleccionados, productoId]
+      };
+    });
+  };
+
+  // Función para seleccionar/deseleccionar todos los productos de una mesa
+  const toggleSeleccionarTodosParaCocina = (mesa) => {
+    const productos = productosPorMesa[mesa] || [];
+    const seleccionados = productosSeleccionadosParaCocina[mesa] || [];
+    
+    if (seleccionados.length === productos.length) {
+      // Si todos están seleccionados, deseleccionar todos
+      setProductosSeleccionadosParaCocina(prev => ({
+        ...prev,
+        [mesa]: []
+      }));
+    } else {
+      // Seleccionar todos
+      setProductosSeleccionadosParaCocina(prev => ({
+        ...prev,
+        [mesa]: productos.map(p => p.id)
+      }));
+    }
   };
 
   // Función para calcular el total de una mesa
@@ -969,11 +1016,13 @@ export default function Pedidos() {
     }
   };
 
-  // Función para enviar pedido a cocina (INDEPENDIENTE del pago)
+  // Función para enviar pedido a cocina (INDEPENDIENTE del pago) - SOLO PRODUCTOS SELECCIONADOS
   const enviarACocina = async (mesa) => {
-    // Validar que haya productos en la mesa
-    if (!productosPorMesa[mesa] || productosPorMesa[mesa].length === 0) {
-      alert('❌ No hay productos en esta mesa para enviar a cocina');
+    // Validar que haya productos seleccionados
+    const seleccionados = productosSeleccionadosParaCocina[mesa] || [];
+    
+    if (seleccionados.length === 0) {
+      alert('❌ Por favor selecciona al menos un producto para enviar a cocina');
       return;
     }
 
@@ -1009,9 +1058,12 @@ export default function Pedidos() {
       // Extraer número de mesa
       const numeroMesa = parseInt(mesa.replace('Mesa ', ''));
 
-      // Insertar cada producto en pedidos_cocina
-      for (let i = 0; i < productosPorMesa[mesa].length; i++) {
-        const producto = productosPorMesa[mesa][i];
+      // Filtrar solo los productos seleccionados
+      const productosAEnviar = productosPorMesa[mesa].filter(p => seleccionados.includes(p.id));
+
+      // Insertar cada producto seleccionado en pedidos_cocina
+      for (let i = 0; i < productosAEnviar.length; i++) {
+        const producto = productosAEnviar[i];
         
         const pedidoCocina = {
           usuario_id: usuarioId,
@@ -1040,8 +1092,14 @@ export default function Pedidos() {
         }
       }
 
-      alert(`✅ Pedido de ${mesa} enviado a cocina exitosamente`);
-      console.log(`🍳 ${productosPorMesa[mesa].length} productos enviados a cocina`);
+      alert(`✅ ${productosAEnviar.length} producto(s) de ${mesa} enviados a cocina exitosamente`);
+      console.log(`🍳 ${productosAEnviar.length} productos enviados a cocina`);
+
+      // Limpiar selección después de enviar a cocina
+      setProductosSeleccionadosParaCocina(prev => ({
+        ...prev,
+        [mesa]: []
+      }));
 
     } catch (error) {
       console.error('❌ Error inesperado al enviar a cocina:', error);
@@ -1598,29 +1656,73 @@ export default function Pedidos() {
                   <p className="text-gray-400 text-center py-6">No hay productos en esta mesa</p>
                 ) : (
                   <div className="space-y-4">
+                    {/* Controles de selección para cocina */}
+                    <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-3 border border-orange-400/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-orange-300 text-sm font-medium">🍳 Seleccionar para Cocina:</span>
+                          <span className="text-orange-200 text-xs">
+                            ({(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length} de {productosPorMesa[mesaSeleccionada].length})
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => toggleSeleccionarTodosParaCocina(mesaSeleccionada)}
+                          className="text-orange-300 hover:text-orange-200 text-xs font-medium underline"
+                        >
+                          {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
+                            ? '❌ Deseleccionar todos'
+                            : '✅ Seleccionar todos'}
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Lista de productos de la mesa */}
                     <div className="space-y-2">
-                      {productosPorMesa[mesaSeleccionada].map((producto) => (
-                                                 <div key={producto.id} className="flex items-center justify-between bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30">
-                          <div className="flex-1">
-                            <p className="text-white font-medium">{producto.producto}</p>
-                            <p className="text-gray-300 text-sm">
-                              {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
-                            </p>
+                      {productosPorMesa[mesaSeleccionada].map((producto) => {
+                        const estaSeleccionado = (productosSeleccionadosParaCocina[mesaSeleccionada] || []).includes(producto.id);
+                        
+                        return (
+                          <div 
+                            key={producto.id} 
+                            className={`flex items-center justify-between rounded-lg p-3 border transition-all duration-200 ${
+                              estaSeleccionado 
+                                ? 'bg-orange-500/20 border-orange-400/50 shadow-lg' 
+                                : 'bg-white/20 border-white/30'
+                            }`}
+                          >
+                            {/* Checkbox para seleccionar producto */}
+                            <div className="flex items-center gap-3 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={estaSeleccionado}
+                                onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
+                                className="w-5 h-5 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-2 cursor-pointer"
+                                title="Seleccionar para enviar a cocina"
+                              />
+                              
+                              <div className="flex-1">
+                                <p className="text-white font-medium">{producto.producto}</p>
+                                <p className="text-gray-300 text-sm">
+                                  {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <span className="text-green-400 font-bold">
+                                ${parseFloat(producto.subtotal).toLocaleString()}
+                              </span>
+                              <button
+                                onClick={() => eliminarProducto(mesaSeleccionada, producto.id)}
+                                className="text-red-400 hover:text-red-300 text-lg"
+                                title="Eliminar producto"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-green-400 font-bold">
-                              ${parseFloat(producto.subtotal).toLocaleString()}
-                            </span>
-                            <button
-                              onClick={() => eliminarProducto(mesaSeleccionada, producto.id)}
-                              className="text-red-400 hover:text-red-300 text-lg"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     
                                                                {/* Resumen de la mesa */}
@@ -1809,17 +1911,33 @@ export default function Pedidos() {
                          {/* Botones de Acción: Enviar a Cocina y Registrar Pedido */}
              {mesaSeleccionada && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && (
                <div className="text-center mt-6 space-y-4">
-                 {/* Botón NUEVO: Enviar a Cocina (INDEPENDIENTE del pago) */}
+                 {/* Botón NUEVO: Enviar a Cocina (SOLO PRODUCTOS SELECCIONADOS) */}
                  <div>
                    <button
                      onClick={() => enviarACocina(mesaSeleccionada)}
-                     disabled={enviandoACocina}
-                     className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:scale-100 text-lg shadow-lg"
+                     disabled={enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0}
+                     className={`font-bold py-3 px-8 rounded-lg transition-all duration-300 transform text-lg shadow-lg ${
+                       enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
+                         ? 'bg-gray-600 cursor-not-allowed scale-100'
+                         : 'bg-orange-600 hover:bg-orange-700 hover:scale-105'
+                     } text-white`}
                    >
-                     {enviandoACocina ? '⏳ Enviando a cocina...' : '🍳 Enviar a Cocina'}
+                     {enviandoACocina 
+                       ? '⏳ Enviando a cocina...' 
+                       : `🍳 Enviar ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length > 0 
+                           ? `(${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}) ` 
+                           : ''}a Cocina`
+                     }
                    </button>
-                   <p className="text-gray-400 text-sm mt-2">
-                     Envía el pedido a la cocina (sin procesar pago)
+                   <p className={`text-sm mt-2 ${
+                     (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0 
+                       ? 'text-orange-400' 
+                       : 'text-gray-400'
+                   }`}>
+                     {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
+                       ? '⚠️ Selecciona al menos un producto para enviar a cocina'
+                       : `Enviará ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length} producto(s) seleccionado(s) a cocina`
+                     }
                    </p>
                  </div>
 

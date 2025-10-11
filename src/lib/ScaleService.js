@@ -354,9 +354,9 @@ class ScaleService {
       }
       
       if (stabilityFlag === 'S') {
-        // Aplicar umbral mínimo
-        if (kgValue < 0.1) {
-          console.log(`[scale] stable:${kgValue} (ignored <0.1)`);
+        // Aplicar umbral mínimo de 3 gramos
+        if (kgValue < 0.003) {
+          console.log(`[scale] stable:${kgValue} (ignored <0.003kg)`);
           return;
         }
         

@@ -127,7 +127,11 @@ export default function RegistroVenta() {
   
   // Refs y estado para el portal del dropdown
   const searchInputRef = useRef(null);
+  const dropdownRef = useRef(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  
+  // Estado para navegación por teclado
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
 
   // Función para cargar productos del inventario filtrados por usuario
   const cargarProductosInventario = async () => {
@@ -196,10 +200,10 @@ export default function RegistroVenta() {
     
     if (valor.trim()) {
       filtrarProductos(valor);
-      setMostrarDropdown(true);
+      setIndiceSeleccionado(-1); // Resetear índice al cambiar búsqueda
       
-      // Calcular posición del dropdown para el portal
-      if (searchInputRef.current) {
+      // Calcular posición del dropdown SOLO si no está visible
+      if (!mostrarDropdown && searchInputRef.current) {
         const rect = searchInputRef.current.getBoundingClientRect();
         setDropdownPosition({
           top: rect.bottom + window.scrollY,
@@ -207,9 +211,12 @@ export default function RegistroVenta() {
           width: rect.width
         });
       }
+      
+      setMostrarDropdown(true);
     } else {
       setProductosFiltrados([]);
       setMostrarDropdown(false);
+      setIndiceSeleccionado(-1);
     }
   };
 
@@ -855,25 +862,105 @@ export default function RegistroVenta() {
     };
   }, [mostrarDropdown]);
 
-  // Recalcular posición del dropdown cuando se hace scroll o resize
+  // Navegación por teclado en el dropdown
   useEffect(() => {
-    const handleScrollResize = () => {
-      if (mostrarDropdown && searchInputRef.current) {
-        const rect = searchInputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width
-        });
+    const handleKeyDown = (e) => {
+      if (!mostrarDropdown || productosFiltrados.length === 0) return;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setIndiceSeleccionado(prev => {
+            const nuevoIndice = prev < productosFiltrados.length - 1 ? prev + 1 : prev;
+            // Auto-scroll al elemento seleccionado
+            setTimeout(() => {
+              if (dropdownRef.current) {
+                const items = dropdownRef.current.querySelectorAll('[data-dropdown-item]');
+                if (items[nuevoIndice]) {
+                  items[nuevoIndice].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+              }
+            }, 0);
+            return nuevoIndice;
+          });
+          break;
+
+        case 'ArrowUp':
+          e.preventDefault();
+          setIndiceSeleccionado(prev => {
+            const nuevoIndice = prev > 0 ? prev - 1 : 0;
+            // Auto-scroll al elemento seleccionado
+            setTimeout(() => {
+              if (dropdownRef.current) {
+                const items = dropdownRef.current.querySelectorAll('[data-dropdown-item]');
+                if (items[nuevoIndice]) {
+                  items[nuevoIndice].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+              }
+            }, 0);
+            return nuevoIndice;
+          });
+          break;
+
+        case 'Enter':
+          e.preventDefault();
+          if (indiceSeleccionado >= 0 && indiceSeleccionado < productosFiltrados.length) {
+            seleccionarProducto(productosFiltrados[indiceSeleccionado]);
+          }
+          break;
+
+        case 'Escape':
+          e.preventDefault();
+          setMostrarDropdown(false);
+          setIndiceSeleccionado(-1);
+          break;
+
+        default:
+          break;
       }
     };
 
-    window.addEventListener('scroll', handleScrollResize);
-    window.addEventListener('resize', handleScrollResize);
+    if (mostrarDropdown) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mostrarDropdown, productosFiltrados, indiceSeleccionado]);
+
+  // Recalcular posición del dropdown cuando se hace scroll o resize (con throttle)
+  useEffect(() => {
+    let throttleTimeout = null;
+    
+    const handleScrollResize = () => {
+      // Throttle: solo ejecutar cada 100ms
+      if (throttleTimeout) return;
+      
+      throttleTimeout = setTimeout(() => {
+        if (mostrarDropdown && searchInputRef.current) {
+          const rect = searchInputRef.current.getBoundingClientRect();
+          setDropdownPosition({
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width
+          });
+        }
+        throttleTimeout = null;
+      }, 100);
+    };
+
+    if (mostrarDropdown) {
+      window.addEventListener('scroll', handleScrollResize, { passive: true });
+      window.addEventListener('resize', handleScrollResize, { passive: true });
+    }
     
     return () => {
       window.removeEventListener('scroll', handleScrollResize);
       window.removeEventListener('resize', handleScrollResize);
+      if (throttleTimeout) {
+        clearTimeout(throttleTimeout);
+      }
     };
   }, [mostrarDropdown]);
 
@@ -1717,23 +1804,41 @@ export default function RegistroVenta() {
                           {/* Dropdown de productos filtrados - Portal */}
             {mostrarDropdown && productosFiltrados.length > 0 && createPortal(
               <div 
+                ref={dropdownRef}
                 data-dropdown-portal
-                className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-2xl shadow-2xl max-h-80 overflow-y-auto"
+                className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl overflow-hidden"
                 style={{ 
                   top: dropdownPosition.top + 12,
                   left: dropdownPosition.left,
                   width: dropdownPosition.width
                 }}
               >
-                {productosFiltrados.map((producto, index) => (
+                {/* Hint de navegación por teclado */}
+                <div className="bg-blue-600/20 px-4 py-2 border-b border-blue-400/30">
+                  <p className="text-blue-200 text-xs text-center">
+                    <span className="font-semibold">💡 Tip:</span> Usa ↑↓ para navegar, Enter para seleccionar, Esc para cerrar
+                  </p>
+                </div>
+                
+                {/* Lista de productos */}
+                <div className="max-h-80 overflow-y-auto">
+                  {productosFiltrados.map((producto, index) => (
                   <div
                     key={producto.id || index}
+                    data-dropdown-item
                     onClick={() => seleccionarProducto(producto)}
-                    className="px-6 py-4 hover:bg-blue-600/30 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 hover:scale-[1.02]"
+                    className={`px-6 py-4 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors duration-150 ${
+                      index === indiceSeleccionado 
+                        ? 'bg-blue-600/50 border-blue-400' 
+                        : 'hover:bg-blue-600/30'
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="text-white font-bold text-lg mb-1">{producto.producto}</div>
+                        <div className="text-white font-bold text-lg mb-1">
+                          {producto.producto}
+                          {index === indiceSeleccionado && <span className="ml-2 text-yellow-300">←</span>}
+                        </div>
                         <div className="flex items-center space-x-4 text-sm">
                           <span className="text-green-300 font-medium">
                             ${parseFloat(producto.precio_venta).toLocaleString()}
@@ -1746,7 +1851,8 @@ export default function RegistroVenta() {
                       <div className="text-blue-400 text-xl">→</div>
                     </div>
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>,
               document.body
             )}
@@ -1755,7 +1861,7 @@ export default function RegistroVenta() {
             {mostrarDropdown && productosFiltrados.length === 0 && busquedaProducto.trim() && createPortal(
               <div 
                 data-dropdown-portal
-                className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-2xl shadow-2xl p-6"
+                className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl p-6"
                 style={{ 
                   top: dropdownPosition.top + 12,
                   left: dropdownPosition.left,
@@ -1773,18 +1879,12 @@ export default function RegistroVenta() {
                 <button
                   type="button"
                   onClick={() => {
-                    setBusquedaProducto('');
-                    setProductoActual({
-                      ...productoActual,
-                      producto: '',
-                      precio_unitario: '',
-                      unidad: ''
-                    });
-                    setMostrarDropdown(false);
+                    // Redirigir al componente Inventario para agregar el producto
+                    navigate('/inventario');
                   }}
                   className="w-full px-6 py-3 md:py-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg"
                 >
-                  ✏️ Ingresar producto manualmente
+                  ➕ Agregar producto al Inventario
                 </button>
               </div>,
               document.body

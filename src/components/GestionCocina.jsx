@@ -297,11 +297,18 @@ export default function GestionCocina() {
     return () => clearInterval(interval);
   }, []);
 
-  // Función para cambiar estado de todos los pedidos de una mesa
+  // Función para cambiar estado de un grupo específico de pedidos (enviados juntos)
   const cambiarEstadoMesa = async (mesa, nuevoEstado) => {
-    const pedidosMesa = pedidosCocina.filter(p => p.mesa === mesa.mesa);
+    // Obtener solo los productos de ESTE envío específico (mismo grupo)
+    // Usa la misma lógica que obtenerProductosCompletosDelPedido
+    const pedidosDelGrupo = pedidosCocina.filter(p => 
+      p.mesa === mesa.mesa && 
+      p.fecha_cl === mesa.pedidos[0].fecha_cl &&
+      Math.abs(new Date(p.hora_inicio_pedido) - new Date(mesa.hora_inicio)) < 5000 // Mismo grupo (dentro de 5 segundos)
+    );
     
-    for (const pedido of pedidosMesa) {
+    // Cambiar estado solo de los pedidos de este grupo específico
+    for (const pedido of pedidosDelGrupo) {
       await cambiarEstadoPedido(pedido.id, nuevoEstado);
     }
   };
@@ -578,7 +585,6 @@ export default function GestionCocina() {
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los estados</option>
-                    <option value="pendiente" className="bg-gray-800 text-white">⏳ Pendiente</option>
                     <option value="terminado" className="bg-gray-800 text-white">✅ Terminado</option>
                     <option value="anulado" className="bg-gray-800 text-white">❌ Anulado</option>
                   </select>
@@ -609,7 +615,7 @@ export default function GestionCocina() {
                       })()}`}
                       {filtroMes && ` Mes: ${nombresMeses[parseInt(filtroMes) - 1]}`}
                       {filtroAnio && ` Año: ${filtroAnio}`}
-                      {filtroEstado && ` Estado: ${filtroEstado === 'pendiente' ? '⏳ Pendiente' : filtroEstado === 'terminado' ? '✅ Terminado' : '❌ Anulado'}`}
+                      {filtroEstado && ` Estado: ${filtroEstado === 'terminado' ? '✅ Terminado' : '❌ Anulado'}`}
                     </>
                   )}
                   {` | Mostrando ${pedidosFiltrados.length} de ${pedidosCocina.length} registros totales`}
