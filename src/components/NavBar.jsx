@@ -87,7 +87,9 @@ const NavBar = () => {
       // Verificar si el usuario está autenticado
       const currentUser = await authService.getCurrentUser();
       if (!currentUser) {
-        console.log('❌ Usuario no autenticado');
+        if (import.meta.env.DEV) {
+          console.log('❌ Usuario no autenticado');
+        }
         return false;
       }
 
@@ -97,7 +99,9 @@ const NavBar = () => {
       });
 
       if (hasRated) {
-        console.log('✅ Usuario ya calificó en la base de datos, no mostrar notificación');
+        if (import.meta.env.DEV) {
+          console.log('✅ Usuario ya calificó en la base de datos, no mostrar notificación');
+        }
         // Marcar como mostrada para no volver a verificar
         const storageKey = `ratingNotificationShown_${currentUser.id}`;
         localStorage.setItem(storageKey, 'true');
@@ -108,13 +112,17 @@ const NavBar = () => {
       const storageKey = `ratingNotificationShown_${currentUser.id}`;
       const hasShown = localStorage.getItem(storageKey);
       if (hasShown) {
-        console.log('⚠️ Notificación marcada como mostrada en localStorage, pero usuario no calificó');
-        console.log('🔄 Limpiando localStorage y permitiendo mostrar notificación');
+        if (import.meta.env.DEV) {
+          console.log('⚠️ Notificación marcada como mostrada en localStorage, pero usuario no calificó');
+          console.log('🔄 Limpiando localStorage y permitiendo mostrar notificación');
+        }
         // Limpiar localStorage si el usuario no calificó realmente
         localStorage.removeItem(storageKey);
       }
 
-      console.log('⭐ Usuario puede calificar:', currentUser.nombre);
+      if (import.meta.env.DEV) {
+        console.log('⭐ Usuario puede calificar:', currentUser.nombre);
+      }
       return true;
     } catch (error) {
       console.error('Error al verificar notificación de calificación:', error);
@@ -269,12 +277,16 @@ const NavBar = () => {
     let isInitialLoad = true;
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth event:', event, session?.user?.id);
+      if (import.meta.env.DEV) {
+        console.log('🔄 Auth event:', event, session?.user?.id);
+      }
       
       // Ignorar el primer evento (INITIAL_SESSION) y solo procesar SIGNED_IN real
       if (isInitialLoad) {
         isInitialLoad = false;
-        console.log('⏭️ Ignorando evento inicial, esperando login real');
+        if (import.meta.env.DEV) {
+          console.log('⏭️ Ignorando evento inicial, esperando login real');
+        }
         return;
       }
       
@@ -285,7 +297,9 @@ const NavBar = () => {
         // Esperar un poco para que se complete el login
         setTimeout(async () => {
           if (await shouldShowRatingNotification()) {
-            console.log('🚀 Usuario inició sesión, mostrando notificación de calificación');
+            if (import.meta.env.DEV) {
+              console.log('🚀 Usuario inició sesión, mostrando notificación de calificación');
+            }
             setShowRatingNotification(true);
           }
         }, 1000);
@@ -298,7 +312,9 @@ const NavBar = () => {
   // Función para cerrar el popup de notificación cuando se completa la calificación
   useEffect(() => {
     window.onRatingCompleted = () => {
-      console.log('✅ Calificación completada, cerrando popup de notificación');
+      if (import.meta.env.DEV) {
+        console.log('✅ Calificación completada, cerrando popup de notificación');
+      }
       setShowRatingNotification(false);
       
       // Marcar que el usuario ya calificó (persiste entre recargas)
@@ -541,7 +557,9 @@ const NavBar = () => {
             if (currentUser) {
               const storageKey = `ratingNotificationShown_${currentUser.id}`;
               localStorage.setItem(storageKey, 'true');
-              console.log('✅ Usuario calificó, no mostrar más notificaciones');
+              if (import.meta.env.DEV) {
+                console.log('✅ Usuario calificó, no mostrar más notificaciones');
+              }
             }
           } else if (action === 'later') {
             // Si postergó, marcar para no mostrar más (persiste entre recargas)
@@ -549,7 +567,9 @@ const NavBar = () => {
             if (currentUser) {
               const storageKey = `ratingNotificationShown_${currentUser.id}`;
               localStorage.setItem(storageKey, 'true');
-              console.log('⏰ Usuario postergó, no mostrar más notificaciones');
+              if (import.meta.env.DEV) {
+                console.log('⏰ Usuario postergó, no mostrar más notificaciones');
+              }
             }
           }
         }} />
