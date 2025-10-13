@@ -71,7 +71,7 @@ const RatingNotification = ({ onClose }) => {
           </div>
           
           <p className="text-gray-400 text-xs">
-            Solo tomará 30 segundos
+            Solo tomará 15 segundos
           </p>
         </div>
 
