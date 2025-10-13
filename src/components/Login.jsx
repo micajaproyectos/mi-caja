@@ -142,7 +142,24 @@ function Login() {
             <h2 className="text-3xl font-bold text-white drop-shadow-lg mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Iniciar Sesión
             </h2>
-            <p className="text-gray-300 italic">Bienvenido a Mi Caja</p>
+            <p className="text-gray-300 italic mb-4">Bienvenido a Mi Caja</p>
+            
+            {/* Botón Activa tu cuenta */}
+            <a
+              href="https://wa.me/56985660954?text=Hola%2C%20quiero%20activar%20una%20cuenta%20de%20Mi%20Caja"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block w-full py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 font-medium text-center"
+              style={{
+                backgroundColor: '#25d366',
+                color: 'white',
+                boxShadow: '0 4px 14px rgba(37, 211, 102, 0.4)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                textDecoration: 'none'
+              }}
+            >
+              Activa tu cuenta
+            </a>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">

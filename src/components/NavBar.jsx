@@ -5,6 +5,7 @@ import { sessionManager } from '../lib/sessionManager.js';
 import { supabase } from '../lib/supabaseClient.js';
 import SubscriptionNotification from './SubscriptionNotification.jsx';
 import NewFeaturesNotification from './NewFeaturesNotification.jsx';
+import RatingNotification from './RatingNotification.jsx';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const NavBar = () => {
   const [showVisualNotification, setShowVisualNotification] = useState(false);
   const [showNewFeaturesNotification, setShowNewFeaturesNotification] = useState(false);
   const [showNewFeaturesVisualNotification, setShowNewFeaturesVisualNotification] = useState(false);
+  const [showRatingNotification, setShowRatingNotification] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -77,6 +79,47 @@ const NavBar = () => {
   const openNewFeaturesNotification = () => {
     setShowNewFeaturesNotification(true);
     setIsMenuOpen(false); // Cerrar el menú
+  };
+
+  // Función para verificar si debe mostrar la notificación de calificación
+  const shouldShowRatingNotification = async () => {
+    try {
+      // Verificar si el usuario está autenticado
+      const currentUser = await authService.getCurrentUser();
+      if (!currentUser) {
+        console.log('❌ Usuario no autenticado');
+        return false;
+      }
+
+      // PRIMERO: Verificar si ya calificó en la base de datos (fuente de verdad)
+      const { data: hasRated } = await supabase.rpc('usuario_ya_califico', {
+        p_usuario_id: currentUser.id
+      });
+
+      if (hasRated) {
+        console.log('✅ Usuario ya calificó en la base de datos, no mostrar notificación');
+        // Marcar como mostrada para no volver a verificar
+        const storageKey = `ratingNotificationShown_${currentUser.id}`;
+        localStorage.setItem(storageKey, 'true');
+        return false;
+      }
+
+      // SEGUNDO: Si no calificó, verificar localStorage solo como referencia
+      const storageKey = `ratingNotificationShown_${currentUser.id}`;
+      const hasShown = localStorage.getItem(storageKey);
+      if (hasShown) {
+        console.log('⚠️ Notificación marcada como mostrada en localStorage, pero usuario no calificó');
+        console.log('🔄 Limpiando localStorage y permitiendo mostrar notificación');
+        // Limpiar localStorage si el usuario no calificó realmente
+        localStorage.removeItem(storageKey);
+      }
+
+      console.log('⭐ Usuario puede calificar:', currentUser.nombre);
+      return true;
+    } catch (error) {
+      console.error('Error al verificar notificación de calificación:', error);
+      return false;
+    }
   };
 
   // Función para verificar si debe mostrar la notificación de suscripción
@@ -208,7 +251,71 @@ const NavBar = () => {
       setShowVisualNotification(true);
     }
 
-    // Verificar notificación de nuevas funcionalidades
+    // Verificar notificación de calificación al inicio de sesión
+    const checkRatingNotification = async () => {
+      if (await shouldShowRatingNotification()) {
+        // Pequeño delay para que aparezca después de otras notificaciones
+        setTimeout(() => {
+          setShowRatingNotification(true);
+        }, 2000);
+      }
+    };
+    checkRatingNotification();
+  }, []);
+
+  // Escuchar cambios de autenticación para mostrar notificación
+  useEffect(() => {
+    let hasShownNotification = false;
+    let isInitialLoad = true;
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth event:', event, session?.user?.id);
+      
+      // Ignorar el primer evento (INITIAL_SESSION) y solo procesar SIGNED_IN real
+      if (isInitialLoad) {
+        isInitialLoad = false;
+        console.log('⏭️ Ignorando evento inicial, esperando login real');
+        return;
+      }
+      
+      // Solo mostrar notificación en SIGNED_IN (login real), no en INITIAL_SESSION
+      if (event === 'SIGNED_IN' && session?.user && !hasShownNotification) {
+        hasShownNotification = true; // Evitar múltiples ejecuciones
+        
+        // Esperar un poco para que se complete el login
+        setTimeout(async () => {
+          if (await shouldShowRatingNotification()) {
+            console.log('🚀 Usuario inició sesión, mostrando notificación de calificación');
+            setShowRatingNotification(true);
+          }
+        }, 1000);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Función para cerrar el popup de notificación cuando se completa la calificación
+  useEffect(() => {
+    window.onRatingCompleted = () => {
+      console.log('✅ Calificación completada, cerrando popup de notificación');
+      setShowRatingNotification(false);
+      
+      // Marcar que el usuario ya calificó (persiste entre recargas)
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        const storageKey = `ratingNotificationShown_${currentUser.id}`;
+        localStorage.setItem(storageKey, 'true');
+      }
+    };
+    
+    return () => {
+      delete window.onRatingCompleted;
+    };
+  }, []);
+
+  // Verificar notificación de nuevas funcionalidades
+  useEffect(() => {
     if (shouldShowNewFeaturesNotification()) {
       // Pequeño delay para que aparezca después de que se cargue la página
       setTimeout(() => {
@@ -318,6 +425,21 @@ const NavBar = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Botón de prueba para notificación de calificación */}
+                  <div className="mb-4">
+                    <button
+                      onClick={() => setShowRatingNotification(true)}
+                      className="w-full p-2 rounded-lg text-xs font-medium transition-all"
+                      style={{ 
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)', 
+                        color: '#ffc107',
+                        border: '1px solid rgba(255, 193, 7, 0.2)'
+                      }}
+                    >
+                      ⭐ Califica tu experiencia con Mi Caja
+                    </button>
+                  </div>
                   
                   <div className="mb-3">
                     <p className="text-white text-sm font-semibold">{userInfo.nombre || 'Usuario'}</p>
@@ -405,6 +527,32 @@ const NavBar = () => {
       {/* Notificación de nuevas funcionalidades */}
       {showNewFeaturesNotification && (
         <NewFeaturesNotification onClose={closeNewFeaturesNotification} />
+      )}
+
+      {/* Notificación de calificación */}
+      {showRatingNotification && (
+        <RatingNotification onClose={(action) => {
+          setShowRatingNotification(false);
+          
+          // Manejar diferentes acciones
+          if (action === 'rated') {
+            // Si calificó, marcar permanentemente que no debe mostrar más
+            const currentUser = authService.getCurrentUser();
+            if (currentUser) {
+              const storageKey = `ratingNotificationShown_${currentUser.id}`;
+              localStorage.setItem(storageKey, 'true');
+              console.log('✅ Usuario calificó, no mostrar más notificaciones');
+            }
+          } else if (action === 'later') {
+            // Si postergó, marcar para no mostrar más (persiste entre recargas)
+            const currentUser = authService.getCurrentUser();
+            if (currentUser) {
+              const storageKey = `ratingNotificationShown_${currentUser.id}`;
+              localStorage.setItem(storageKey, 'true');
+              console.log('⏰ Usuario postergó, no mostrar más notificaciones');
+            }
+          }
+        }} />
       )}
     </>
   );
