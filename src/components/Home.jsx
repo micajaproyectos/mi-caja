@@ -176,6 +176,14 @@ export default function Home() {
             ) : (
               <p className="text-sm text-gray-300 italic">Cargando...</p>
             )}
+            <p className="text-sm text-gray-300 italic">
+              {new Date().toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
           </div>
         </div>
       </div>

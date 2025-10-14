@@ -91,7 +91,7 @@ export default function RegistroVenta() {
   const [ventasFiltradas, setVentasFiltradas] = useState([]);
   
   // Estado para controlar la cantidad de ventas mostradas
-  const [ventasMostradas, setVentasMostradas] = useState(10);
+  const [ventasMostradas, setVentasMostradas] = useState(300); // Límite inicial para minimarkets con muchas ventas diarias
 
   // Estados para eliminación múltiple
   const [ventasSeleccionadas, setVentasSeleccionadas] = useState([]);
@@ -396,7 +396,7 @@ export default function RegistroVenta() {
 
   // Resetear contador de ventas mostradas cuando cambien los filtros
   useEffect(() => {
-    setVentasMostradas(10);
+    setVentasMostradas(300); // Límite inicial para minimarkets con muchas ventas diarias
   }, [filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
 
   // Función para limpiar todos los filtros
@@ -434,6 +434,10 @@ export default function RegistroVenta() {
   const obtenerVentasAMostrar = () => {
     // Mostrar TODAS las ventas filtradas (incluyendo productos individuales)
     // Esto permite ver todos los productos que componen cada venta
+    // Si ventasMostradas es mayor o igual al total, mostrar todas
+    if (ventasMostradas >= ventasFiltradas.length) {
+      return ventasFiltradas;
+    }
     return ventasFiltradas.slice(0, ventasMostradas);
   };
 
@@ -442,6 +446,11 @@ export default function RegistroVenta() {
   // Función para mostrar todas las ventas
   const mostrarTodasLasVentas = () => {
     setVentasMostradas(ventasFiltradas.length);
+  };
+
+  // Función para cargar más ventas (incrementar límite)
+  const cargarMasVentas = () => {
+    setVentasMostradas(prev => Math.min(prev + 100, ventasFiltradas.length));
   };
 
   // Función para obtener todos los meses del año
@@ -2208,6 +2217,11 @@ export default function RegistroVenta() {
                   )}
                                      {` | Mostrando ${ventasFiltradas.length} de ${ventasRegistradas.length} registros totales`}
                 </p>
+                {ventasFiltradas.length > ventasMostradas && (
+                  <p className="text-yellow-300 text-xs text-center mt-2">
+                    💡 <strong>Nota:</strong> Solo se muestran {ventasMostradas} registros. Usa los botones de abajo para ver todos los {ventasFiltradas.length} registros disponibles.
+                  </p>
+                )}
               </div>
             </div>
             
@@ -2449,17 +2463,30 @@ export default function RegistroVenta() {
                   
                                                        {/* Controles para mostrar todas las ventas */}
                    {ventasFiltradas.length > ventasMostradas && (
-                    <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+                    <div className="mt-4 p-4 bg-yellow-600/20 backdrop-blur-sm rounded-lg border border-yellow-500/30">
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <p className="text-blue-200 text-sm">
-                           Mostrando {Math.min(ventasMostradas, ventasFiltradas.length)} de {ventasFiltradas.length} registros totales
-                        </p>
-                        <button
-                          onClick={mostrarTodasLasVentas}
-                          className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
-                        >
-                          📋 Mostrar todas
-                        </button>
+                        <div className="text-center sm:text-left">
+                          <p className="text-yellow-200 text-sm font-medium">
+                            ⚠️ Mostrando {Math.min(ventasMostradas, ventasFiltradas.length)} de {ventasFiltradas.length} registros
+                          </p>
+                          <p className="text-yellow-300 text-xs mt-1">
+                            Hay {ventasFiltradas.length - ventasMostradas} registros adicionales disponibles
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={cargarMasVentas}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+                          >
+                            ➕ Cargar 100 más
+                          </button>
+                          <button
+                            onClick={mostrarTodasLasVentas}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+                          >
+                            📋 Mostrar todos los {ventasFiltradas.length} registros
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

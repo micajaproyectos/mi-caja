@@ -100,16 +100,29 @@ export default function Seguimiento() {
         ultimoDiaDelMes
       });
 
-      // 1. Total de Ventas del mes
-      const { data: ventasData, error: ventasError } = await supabase
-        .from('ventas')
-        .select('total_venta, fecha_cl')
+      // 1. Total de Ventas del mes usando la vista ventas_mensual_acum_v2
+      // Primero obtener el cliente_id del usuario
+      const { data: clienteData, error: clienteError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
         .eq('usuario_id', usuarioId)
-        .gte('fecha_cl', fechaInicio)
-        .lte('fecha_cl', fechaFin);
+        .single();
 
-      if (ventasError) {
-        console.error('❌ Error al cargar ventas:', ventasError);
+      let totalVentas = 0;
+      if (!clienteError && clienteData) {
+        const { data: ventasData, error: ventasError } = await supabase
+          .from('ventas_mensual_acum_v2')
+          .select('total_mes')
+          .eq('cliente_id', clienteData.cliente_id)
+          .eq('anio', filtroAnio)
+          .eq('mes_num', filtroMes)
+          .single();
+
+        if (ventasError) {
+          console.error('❌ Error al cargar ventas desde vista:', ventasError);
+        } else if (ventasData) {
+          totalVentas = parseFloat(ventasData.total_mes) || 0;
+        }
       }
 
       // 2. Total de Gastos del mes
@@ -194,8 +207,7 @@ export default function Seguimiento() {
         console.error('❌ Error al cargar ventas rápidas:', ventasRapidasError);
       }
 
-                    // Calcular totales
-       const totalVentas = ventasData?.reduce((sum, item) => sum + (parseFloat(item.total_venta) || 0), 0) || 0;
+                    // Calcular totales (totalVentas ya se calculó arriba usando la vista)
        const totalGastos = gastosData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
        const totalInventario = inventarioData?.reduce((sum, item) => sum + (parseFloat(item.costo_total) || 0), 0) || 0;
        const totalProveedores = proveedoresData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
@@ -213,7 +225,8 @@ export default function Seguimiento() {
         totalPedidos,
         totalPropinas,
         totalVentasRapidas,
-        registrosInventario: inventarioData?.length || 0
+        registrosInventario: inventarioData?.length || 0,
+        fuenteVentas: 'ventas_mensual_acum_v2'
       });
 
       setTotales({

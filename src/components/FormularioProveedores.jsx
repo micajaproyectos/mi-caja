@@ -716,17 +716,6 @@ const FormularioProveedores = () => {
                   </div>
                                   ) : (
                     <div className="overflow-x-auto">
-                      {/* Leyenda de botones */}
-                      <div className="flex items-center justify-center gap-6 mb-4 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full" />
-                          <span className="text-white text-sm font-medium">Pendiente</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-600 rounded_full" />
-                          <span className="text-white text-sm font-medium">Pagado</span>
-                        </div>
-                      </div>
 
                       {/* Tabla real con estructura HTML table */}
                       <div className="overflow-x-auto">
@@ -760,18 +749,8 @@ const FormularioProveedores = () => {
                                 </td>
 
                                 {/* Estado */}
-                                <td className="p-2 md:p-3 text-center">
-                                  <div className={`px-2 py-1.5 rounded-lg text-sm font-bold flex-shrink-0 shadow-lg w-20 mx-auto ${
-                                    prov.estado === 'Pagado'
-                                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-2 border-green-300 shadow-green-500/50'
-                                      : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-2 border-yellow-300 shadow-yellow-500/50'
-                                  }`}>
-                                    <div className="flex items-center justify-center">
-                                      <span className="text-sm">
-                                        {prov.estado}
-                                      </span>
-                                    </div>
-                                  </div>
+                                <td className="text-white p-2 md:p-3 text-xs md:text-sm font-medium text-center">
+                                  {prov.estado}
                                 </td>
 
                                 {/* Fecha de Pago */}
@@ -797,7 +776,7 @@ const FormularioProveedores = () => {
                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
                                      )}
                                      <div className="flex items-center justify-center gap-0.5 relative z-10">
-                                       <span className="text-xs">{prov.estado}</span>
+                                       <span className="text-xs">{prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente'}</span>
                                      </div>
                                    </button>
                                    
