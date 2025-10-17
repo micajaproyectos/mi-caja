@@ -57,8 +57,8 @@ const NewFeaturesNotification = ({ onClose }) => {
               <div>
                 <h4 className="text-green-300 font-semibold text-lg mb-1">Cuadre de Caja Diario</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Nueva calculadora de cuadre de caja en Registro de Venta. Establece tu caja inicial 
-                  al comenzar el día y ve cómo se acumula automáticamente con cada venta en efectivo. 
+                  Nueva calculadora de cuadre de caja en Registro de Venta. Escribe tu caja inicial 
+                  en la primera venta del día y ve cómo se acumula automáticamente con cada vez que se realiza una venta en efectivo. 
                   Incluye calculadora de vuelto y total en caja actualizado en tiempo real.
                 </p>
               </div>
