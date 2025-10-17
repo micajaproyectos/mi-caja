@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 
-const NewFeaturesNotification = ({ onClose }) => {
+const NewFeaturesNotification = ({ onClose, show = false }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Mostrar la notificación con una pequeña animación
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    // Mostrar la notificación solo cuando show sea true
+    if (show) {
+      const timer = setTimeout(() => setIsVisible(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [show]);
 
   const handleClose = () => {
     setIsVisible(false);
     setTimeout(onClose, 200); // Esperar a que termine la animación
   };
+
+  // No renderizar si no debe mostrarse
+  if (!show) {
+    return null;
+  }
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>

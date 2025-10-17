@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 
-const RatingNotification = ({ onClose }) => {
+const RatingNotification = ({ onClose, show = false }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Mostrar la notificación con una pequeña animación
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    // Mostrar la notificación solo cuando show sea true
+    if (show) {
+      const timer = setTimeout(() => setIsVisible(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [show]);
 
   const handleClose = (action = 'later') => {
     setIsVisible(false);
@@ -21,6 +23,11 @@ const RatingNotification = ({ onClose }) => {
     }
     handleClose('rated'); // Indicar que el usuario calificó
   };
+
+  // No renderizar si no debe mostrarse
+  if (!show) {
+    return null;
+  }
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>

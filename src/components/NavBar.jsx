@@ -20,6 +20,7 @@ const NavBar = () => {
   const [showNewFeaturesNotification, setShowNewFeaturesNotification] = useState(false);
   const [showNewFeaturesVisualNotification, setShowNewFeaturesVisualNotification] = useState(false);
   const [showRatingNotification, setShowRatingNotification] = useState(false);
+  const [showRatingVisualNotification, setShowRatingVisualNotification] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -79,6 +80,44 @@ const NavBar = () => {
   const openNewFeaturesNotification = () => {
     setShowNewFeaturesNotification(true);
     setIsMenuOpen(false); // Cerrar el menú
+  };
+
+  // Función para abrir manualmente la notificación de calificación
+  const openRatingNotification = () => {
+    setShowRatingNotification(true);
+    setIsMenuOpen(false); // Cerrar el menú
+  };
+
+  // Función para cerrar la notificación de calificación
+  const closeRatingNotification = (action) => {
+    setShowRatingNotification(false);
+    
+    // Manejar diferentes acciones
+    if (action === 'rated') {
+      // Si calificó, marcar permanentemente que no debe mostrar más
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        const storageKey = `ratingNotificationShown_${currentUser.id}`;
+        localStorage.setItem(storageKey, 'true');
+        if (import.meta.env.DEV) {
+          console.log('✅ Usuario calificó, no mostrar más notificaciones');
+        }
+      }
+      // No mostrar más la notificación visual
+      setShowRatingVisualNotification(false);
+    } else if (action === 'later') {
+      // Si postergó, marcar para no mostrar más (persiste entre recargas)
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        const storageKey = `ratingNotificationShown_${currentUser.id}`;
+        localStorage.setItem(storageKey, 'true');
+        if (import.meta.env.DEV) {
+          console.log('⏰ Usuario postergó, no mostrar más notificaciones');
+        }
+      }
+      // No mostrar más la notificación visual
+      setShowRatingVisualNotification(false);
+    }
   };
 
   // Función para verificar si debe mostrar la notificación de calificación
@@ -290,10 +329,8 @@ const NavBar = () => {
     // Verificar notificación de calificación al inicio de sesión
     const checkRatingNotification = async () => {
       if (await shouldShowRatingNotification()) {
-        // Pequeño delay para que aparezca después de otras notificaciones
-        setTimeout(() => {
-          setShowRatingNotification(true);
-        }, 2000);
+        // Solo mostrar notificación visual en el menú, no popup automático
+        setShowRatingVisualNotification(true);
       }
     };
     checkRatingNotification();
@@ -326,9 +363,9 @@ const NavBar = () => {
         setTimeout(async () => {
           if (await shouldShowRatingNotification()) {
             if (import.meta.env.DEV) {
-              console.log('Usuario inició sesión, mostrando notificación de calificación');
+              console.log('Usuario inició sesión, mostrando notificación visual de calificación');
             }
-            setShowRatingNotification(true);
+            setShowRatingVisualNotification(true);
           }
         }, 1000);
       }
@@ -367,13 +404,7 @@ const NavBar = () => {
     
     console.log('🔍 Resultados:', { showPopup, showVisual });
     
-    if (showPopup) {
-      console.log('✅ Mostrando popup de nuevas funcionalidades');
-      // Pequeño delay para que aparezca después de que se cargue la página
-      setTimeout(() => {
-        setShowNewFeaturesNotification(true);
-      }, 1500);
-    } else if (showVisual) {
+    if (showPopup || showVisual) {
       console.log('✅ Mostrando notificación visual en menú');
       setShowNewFeaturesVisualNotification(true);
     } else {
@@ -423,7 +454,7 @@ const NavBar = () => {
               </div>
               
               {/* Indicador de notificación */}
-              {(showVisualNotification || showNewFeaturesVisualNotification) && (
+              {(showVisualNotification || showNewFeaturesVisualNotification || showRatingVisualNotification) && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"
                      style={{ boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)' }}>
                 </div>
@@ -480,21 +511,27 @@ const NavBar = () => {
                     </div>
                   )}
 
-                  {/* Botón de prueba para notificación de calificación */}
-                  <div className="mb-4">
-                    <button
-                      onClick={() => setShowRatingNotification(true)}
-                      className="w-full p-2 rounded-lg text-xs font-medium transition-all"
-                      style={{ 
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)', 
-                        color: '#ffc107',
-                        border: '1px solid rgba(255, 193, 7, 0.2)'
-                      }}
-                    >
-                      ⭐ Califica tu experiencia con Mi Caja
-                    </button>
-                  </div>
-                  
+                  {/* Notificación de calificación en el menú */}
+                  {showRatingVisualNotification && (
+                    <div className="mb-4 p-3 rounded-lg border-l-4 cursor-pointer hover:bg-white/5 transition-colors"
+                         style={{ 
+                           backgroundColor: 'rgba(255, 193, 7, 0.1)', 
+                           borderLeftColor: '#ffc107',
+                           border: '1px solid rgba(255, 193, 7, 0.2)'
+                         }}
+                         onClick={openRatingNotification}>
+                      <div className="flex items-center">
+                        <span className="text-lg mr-2">⭐</span>
+                        <div>
+                          <p className="text-white text-xs font-medium">¡Tu opinión es importante!</p>
+                          <p className="text-gray-300 text-xs mt-1">
+                            ¿Mi Caja te ha sido útil? Cuéntanos tu experiencia. ¡Haz clic para calificar!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mb-3">
                     <p className="text-white text-sm font-semibold">{userInfo.nombre || 'Usuario'}</p>
                     <p className="text-gray-300 text-xs break-all">{userInfo.email || ''}</p>
@@ -580,37 +617,12 @@ const NavBar = () => {
 
       {/* Notificación de nuevas funcionalidades */}
       {showNewFeaturesNotification && (
-        <NewFeaturesNotification onClose={closeNewFeaturesNotification} />
+        <NewFeaturesNotification onClose={closeNewFeaturesNotification} show={true} />
       )}
 
       {/* Notificación de calificación */}
       {showRatingNotification && (
-        <RatingNotification onClose={(action) => {
-          setShowRatingNotification(false);
-          
-          // Manejar diferentes acciones
-          if (action === 'rated') {
-            // Si calificó, marcar permanentemente que no debe mostrar más
-            const currentUser = authService.getCurrentUser();
-            if (currentUser) {
-              const storageKey = `ratingNotificationShown_${currentUser.id}`;
-              localStorage.setItem(storageKey, 'true');
-              if (import.meta.env.DEV) {
-                console.log('✅ Usuario calificó, no mostrar más notificaciones');
-              }
-            }
-          } else if (action === 'later') {
-            // Si postergó, marcar para no mostrar más (persiste entre recargas)
-            const currentUser = authService.getCurrentUser();
-            if (currentUser) {
-              const storageKey = `ratingNotificationShown_${currentUser.id}`;
-              localStorage.setItem(storageKey, 'true');
-              if (import.meta.env.DEV) {
-                console.log('⏰ Usuario postergó, no mostrar más notificaciones');
-              }
-            }
-          }
-        }} />
+        <RatingNotification onClose={closeRatingNotification} show={true} />
       )}
     </>
   );
