@@ -83,6 +83,25 @@ export default function RegistroVenta() {
   const [montoPagado, setMontoPagado] = useState('');
   const [mostrarVuelto, setMostrarVuelto] = useState(false);
   
+  // Estados para cuadrar caja (solo frontend)
+  const [cajaInicial, setCajaInicial] = useState(() => {
+    // Cargar caja inicial desde localStorage al inicializar
+    const fechaActual = obtenerFechaActual();
+    const cajaGuardada = localStorage.getItem('cajaInicial');
+    const fechaGuardada = localStorage.getItem('cajaInicialFecha');
+    
+    // Si hay caja guardada y es del mismo día, usarla
+    if (cajaGuardada && fechaGuardada === fechaActual) {
+      return cajaGuardada;
+    }
+    
+    // Si es un día diferente o no hay datos, limpiar
+    localStorage.removeItem('cajaInicial');
+    localStorage.removeItem('cajaInicialFecha');
+    return '';
+  });
+  // Ya no necesitamos el estado cajaAcumulada porque se calcula desde las ventas registradas
+  
   // Estados para filtros
   const [filtroDia, setFiltroDia] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
@@ -298,6 +317,31 @@ export default function RegistroVenta() {
     const totalVenta = calcularTotalVenta();
     const montoPagadoNum = parseFloat(montoPagado) || 0;
     return montoPagadoNum - totalVenta;
+  };
+
+  // Función para calcular el total de caja (caja inicial + acumulado real)
+  const calcularTotalCaja = () => {
+    const cajaInicialNum = parseFloat(cajaInicial) || 0;
+    return cajaInicialNum + calcularAcumuladoReal();
+  };
+
+  // Función para calcular el acumulado real desde las ventas registradas
+  const calcularAcumuladoReal = () => {
+    const fechaActual = obtenerFechaActual();
+    const ventasEfectivoHoy = ventasRegistradas.filter(venta => {
+      const fechaVenta = venta.fecha_cl || venta.fecha;
+      return fechaVenta === fechaActual && venta.tipo_pago === 'efectivo';
+    });
+
+    // Sumar solo los totales de ventas completas (con total_final)
+    const acumulado = ventasEfectivoHoy.reduce((total, venta) => {
+      if (venta.total_final !== null && venta.total_final !== undefined) {
+        return total + (parseFloat(venta.total_final) || 0);
+      }
+      return total;
+    }, 0);
+
+    return acumulado;
   };
 
   // Función para filtrar ventas usando fecha_cl
@@ -841,6 +885,12 @@ export default function RegistroVenta() {
         
         // Limpiar filtros para mostrar solo las ventas del día actual
         limpiarFiltros();
+        
+        // Reiniciar caja inicial al nuevo día
+        setCajaInicial('');
+        // Limpiar localStorage de caja inicial al nuevo día
+        localStorage.removeItem('cajaInicial');
+        localStorage.removeItem('cajaInicialFecha');
       }
     };
 
@@ -1237,6 +1287,9 @@ export default function RegistroVenta() {
           return;
         }
       }
+
+      // Los valores de caja se calcularán automáticamente desde las ventas registradas
+      // No necesitamos actualizar manualmente el estado de cajaAcumulada
 
       mostrarNotificacion(`✅ Venta registrada correctamente con ${productosVenta.length} productos. Total: $${totalVenta.toLocaleString()}`, 'success');
       
@@ -2020,35 +2073,88 @@ export default function RegistroVenta() {
                 </h4>
                 
                 <div className="space-y-3 md:space-y-4">
-                  {/* Total de la venta (solo lectura) */}
-                  <div>
-                    <label className="block text-blue-100 text-xs md:text-sm mb-2">
-                      Total de la venta:
-                    </label>
-                    <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center">
-                      <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
-                        ${calcularTotalVenta().toLocaleString('es-CL')}
-                      </p>
+                  {/* Total de la venta y Monto pagado por el cliente en la misma línea */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                    {/* Total de la venta (solo lectura) */}
+                    <div>
+                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        Total de la venta:
+                      </label>
+                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center">
+                        <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
+                          ${calcularTotalVenta().toLocaleString('es-CL')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Monto pagado por el cliente */}
+                    <div>
+                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        Monto pagado por el cliente:
+                      </label>
+                      <input
+                        type="number"
+                        value={montoPagado}
+                        onChange={(e) => {
+                          setMontoPagado(e.target.value);
+                          setMostrarVuelto(e.target.value !== '');
+                        }}
+                        placeholder="Ingresa el monto recibido"
+                        step="100"
+                        min="0"
+                        className="w-full p-2 md:p-3 lg:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      />
                     </div>
                   </div>
 
-                  {/* Monto pagado por el cliente */}
-                  <div>
-                    <label className="block text-blue-100 text-xs md:text-sm mb-2">
-                      Monto pagado por el cliente:
-                    </label>
-                    <input
-                      type="number"
-                      value={montoPagado}
-                      onChange={(e) => {
-                        setMontoPagado(e.target.value);
-                        setMostrarVuelto(e.target.value !== '');
-                      }}
-                      placeholder="Ingresa el monto recibido"
-                      step="100"
-                      min="0"
-                      className="w-full p-2 md:p-3 lg:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
-                    />
+                  {/* Campos para cuadrar caja */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                    {/* Caja Inicial */}
+                    <div>
+                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        Caja Inicial:
+                      </label>
+                      <input
+                        type="number"
+                        value={cajaInicial}
+                        onChange={(e) => {
+                          const valor = e.target.value;
+                          setCajaInicial(valor);
+                          // Guardar en localStorage con la fecha actual
+                          const fechaActual = obtenerFechaActual();
+                          localStorage.setItem('cajaInicial', valor);
+                          localStorage.setItem('cajaInicialFecha', fechaActual);
+                        }}
+                        placeholder="Ej: 20000"
+                        step="100"
+                        min="0"
+                        className="w-full p-2 md:p-3 lg:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      />
+                    </div>
+
+                    {/* Acumulado del Día */}
+                    <div>
+                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        Acumulado del Día:
+                      </label>
+                      <div className="bg-white/10 border border-green-400/50 rounded-lg p-2 md:p-3 text-center">
+                        <p className="text-green-300 text-lg md:text-xl lg:text-2xl font-bold">
+                          ${calcularAcumuladoReal().toLocaleString('es-CL')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Total en Caja */}
+                    <div>
+                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        Total en Caja:
+                      </label>
+                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center">
+                        <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
+                          ${calcularTotalCaja().toLocaleString('es-CL')}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Mostrar el vuelto */}

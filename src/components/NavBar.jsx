@@ -100,7 +100,7 @@ const NavBar = () => {
 
       if (hasRated) {
         if (import.meta.env.DEV) {
-          console.log('✅ Usuario ya calificó en la base de datos, no mostrar notificación');
+          console.log('Usuario ya calificó en la base de datos, no mostrar notificación');
         }
         // Marcar como mostrada para no volver a verificar
         const storageKey = `ratingNotificationShown_${currentUser.id}`;
@@ -113,15 +113,15 @@ const NavBar = () => {
       const hasShown = localStorage.getItem(storageKey);
       if (hasShown) {
         if (import.meta.env.DEV) {
-          console.log('⚠️ Notificación marcada como mostrada en localStorage, pero usuario no calificó');
-          console.log('🔄 Limpiando localStorage y permitiendo mostrar notificación');
+          console.log('Notificación marcada como mostrada en localStorage, pero usuario no calificó');
+          console.log('Limpiando localStorage y permitiendo mostrar notificación');
         }
         // Limpiar localStorage si el usuario no calificó realmente
         localStorage.removeItem(storageKey);
       }
 
       if (import.meta.env.DEV) {
-        console.log('⭐ Usuario puede calificar:', currentUser.nombre);
+        console.log('Usuario puede calificar:', currentUser.nombre);
       }
       return true;
     } catch (error) {
@@ -192,27 +192,55 @@ const NavBar = () => {
 
   // Función para verificar si debe mostrar la notificación de nuevas funcionalidades
   const shouldShowNewFeaturesNotification = () => {
-    // Verificar si ya se mostró en esta sesión
-    const sessionShown = sessionStorage.getItem('newFeaturesNotificationShown');
-    return !sessionShown;
+    // Verificar si ya se mostró permanentemente
+    const permanentlyShown = localStorage.getItem('newFeaturesNotificationShown');
+    if (permanentlyShown) {
+      console.log('❌ Notificación ya marcada como mostrada permanentemente');
+      console.log('🔧 Limpiando localStorage para resetear notificación...');
+      localStorage.removeItem('newFeaturesNotificationShown');
+      localStorage.removeItem('newFeaturesNotificationDismissed');
+      return true; // Mostrar después de limpiar
+    }
+    
+    // Por ahora, mostrar siempre para testing (después podemos ajustar la lógica de fechas)
+    console.log('✅ Mostrando notificación - modo testing activado');
+    return true;
   };
 
   // Función para verificar si debe mostrar la notificación visual de nuevas funcionalidades
   const shouldShowNewFeaturesVisualNotification = () => {
-    // Verificar si ya se mostró el popup en esta sesión pero no se ha ocultado permanentemente
-    const sessionShown = sessionStorage.getItem('newFeaturesNotificationShown');
-    const permanentlyDismissed = localStorage.getItem('newFeaturesNotificationDismissed');
-    return sessionShown && !permanentlyDismissed;
+    const today = new Date();
+    const featureStartDate = '2025-01-26'; // Fecha de implementación de cuadre de caja (ayer)
+    const daysSinceFeature = Math.floor((today - new Date(featureStartDate)) / (1000 * 60 * 60 * 24));
+    
+    // Verificar si ya se ocultó permanentemente (después de 9 días total)
+    const permanentlyDismissed = localStorage.getItem('newFeaturesNotificationShown');
+    if (permanentlyDismissed) {
+      return false;
+    }
+    
+    // Mostrar en notificaciones del menú entre el día 3 y 9 (7 días)
+    // Días 0-2: Popup automático
+    // Días 3-9: Solo en notificaciones del menú
+    // Día 10+: Desaparece completamente
+    return daysSinceFeature >= 3 && daysSinceFeature <= 9;
   };
 
   // Función para marcar la notificación de nuevas funcionalidades como mostrada
   const markNewFeaturesNotificationAsShown = () => {
-    sessionStorage.setItem('newFeaturesNotificationShown', 'true');
-    // Para ocultar permanentemente la notificación visual después de un tiempo
-    setTimeout(() => {
-      localStorage.setItem('newFeaturesNotificationDismissed', 'true');
-      setShowNewFeaturesVisualNotification(false);
-    }, 7 * 24 * 60 * 60 * 1000); // 7 días
+    // No marcar como mostrada permanentemente aquí
+    // La lógica de tiempo se maneja en shouldShowNewFeaturesNotification
+    // Solo ocultar temporalmente la notificación visual
+    setShowNewFeaturesVisualNotification(false);
+    
+    // Marcar como permanentemente ocultada solo después de 9 días totales
+    const today = new Date();
+    const featureStartDate = '2025-01-26';
+    const daysSinceFeature = Math.floor((today - new Date(featureStartDate)) / (1000 * 60 * 60 * 24));
+    
+    if (daysSinceFeature >= 9) {
+      localStorage.setItem('newFeaturesNotificationShown', 'true');
+    }
   };
 
   // Cargar datos básicos del usuario al montar el componente
@@ -298,7 +326,7 @@ const NavBar = () => {
         setTimeout(async () => {
           if (await shouldShowRatingNotification()) {
             if (import.meta.env.DEV) {
-              console.log('🚀 Usuario inició sesión, mostrando notificación de calificación');
+              console.log('Usuario inició sesión, mostrando notificación de calificación');
             }
             setShowRatingNotification(true);
           }
@@ -332,14 +360,24 @@ const NavBar = () => {
 
   // Verificar notificación de nuevas funcionalidades
   useEffect(() => {
-    if (shouldShowNewFeaturesNotification()) {
+    console.log('🔍 Verificando notificación de nuevas funcionalidades...');
+    
+    const showPopup = shouldShowNewFeaturesNotification();
+    const showVisual = shouldShowNewFeaturesVisualNotification();
+    
+    console.log('🔍 Resultados:', { showPopup, showVisual });
+    
+    if (showPopup) {
+      console.log('✅ Mostrando popup de nuevas funcionalidades');
       // Pequeño delay para que aparezca después de que se cargue la página
       setTimeout(() => {
         setShowNewFeaturesNotification(true);
       }, 1500);
-    } else if (shouldShowNewFeaturesVisualNotification()) {
-      // Si no debe mostrar el popup pero sí la notificación visual
+    } else if (showVisual) {
+      console.log('✅ Mostrando notificación visual en menú');
       setShowNewFeaturesVisualNotification(true);
+    } else {
+      console.log('❌ No se muestra ninguna notificación');
     }
   }, []);
 
@@ -435,7 +473,7 @@ const NavBar = () => {
                         <div>
                           <p className="text-white text-xs font-medium">¡Nuevas Mejoras Disponibles!</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            Descubre las nuevas funciones: Pantalla Completa, Autoservicio e Insumos. ¡Haz clic para ver más!
+                            Nueva calculadora de cuadre de caja diario con acumulación automática. ¡Haz clic para ver más!
                           </p>
                         </div>
                       </div>

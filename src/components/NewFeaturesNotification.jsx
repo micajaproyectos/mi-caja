@@ -51,27 +51,15 @@ const NewFeaturesNotification = ({ onClose }) => {
           </h3>
           
           <div className="text-left space-y-4">
-            {/* Gestión Cocina */}
+            {/* Cuadre de Caja */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">🍳</span>
+              <span className="text-2xl">💰</span>
               <div>
-                <h4 className="text-orange-300 font-semibold text-lg mb-1">Gestión Cocina</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Cuadre de Caja Diario</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Sistema de pedidos en tiempo real para cocina. Coordina meseros y cocineros 
-                  con tarjetas de pedidos pendientes, temporizador automático, y historial 
-                  completo con filtros. Marca pedidos como terminados o anulados.
-                </p>
-              </div>
-            </div>
-
-            {/* Eliminación Simultánea en Registro de Venta */}
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">🤝</span>
-              <div>
-                <h4 className="text-purple-300 font-semibold text-lg mb-1">Eliminación Simultánea - Registro de Venta</h4>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  Selecciona y elimina múltiples registros a la vez en Registro de Venta. 
-                  Ahorra tiempo con selectores de filas y eliminación masiva eficiente.
+                  Nueva calculadora de cuadre de caja en Registro de Venta. Establece tu caja inicial 
+                  al comenzar el día y ve cómo se acumula automáticamente con cada venta en efectivo. 
+                  Incluye calculadora de vuelto y total en caja actualizado en tiempo real.
                 </p>
               </div>
             </div>

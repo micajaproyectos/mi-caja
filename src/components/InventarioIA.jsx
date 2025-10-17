@@ -580,7 +580,7 @@ const InventarioIA = () => {
     }
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('🚀 Procesando archivo:', {
+      console.log('-Procesando archivo:', {
         name: selectedFile.name,
         type: selectedFile.type,
         size: selectedFile.size,
@@ -589,8 +589,8 @@ const InventarioIA = () => {
 
       // Log de schemaHints que se envían
       const normalizedHints = normalizarSchemaHints();
-      console.log('🎯 SchemaHints normalizados que se envían:', normalizedHints);
-      console.log('🎯 SchemaHints originales:', schemaHints);
+      console.log('SchemaHints normalizados que se envían:', normalizedHints);
+      console.log('SchemaHints originales:', schemaHints);
     }
 
     let response;
@@ -625,7 +625,7 @@ const InventarioIA = () => {
         // Usar el path existente de croppedFile
         const previewPath = croppedFile.path;
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🔑 Firmando path existente:', previewPath);
+          console.log('Firmando path existente:', previewPath);
         }
         
         // Generar signedUrl justo antes del fetch
@@ -634,7 +634,7 @@ const InventarioIA = () => {
           .createSignedUrl(previewPath, SIGNED_URL_TTL);
         
         if (signedUrlError || !signedUrlData?.signedUrl) {
-          console.warn('⚠️ No se pudo generar signedUrl:', signedUrlError?.message || 'data vacío');
+          console.warn('No se pudo generar signedUrl:', signedUrlError?.message || 'data vacío');
           setIsProcessing(false);
           return;
         }
@@ -645,15 +645,15 @@ const InventarioIA = () => {
         mode = 'imageSignedUrl';
         
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🎯 Procesando con recorte aplicado:', { mode, fileType, path: previewPath });
+          console.log('Procesando con recorte aplicado:', { mode, fileType, path: previewPath });
           
           // Log seguro de firma
-          console.log('✅ Firma de recorte OK', { ttl: SIGNED_URL_TTL, hasSignedUrl: Boolean(url) });
+          console.log('Firma de recorte OK', { ttl: SIGNED_URL_TTL, hasSignedUrl: Boolean(url) });
         }
         
       } else if (selectedFile.type.startsWith('image/')) {
         // Imagen: se procesará más abajo firmando previews/ (sin subir aquí)
-        console.log('🖼️ Imagen seleccionada; se firmará previews/ si existe path');
+        console.log('Imagen seleccionada; se firmará previews/ si existe path');
       } else {
         // PDF sin recorte: NO PERMITIDO
         mostrarMensaje('error', 'Para procesar PDFs, primero aplica un recorte');
@@ -1370,7 +1370,7 @@ const aplicarAInventario = useCallback(async () => {
     const file = event.dataTransfer.files[0];
     if (file) {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('🔍 Archivo drop:', {
+        console.log('Archivo drop:', {
           name: file.name,
           type: file.type,
           size: file.size,
@@ -1384,7 +1384,7 @@ const aplicarAInventario = useCallback(async () => {
         const isValidType = validTypes.includes(file.type);
         const isValidSize = file.size <= maxSize;
         
-        console.log('🔍 Validación drop:', {
+        console.log('Validación drop:', {
           isValidType,
           isValidSize,
           validTypes,
@@ -1418,7 +1418,7 @@ const aplicarAInventario = useCallback(async () => {
     
     try {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('🔄 Generando previsualización para:', file.name, file.type);
+        console.log('Generando previsualización para:', file.name, file.type);
       }
       
       // Resetear estados de PDF e imagen
@@ -1429,7 +1429,7 @@ const aplicarAInventario = useCallback(async () => {
       
       if (file.type === 'application/pdf') {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('📄 Procesando PDF...');
+          console.log('Procesando PDF...');
         }
         
         // Crear URL del archivo para react-pdf
@@ -1443,12 +1443,12 @@ const aplicarAInventario = useCallback(async () => {
         setCurrentPage(1);
         
         if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ URL de PDF generada para react-pdf');
+          console.log('URL de PDF generada para react-pdf');
         }
         
       } else if (file.type.startsWith('image/')) {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🖼️ Procesando imagen...');
+          console.log('Procesando imagen...');
         }
         // Para imágenes, crear URL de previsualización
         const url = URL.createObjectURL(file);
@@ -1463,8 +1463,8 @@ const aplicarAInventario = useCallback(async () => {
         const displayHeight = img.naturalHeight * scale;
         
         if (process.env.NODE_ENV !== 'production') {
-          console.log('📐 Dimensiones reales de la imagen:', img.naturalWidth, 'x', img.naturalHeight);
-          console.log('📐 Dimensiones de visualización:', displayWidth, 'x', displayHeight);
+          console.log('Dimensiones reales de la imagen:', img.naturalWidth, 'x', img.naturalHeight);
+          console.log('Dimensiones de visualización:', displayWidth, 'x', displayHeight);
         }
         
         // Inicializar área de encuadre proporcional a la visualización
@@ -1484,8 +1484,8 @@ const aplicarAInventario = useCallback(async () => {
         });
         
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🎯 Área de encuadre para imagen inicializada:', cropArea);
-          console.log('📐 Dimensiones reales guardadas:', img.naturalWidth, 'x', img.naturalHeight);
+          console.log('Área de encuadre para imagen inicializada:', cropArea);
+          console.log('Dimensiones reales guardadas:', img.naturalWidth, 'x', img.naturalHeight);
         }
         };
         
@@ -1493,7 +1493,7 @@ const aplicarAInventario = useCallback(async () => {
         setPreviewUrl(url);
         setShowPreview(true);
         if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ URL de imagen generada');
+          console.log('URL de imagen generada');
         }
       }
       
@@ -1501,7 +1501,7 @@ const aplicarAInventario = useCallback(async () => {
         console.log('✅ Previsualización generada exitosamente');
       }
     } catch (error) {
-      console.error('❌ Error generando previsualización:', error);
+      console.error('Error generando previsualización:', error);
       mostrarMensaje('error', 'Error generando previsualización del archivo');
     }
   }, [mostrarMensaje]);
@@ -1534,7 +1534,7 @@ const aplicarAInventario = useCallback(async () => {
         }
         
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🎯 Aplicando encuadre para PDF:', {
+          console.log('Aplicando encuadre para PDF:', {
             originalCropArea: cropArea,
             normalizedCoords,
             pageDimensions: pdfPageDimensions
@@ -1551,7 +1551,7 @@ const aplicarAInventario = useCallback(async () => {
           throw new Error('No se encontró el canvas para recortar');
         }
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🎯 Canvas disponible para recorte:', {
+          console.log('Canvas disponible para recorte:', {
             width: sourceCanvas.width,
             height: sourceCanvas.height,
             ready: pageReady
@@ -1802,7 +1802,7 @@ const aplicarAInventario = useCallback(async () => {
   // Log de depuración para verificar que react-pdf esté disponible (solo cuando se monte el componente)
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('🔍 Debug react-pdf:', {
+      console.log('Debug react-pdf:', {
         Document: typeof Document,
         Page: typeof Page,
         pdfjs: typeof pdfjs,
@@ -1882,27 +1882,27 @@ const aplicarAInventario = useCallback(async () => {
     
     // Validar que el área de encuadre sea válida
     if (!cropArea || cropArea.width <= 0 || cropArea.height <= 0) {
-      console.log('⚠️ Área de encuadre inválida:', cropArea);
+      console.log('Área de encuadre inválida:', cropArea);
       return false;
     }
     
     // Validar que las coordenadas estén dentro de los límites
     if (cropArea.x < 0 || cropArea.y < 0) {
-      console.log('⚠️ Coordenadas de encuadre fuera de límites:', cropArea);
+      console.log('Coordenadas de encuadre fuera de límites:', cropArea);
       return false;
     }
     
     if (selectedFile?.type === 'application/pdf') {
       // Para PDFs, validar que el canvas esté listo
       if (!pageReady || !pageCanvasRef.current) {
-        console.log('⚠️ Canvas de PDF no está listo');
+        console.log('Canvas de PDF no está listo');
         return false;
       }
       
       // Validar que el encuadre no se salga del canvas
       const canvas = pageCanvasRef.current;
       if (cropArea.x + cropArea.width > canvas.width || cropArea.y + cropArea.height > canvas.height) {
-        console.log('⚠️ Encuadre se sale del canvas PDF:', {
+        console.log('Encuadre se sale del canvas PDF:', {
           cropArea,
           canvasSize: { width: canvas.width, height: canvas.height }
         });
@@ -1913,14 +1913,14 @@ const aplicarAInventario = useCallback(async () => {
     } else if (selectedFile?.type.startsWith('image/')) {
       // Para imágenes, validar que el canvas esté listo
       if (!imageReady || !imageCanvasRef.current) {
-        console.log('⚠️ Canvas de imagen no está listo');
+        console.log('Canvas de imagen no está listo');
         return false;
       }
       
       // Validar que el encuadre no se salga del canvas
       const canvas = imageCanvasRef.current;
       if (cropArea.x + cropArea.width > canvas.width || cropArea.y + cropArea.height > canvas.height) {
-        console.log('⚠️ Encuadre se sale del canvas de imagen:', {
+        console.log('Encuadre se sale del canvas de imagen:', {
           cropArea,
           canvasSize: { width: canvas.width, height: canvas.height }
         });
@@ -2037,7 +2037,7 @@ const aplicarAInventario = useCallback(async () => {
     }
     
     if (process.env.NODE_ENV !== 'production') {
-      console.log('🔍 Coordenadas normalizadas:', {
+      console.log('Coordenadas normalizadas:', {
         original: cropArea,
         pageDimensions,
         normalized,
@@ -2070,7 +2070,7 @@ const aplicarAInventario = useCallback(async () => {
         pageCount: pdf.numPages
       };
     } catch (error) {
-      console.error('❌ Error obteniendo dimensiones del PDF:', error);
+      console.error('Error obteniendo dimensiones del PDF:', error);
       return null;
     }
   }, []);
@@ -2093,7 +2093,7 @@ const aplicarAInventario = useCallback(async () => {
       const sh = Math.round(sel.h * pageCanvas.height);
       
       if (process.env.NODE_ENV !== 'production') {
-        console.log('📐 Coordenadas de recorte en píxeles:', { sx, sy, sw, sh });
+        console.log('Coordenadas de recorte en píxeles:', { sx, sy, sw, sh });
       }
       
       // Validar dimensiones del recorte como enteros > 0
@@ -2101,7 +2101,7 @@ const aplicarAInventario = useCallback(async () => {
       const h = Math.max(1, Math.round(outH ?? Math.round((sh / sw) * w)));
       
       if (process.env.NODE_ENV !== 'production') {
-        console.log('📐 Dimensiones validadas del recorte:', { w, h, originalSw: sw, originalSh: sh });
+        console.log('Dimensiones validadas del recorte:', { w, h, originalSw: sw, originalSh: sh });
       }
       
       // Crear canvas de recorte con dimensiones validadas
@@ -2110,7 +2110,7 @@ const aplicarAInventario = useCallback(async () => {
       crop.height = h;
       
       if (process.env.NODE_ENV !== 'production') {
-        console.log('📐 Dimensiones del recorte:', { width: crop.width, height: crop.height });
+        console.log('Dimensiones del recorte:', { width: crop.width, height: crop.height });
       }
       
       // Contexto del canvas con optimización para lectura frecuente
@@ -2340,7 +2340,7 @@ const aplicarAInventario = useCallback(async () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 lg:gap-6 mb-8">
               <div>
                 <label className="block text-sm font-medium text-white mb-3">
-                  📅 Fecha de Ingreso
+                  Fecha de Ingreso
                 </label>
                 <input
                   type="date"
@@ -2351,7 +2351,7 @@ const aplicarAInventario = useCallback(async () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-white mb-3">
-                  💰 % Ganancia (global)
+                  % Ganancia (global)
                   <span className="ml-2 text-xs text-gray-300">(0-100%)</span>
                 </label>
                 <input
@@ -2367,7 +2367,7 @@ const aplicarAInventario = useCallback(async () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-white mb-3">
-                  🏷️ IVA
+                  IVA
                   <span className="ml-2 text-xs text-gray-300">(no editable)</span>
                 </label>
                 <div className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-300 backdrop-blur-sm">
@@ -2392,7 +2392,7 @@ const aplicarAInventario = useCallback(async () => {
                   onClick={() => setShowSchemaHints(!showSchemaHints)}
                   className="text-sm text-green-400 hover:text-green-300 font-medium transition-colors duration-200"
                 >
-                  {showSchemaHints ? '👁️ Ocultar' : '👁️ Mostrar'}
+                  {showSchemaHints ? 'Ocultar' : 'Mostrar'}
                 </button>
               </div>
               
@@ -2401,7 +2401,7 @@ const aplicarAInventario = useCallback(async () => {
                     {/* Producto */}
                     <div>
                       <label className="block text-sm font-medium text-white mb-2 md:mb-3">
-                        🍎 Producto
+                        Producto
                       </label>
                       <input
                         type="text"
@@ -2446,7 +2446,7 @@ const aplicarAInventario = useCallback(async () => {
                   {/* Costo Total */}
                   <div>
                     <label className="block text-sm font-medium text-white mb-3">
-                      💰 Costo Total
+                      Costo Total
                     </label>
                     <input
                       type="text"
@@ -2543,7 +2543,7 @@ const aplicarAInventario = useCallback(async () => {
                     }}
                       className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
-                      🐛 Debug
+                      Debug
                     </button>
                     
                     {/* Botón de debug de Supabase */}
@@ -3136,7 +3136,7 @@ const aplicarAInventario = useCallback(async () => {
                     }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    🎯 Centrar
+                    Centrar
                   </button>
                   
                   <button
@@ -3170,7 +3170,7 @@ const aplicarAInventario = useCallback(async () => {
                     }}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    📏 Tamaño Completo
+                    Tamaño Completo
                   </button>
                   
                   <button
@@ -3327,7 +3327,7 @@ const aplicarAInventario = useCallback(async () => {
                     }}
                     className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
-                    📋 Debug en Consola
+                    Debug en Consola
                   </button>
                 </div>
               </div>
@@ -3359,10 +3359,10 @@ const aplicarAInventario = useCallback(async () => {
                     className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Aplica todos los ítems del borrador al inventario principal. Esta acción no se puede deshacer."
                   >
-                    🚀 Aplicar a inventario
+                    Aplicar a inventario
                   </button>
                   <div className="text-xs text-green-400 mt-2 text-center cursor-help" title="Transfiere todos los ítems del borrador al inventario principal. Los ítems se agregarán con la fecha de ingreso especificada y estarán disponibles para ventas.">
-                    💡 Transferir al stock
+                    Transferir al stock
                   </div>
                   <button
                     onClick={reiniciar}

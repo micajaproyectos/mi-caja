@@ -41,7 +41,7 @@ const SubscriptionNotification = ({ onClose }) => {
             Recordatorio Importante
           </h3>
           <p className="text-gray-300 text-sm leading-relaxed">
-            No olvides cancelar tu suscripción mensual para seguir disfrutando de Mi Caja - Tu negocio en un solo lugar. Si ya has cancelado omite esta notificación.
+            No olvides cancelar tu suscripción mensual para seguir disfrutando de Mi Caja. Si ya has cancelado omite esta notificación.
           </p>
         </div>
 
