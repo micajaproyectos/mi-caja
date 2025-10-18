@@ -3460,7 +3460,7 @@ const aplicarAInventario = useCallback(async () => {
                                 title="Unidad de medida del producto"
                               >
                                 <span className="text-black">
-                                  {item.unidad || 'Seleccionar'}
+                                  {item.unidad && item.unidad !== 'un' ? item.unidad : 'Seleccionar'}
                                 </span>
                                 <span className="text-gray-500">▼</span>
                               </div>
