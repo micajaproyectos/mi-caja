@@ -1268,6 +1268,10 @@ export default function Seguimiento() {
                       <span className="w-3 h-3 bg-green-400 rounded-full"></span>
                         Promedio mensual: {formatearMoneda(datosVentasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
                     </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-green-300 rounded-full"></span>
+                        Promedio diario: {formatearMoneda((datosVentasAcumuladas.find(item => item.mes_num === filtroMes)?.totalMes || 0) / 30)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1589,6 +1593,10 @@ export default function Seguimiento() {
                     <span className="flex items-center gap-1">
                       <span className="w-3 h-3 bg-blue-400 rounded-full"></span>
                       Promedio mensual: {formatearMoneda(datosPedidosAcumulados.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-blue-300 rounded-full"></span>
+                      Promedio diario: {formatearMoneda((datosPedidosAcumulados.find(item => item.mes_num === filtroMes)?.totalMes || 0) / 30)}
                     </span>
                     </div>
                   </div>
@@ -1912,6 +1920,10 @@ export default function Seguimiento() {
                       <span className="flex items-center gap-1">
                         <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
                         Promedio mensual: {formatearMoneda(datosVentasRapidasAcumuladas.reduce((sum, item) => sum + item.totalMes, 0) / 12)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-3 h-3 bg-yellow-300 rounded-full"></span>
+                        Promedio diario: {formatearMoneda((datosVentasRapidasAcumuladas.find(item => item.mes_num === filtroMes)?.totalMes || 0) / 30)}
                       </span>
                     </div>
                   </div>
