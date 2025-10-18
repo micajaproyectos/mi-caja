@@ -36,7 +36,8 @@ const RegistroInventario = () => {
     unidad: '',
     costo_total: '',
     precio_unitario: '',
-    precio_venta: ''
+    precio_venta: '',
+    imagen: ''
   });
 
   // Opciones para el selector de unidad
@@ -185,7 +186,7 @@ const RegistroInventario = () => {
 
       const { data, error } = await supabase
         .from('inventario')
-        .select('id, fecha_ingreso, fecha_cl, producto, cantidad, unidad, costo_total, precio_unitario, precio_venta, usuario_id, created_at')
+        .select('id, fecha_ingreso, fecha_cl, producto, cantidad, unidad, costo_total, precio_unitario, precio_venta, imagen, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .order('fecha_ingreso', { ascending: false })
         .order('created_at', { ascending: false });
@@ -345,7 +346,8 @@ const RegistroInventario = () => {
       unidad: item.unidad,
       costo_total: item.costo_total,
       precio_unitario: item.precio_unitario,
-      precio_venta: item.precio_venta
+      precio_venta: item.precio_venta,
+      imagen: item.imagen || ''
     });
   };
 
@@ -358,7 +360,8 @@ const RegistroInventario = () => {
       unidad: '',
       costo_total: '',
       precio_unitario: '',
-      precio_venta: ''
+      precio_venta: '',
+      imagen: ''
     });
   };
 
@@ -404,7 +407,8 @@ const RegistroInventario = () => {
           unidad: valoresEdicion.unidad,
           costo_total: parseFloat(valoresEdicion.costo_total),
           precio_unitario: parseFloat(valoresEdicion.precio_unitario),
-          precio_venta: parseFloat(valoresEdicion.precio_venta)
+          precio_venta: parseFloat(valoresEdicion.precio_venta),
+          imagen: valoresEdicion.imagen.trim() || null
         })
         .eq('id', id);
 
@@ -829,15 +833,41 @@ const RegistroInventario = () => {
                           </td>
                           <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm min-w-[200px] md:min-w-[280px]">
                             {estaEditando ? (
-                              <input
-                                type="text"
-                                value={valoresEdicion.producto}
-                                onChange={(e) => handleEdicionChange('producto', e.target.value)}
-                                className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
-                                placeholder="Nombre del producto"
-                              />
+                              <div className="space-y-2">
+                                <input
+                                  type="text"
+                                  value={valoresEdicion.producto}
+                                  onChange={(e) => handleEdicionChange('producto', e.target.value)}
+                                  className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                  placeholder="Nombre del producto"
+                                />
+                                <div>
+                                  <label className="block text-xs text-gray-300 mb-1">Link imagen (opcional)</label>
+                                  <input
+                                    type="url"
+                                    value={valoresEdicion.imagen}
+                                    onChange={(e) => handleEdicionChange('imagen', e.target.value)}
+                                    className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                    placeholder="https://ejemplo.com/imagen.jpg"
+                                  />
+                                </div>
+                              </div>
                             ) : (
-                              <span className="block">{item.producto}</span>
+                              <div className="relative group">
+                                <span className="block">{item.producto}</span>
+                                {item.imagen && (
+                                  <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                                    <img
+                                      src={item.imagen}
+                                      alt={item.producto}
+                                      className="w-24 h-24 object-cover rounded-lg border border-white/20 shadow-lg"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">

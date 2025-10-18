@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
 import Footer from './Footer';
 
 export default function Stock() {
@@ -26,6 +27,9 @@ export default function Stock() {
   // Estado para controlar cuántos productos mostrar
   const [mostrarTodos, setMostrarTodos] = useState(false);
 
+  // Estado para almacenar datos del inventario con imágenes
+  const [productosInventario, setProductosInventario] = useState([]);
+
   // Referencias para limpiar intervalos y suscripciones
   const intervalRef = useRef(null);
   const subscriptionRef = useRef(null);
@@ -37,6 +41,42 @@ export default function Stock() {
   
   // Obtener productos a mostrar (50 inicialmente o todos si mostrarTodos es true)
   const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 50);
+
+  // Función para cargar productos del inventario con imágenes
+  const cargarProductosInventario = async () => {
+    try {
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setProductosInventario([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('producto, imagen')
+        .eq('usuario_id', usuarioId) // Filtrar por usuario
+        .order('producto', { ascending: true });
+
+      if (error) {
+        console.error('Error al cargar productos del inventario:', error);
+        setProductosInventario([]);
+        return;
+      }
+
+      setProductosInventario(data || []);
+    } catch (error) {
+      console.error('Error inesperado al cargar productos del inventario:', error);
+      setProductosInventario([]);
+    }
+  };
+
+  // Función para obtener la imagen de un producto del inventario
+  const obtenerImagenProducto = (nombreProducto) => {
+    const productoInventario = productosInventario.find(p => p.producto === nombreProducto);
+    return productoInventario ? productoInventario.imagen : null;
+  };
 
   // Función para cargar datos del stock desde la vista stock_view_new
   const cargarStock = async () => {
@@ -166,9 +206,10 @@ export default function Stock() {
         },
         (payload) => {
           console.log('🔄 Cambio detectado en ventas:', payload);
-          // Actualizar solo el stock cuando hay cambios en ventas
+          // Actualizar stock y inventario cuando hay cambios en ventas
           setActualizandoAutomaticamente(true);
           cargarStock();
+          cargarProductosInventario();
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
       )
@@ -181,9 +222,10 @@ export default function Stock() {
         },
         (payload) => {
           console.log('🔄 Cambio detectado en inventario:', payload);
-          // Actualizar solo el stock cuando hay cambios en inventario
+          // Actualizar stock e inventario cuando hay cambios en inventario
           setActualizandoAutomaticamente(true);
           cargarStock();
+          cargarProductosInventario();
           setTimeout(() => setActualizandoAutomaticamente(false), 2000);
         }
       )
@@ -256,6 +298,7 @@ export default function Stock() {
     cargarStock();
     cargarProductoMasVendido();
     cargarProductosSinVentas();
+    cargarProductosInventario(); // Cargar inventario con imágenes
     
     // Configurar suscripción en tiempo real
     configurarSuscripcionTiempoReal();
@@ -275,6 +318,7 @@ export default function Stock() {
     cargarStock();
     cargarProductoMasVendido();
     cargarProductosSinVentas();
+    cargarProductosInventario(); // Recargar inventario con imágenes
     setTimeout(() => setActualizandoAutomaticamente(false), 2000);
   };
 
@@ -407,7 +451,7 @@ export default function Stock() {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto relative">
                     <table className="w-full text-xs md:text-sm">
                       <thead>
                         <tr className="bg-white/10 backdrop-blur-sm">
@@ -421,8 +465,24 @@ export default function Stock() {
                       <tbody>
                         {productosAMostrar.map((item, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
-                              {item.producto || 'Sin nombre'}
+                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm max-w-20 md:max-w-32">
+                              <div className="relative group">
+                                <span className="block truncate" title={item.producto}>
+                                  {item.producto || 'Sin nombre'}
+                                </span>
+                                {obtenerImagenProducto(item.producto) && (
+                                  <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-50">
+                                    <img
+                                      src={obtenerImagenProducto(item.producto)}
+                                      alt={item.producto}
+                                      className="w-24 h-24 object-cover rounded-lg border border-white/20 shadow-xl bg-white"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                               {formatearNumeroEntero(item.total_ingresado || 0)}
@@ -539,9 +599,23 @@ export default function Stock() {
                 <div className="text-center">
                   <div className="mb-6 md:mb-8">
                     <div className="text-yellow-400 text-5xl md:text-7xl mb-4 md:mb-6 animate-pulse">🏆</div>
-                    <h3 className="text-white text-2xl md:text-3xl font-bold mb-3 md:mb-4">
-                      {productoMasVendido.producto || 'Producto sin nombre'}
-                    </h3>
+                    <div className="relative group inline-block">
+                      <h3 className="text-white text-2xl md:text-3xl font-bold mb-3 md:mb-4" title={productoMasVendido.producto}>
+                        {productoMasVendido.producto || 'Producto sin nombre'}
+                      </h3>
+                      {obtenerImagenProducto(productoMasVendido.producto) && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                          <img
+                            src={obtenerImagenProducto(productoMasVendido.producto)}
+                            alt={productoMasVendido.producto}
+                            className="w-32 h-32 object-cover rounded-lg border border-yellow-400/30 shadow-xl bg-white"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-gray-300 text-base md:text-lg mb-6">
                       El producto con mayor cantidad vendida
                     </p>
@@ -624,7 +698,7 @@ export default function Stock() {
                     </p>
                   </div>
                   
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto relative">
                     <table className="w-full text-xs md:text-sm">
                       <thead>
                         <tr className="bg-white/10 backdrop-blur-sm">
@@ -637,8 +711,24 @@ export default function Stock() {
                       <tbody>
                         {productosSinVentas.map((item, index) => (
                           <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors duration-200">
-                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm truncate max-w-20 md:max-w-32">
-                              {item.producto || 'Sin nombre'}
+                            <td className="text-white p-2 md:p-4 font-medium text-xs md:text-sm max-w-20 md:max-w-32">
+                              <div className="relative group">
+                                <span className="block truncate" title={item.producto}>
+                                  {item.producto || 'Sin nombre'}
+                                </span>
+                                {obtenerImagenProducto(item.producto) && (
+                                  <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-50">
+                                    <img
+                                      src={obtenerImagenProducto(item.producto)}
+                                      alt={item.producto}
+                                      className="w-24 h-24 object-cover rounded-lg border border-white/20 shadow-xl bg-white"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                               {new Date(item.fecha_ingreso).toLocaleDateString('es-ES', {

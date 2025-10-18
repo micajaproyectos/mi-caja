@@ -208,6 +208,12 @@ export default function RegistroVenta() {
     setMostrarDropdown(false);
   };
 
+  // Función para obtener la imagen de un producto del inventario
+  const obtenerImagenProducto = (nombreProducto) => {
+    const productoInventario = productosInventario.find(p => p.producto === nombreProducto);
+    return productoInventario ? productoInventario.imagen : null;
+  };
+
   // Función para manejar cambios en la búsqueda de productos
   const handleBusquedaProducto = (e) => {
     const valor = e.target.value;
@@ -1800,9 +1806,23 @@ export default function RegistroVenta() {
                             <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                               {/* Nombre del producto */}
                               <div className="flex-1 min-w-0">
-                                <p className="text-white font-medium text-xs md:text-sm truncate" title={producto.producto}>
-                                  {producto.producto}
-                                </p>
+                                <div className="relative group">
+                                  <p className="text-white font-medium text-xs md:text-sm truncate" title={producto.producto}>
+                                    {producto.producto}
+                                  </p>
+                                  {obtenerImagenProducto(producto.producto) && (
+                                    <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                                      <img
+                                        src={obtenerImagenProducto(producto.producto)}
+                                        alt={producto.producto}
+                                        className="w-24 h-24 object-cover rounded-lg border border-white/20 shadow-lg"
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               
                               {/* Cantidad y unidad */}

@@ -58,6 +58,18 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
           </h3>
           
           <div className="text-left space-y-4">
+            {/* Previsualización de Imágenes */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-2xl">🖼️</span>
+              <div>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Previsualización de Productos</h4>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  Ahora puedes agregar imágenes de tus productos disponibles en Inventario.
+                  Para acceder, presiona "Editar" en algún producto de tu inventario, copia y pega el link de la imagen y luego guarda los cambios.
+                </p>
+              </div>
+            </div>
+
             {/* Cuadre de Caja */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
               <span className="text-2xl">💰</span>

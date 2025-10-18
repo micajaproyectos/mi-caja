@@ -504,7 +504,7 @@ const NavBar = () => {
                         <div>
                           <p className="text-white text-xs font-medium">¡Nuevas Mejoras Disponibles!</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            Nueva calculadora de cuadre de caja diario con acumulación automática. ¡Haz clic para ver más!
+                            Previsualización de imágenes de productos y mejoras en cuadre de caja. ¡Haz clic para ver más!
                           </p>
                         </div>
                       </div>
