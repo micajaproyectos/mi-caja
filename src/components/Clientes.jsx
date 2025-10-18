@@ -202,22 +202,14 @@ export default function Clientes() {
 
       // Determinar si hay filtros de fecha activos
       const hayFiltrosFechaActivos = filtros.fecha_especifica || filtros.mes || filtros.ano;
+      // Aumentar límite cuando hay filtros activos para mostrar todos los registros del período
+      const limiteRegistros = hayFiltrosFechaActivos ? 1000 : 100;
       
-      // Si no hay filtros de fecha, mostrar registros del mes actual
+      // Si no hay filtros de fecha, mostrar registros del día actual
       if (!hayFiltrosFechaActivos) {
-        const fechaActual = new Date();
-        const anoActual = fechaActual.getFullYear();
-        const mesActual = fechaActual.getMonth() + 1; // getMonth() retorna 0-11
+        const fechaHoy = obtenerFechaHoyChile();
         
-        const mesStr = mesActual.toString().padStart(2, '0');
-        const fechaInicio = `${anoActual}-${mesStr}-01`;
-        
-        // Calcular el último día del mes actual
-        const ultimoDiaDelMes = new Date(anoActual, mesActual, 0).getDate();
-        const fechaFin = `${anoActual}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
-        
-        query = query.gte('fecha_cl', fechaInicio);
-        query = query.lte('fecha_cl', fechaFin);
+        query = query.eq('fecha_cl', fechaHoy);
       } else {
         // Aplicar filtros de fecha si están activos
         if (filtros.fecha_especifica) {
@@ -253,7 +245,10 @@ export default function Clientes() {
         query = query.ilike('nombre_empresa', `%${filtros.producto.trim()}%`);
       }
 
-      let { data, error } = await query.order('fecha_cl', { ascending: false });
+      // Cambiar ordenamiento según si hay filtros activos
+      // Si hay filtros de fecha (especialmente mes), usar orden cronológico (ascendente)
+      const ordenAscendente = hayFiltrosFechaActivos;
+      let { data, error } = await query.order('fecha_cl', { ascending: ordenAscendente }).limit(limiteRegistros);
 
       // Si hay error con fecha_cl, usar consulta con fecha como fallback
       if (error && error.message?.includes('fecha_cl')) {
@@ -265,18 +260,9 @@ export default function Clientes() {
 
         // Aplicar los mismos filtros de fecha en el fallback
         if (!hayFiltrosFechaActivos) {
-          const fechaActual = new Date();
-          const anoActual = fechaActual.getFullYear();
-          const mesActual = fechaActual.getMonth() + 1;
+          const fechaHoy = obtenerFechaHoyChile();
           
-          const mesStr = mesActual.toString().padStart(2, '0');
-          const fechaInicio = `${anoActual}-${mesStr}-01`;
-          
-          const ultimoDiaDelMes = new Date(anoActual, mesActual, 0).getDate();
-          const fechaFin = `${anoActual}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
-          
-          fallbackQuery = fallbackQuery.gte('fecha', fechaInicio);
-          fallbackQuery = fallbackQuery.lte('fecha', fechaFin);
+          fallbackQuery = fallbackQuery.eq('fecha', fechaHoy);
         } else {
           if (filtros.fecha_especifica) {
             fallbackQuery = fallbackQuery.eq('fecha', filtros.fecha_especifica);
@@ -308,7 +294,7 @@ export default function Clientes() {
           fallbackQuery = fallbackQuery.ilike('nombre_empresa', `%${filtros.producto.trim()}%`);
         }
 
-        const fallbackResult = await fallbackQuery.order('fecha', { ascending: false });
+        const fallbackResult = await fallbackQuery.order('fecha', { ascending: hayFiltrosFechaActivos }).limit(limiteRegistros);
         data = fallbackResult.data;
         error = fallbackResult.error;
       }
@@ -1630,7 +1616,9 @@ export default function Clientes() {
                           const estaEditando = editandoId === registro.id;
                           
                           return (
-                            <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                            <tr key={index} className={`hover:bg-white/5 transition-colors ${
+                              registro.total_final ? 'border-t-2 border-white/20' : ''
+                            }`}>
                               {/* Fecha */}
                               <td className="text-white p-3 text-sm">
                                 {estaEditando ? (
