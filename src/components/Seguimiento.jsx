@@ -5,6 +5,7 @@ import { authService } from '../lib/authService.js';
 import { obtenerFechaHoyChile } from '../lib/dateUtils.js';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Label, ReferenceArea, PieChart, Pie, Cell } from 'recharts';
 import Footer from './Footer';
+import SeguimientoBloqueado from './SeguimientoBloqueado';
 
 export default function Seguimiento() {
   const navigate = useNavigate();
@@ -23,6 +24,11 @@ export default function Seguimiento() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Estados para bloqueo por clave interna
+  const [claveInternaValidada, setClaveInternaValidada] = useState(false);
+  const [tieneClaveInterna, setTieneClaveInterna] = useState(false);
+  const [verificandoClave, setVerificandoClave] = useState(false);
   
   // Estados para los filtros
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1); // Mes actual (1-12)
@@ -72,6 +78,53 @@ export default function Seguimiento() {
     return { mes, anio };
   };
 
+  // Función para verificar si el usuario tiene clave interna y si está validada
+  const verificarClaveInterna = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      
+      if (!usuarioId) {
+        setTieneClaveInterna(false);
+        setClaveInternaValidada(false);
+        return;
+      }
+
+      // Obtener si el usuario tiene clave interna configurada
+      const { data: usuarioData, error } = await supabase
+        .from('usuarios')
+        .select('clave_interna')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (error || !usuarioData || !usuarioData.clave_interna) {
+        setTieneClaveInterna(false);
+        setClaveInternaValidada(true); // Si no tiene clave, puede acceder libremente
+        return;
+      }
+
+      // Usuario tiene clave interna configurada
+      setTieneClaveInterna(true);
+
+      // NO usar sessionStorage/localStorage
+      // La validación debe pedirse SIEMPRE al entrar a Seguimiento
+      // Solo el estado en memoria determina si está validada
+      setClaveInternaValidada(false);
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.error('❌ Error verificando clave interna:', e);
+      }
+      setTieneClaveInterna(false);
+      setClaveInternaValidada(true);
+    } finally {
+      setVerificandoClave(false);
+    }
+  };
+
+  // Función para manejar cuando la clave es validada correctamente
+  const handleClaveValidada = () => {
+    setClaveInternaValidada(true);
+  };
+
   // Función para cargar todos los totales acumulados del mes actual
   const cargarTotalesMensuales = async () => {
     try {
@@ -92,14 +145,6 @@ export default function Seguimiento() {
       const ultimoDiaDelMes = new Date(filtroAnio, filtroMes, 0).getDate();
       const fechaFin = `${filtroAnio}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
 
-      console.log('🔍 Filtros de fecha para totales mensuales:', {
-        filtroMes,
-        filtroAnio,
-        fechaInicio,
-        fechaFin,
-        ultimoDiaDelMes
-      });
-
       // 1. Total de Ventas del mes usando la vista ventas_mensual_acum_v2
       // Primero obtener el cliente_id del usuario
       const { data: clienteData, error: clienteError } = await supabase
@@ -116,7 +161,7 @@ export default function Seguimiento() {
           .eq('cliente_id', clienteData.cliente_id)
           .eq('anio', filtroAnio)
           .eq('mes_num', filtroMes)
-          .single();
+          .maybeSingle(); // Usa maybeSingle() para permitir 0 resultados sin error
 
         if (ventasError) {
           console.error('❌ Error al cargar ventas desde vista:', ventasError);
@@ -148,15 +193,6 @@ export default function Seguimiento() {
       if (inventarioError) {
         console.error('❌ Error al cargar inventario:', inventarioError);
       }
-
-      console.log('📦 Datos de inventario obtenidos:', {
-        cantidad: inventarioData?.length || 0,
-        primerosRegistros: inventarioData?.slice(0, 3),
-        filtrosUsados: {
-          fechaInicio: `${fechaInicio}T00:00:00`,
-          fechaFin: `${fechaFin}T23:59:59`
-        }
-      });
 
       // 4. Total de Proveedores del mes
       const { data: proveedoresData, error: proveedoresError } = await supabase
@@ -212,22 +248,9 @@ export default function Seguimiento() {
        const totalInventario = inventarioData?.reduce((sum, item) => sum + (parseFloat(item.costo_total) || 0), 0) || 0;
        const totalProveedores = proveedoresData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
        const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
-       const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
-       const totalPropinas = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0;
-       const totalVentasRapidas = ventasRapidasData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
-
-      console.log('💰 Totales calculados:', {
-        totalVentas,
-        totalGastos,
-        totalInventario,
-        totalProveedores,
-        totalClientes,
-        totalPedidos,
-        totalPropinas,
-        totalVentasRapidas,
-        registrosInventario: inventarioData?.length || 0,
-        fuenteVentas: 'ventas_mensual_acum_v2'
-      });
+      const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
+      const totalPropinas = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0;
+      const totalVentasRapidas = ventasRapidasData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
 
       setTotales({
         ventas: totalVentas, // Solo ventas de la tabla ventas
@@ -812,6 +835,10 @@ export default function Seguimiento() {
       }
     };
     inicializarVentasAcumuladas();
+    
+    // Verificar clave interna al montar
+    setVerificandoClave(true);
+    verificarClaveInterna();
   }, []); // Array vacío = solo se ejecuta una vez al montar
 
   // Cargar totales cuando cambien los filtros (SOLO LAS TARJETAS)
@@ -858,6 +885,11 @@ export default function Seguimiento() {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
+      {/* Bloqueo por clave interna - mostrar solo si tiene clave y no está validada */}
+      {tieneClaveInterna && !claveInternaValidada && !verificandoClave && (
+        <SeguimientoBloqueado onClaveValidada={handleClaveValidada} />
+      )}
+
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"

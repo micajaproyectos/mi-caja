@@ -229,7 +229,7 @@ export default function GestionCocina() {
   const agruparPorMesa = (pedidos) => {
     const grupos = {};
     pedidos.forEach(pedidoPrincipal => {
-      const mesaKey = `Mesa ${pedidoPrincipal.mesa}_${pedidoPrincipal.hora_inicio_pedido}`;
+      const mesaKey = `${pedidoPrincipal.mesa}_${pedidoPrincipal.hora_inicio_pedido}`;
       if (!grupos[mesaKey]) {
         // Obtener TODOS los productos de este pedido (incluyendo filas sin estado)
         const todosLosProductos = obtenerProductosCompletosDelPedido(pedidoPrincipal);
@@ -436,7 +436,7 @@ export default function GestionCocina() {
                   {/* Header de la mesa */}
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-3xl font-bold text-white">
-                      Mesa {mesa.mesa}
+                      {mesa.mesa}
                     </h3>
                     <span className={`px-4 py-2 rounded-full text-sm font-bold ${
                       mesa.estado === 'pendiente'
@@ -696,7 +696,7 @@ export default function GestionCocina() {
                             })()}
                           </td>
                           <td className="text-gray-200 p-3 text-sm font-bold">
-                            {pedido.estado ? `Mesa ${pedido.mesa}` : ''}
+                            {pedido.estado ? pedido.mesa : ''}
                           </td>
                           <td className="text-white p-3 text-sm font-medium">
                             {pedido.producto}

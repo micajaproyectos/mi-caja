@@ -44,8 +44,15 @@ export default function Pedidos() {
   const [cantidadMesas, setCantidadMesas] = useState(4);
   const [productosPorMesa, setProductosPorMesa] = useState({});
   
+  // Estados para edición de nombres de mesas
+  const [mesaEditando, setMesaEditando] = useState(null);
+  const [nombreMesaTemporal, setNombreMesaTemporal] = useState('');
+  
   // Estados para selección de productos para enviar a cocina
   const [productosSeleccionadosParaCocina, setProductosSeleccionadosParaCocina] = useState({});
+  
+  // Estados para selección de productos para pago
+  const [productosSeleccionadosParaPago, setProductosSeleccionadosParaPago] = useState({});
   
   // Estados para propina
   const [propinaActiva, setPropinaActiva] = useState(false);
@@ -363,8 +370,17 @@ export default function Pedidos() {
       [mesa]: prev[mesa].filter(p => p.id !== productoId)
     }));
     
-    // También eliminar de seleccionados si estaba seleccionado
+    // También eliminar de seleccionados para cocina si estaba seleccionado
     setProductosSeleccionadosParaCocina(prev => {
+      const nuevosSeleccionados = { ...prev };
+      if (nuevosSeleccionados[mesa]) {
+        nuevosSeleccionados[mesa] = nuevosSeleccionados[mesa].filter(id => id !== productoId);
+      }
+      return nuevosSeleccionados;
+    });
+    
+    // También eliminar de seleccionados para pago si estaba seleccionado
+    setProductosSeleccionadosParaPago(prev => {
       const nuevosSeleccionados = { ...prev };
       if (nuevosSeleccionados[mesa]) {
         nuevosSeleccionados[mesa] = nuevosSeleccionados[mesa].filter(id => id !== productoId);
@@ -408,9 +424,54 @@ export default function Pedidos() {
     }
   };
 
-  // Función para calcular el total de una mesa
+  // Función para alternar selección de un producto para pago
+  const toggleSeleccionProductoPago = (mesa, productoId) => {
+    setProductosSeleccionadosParaPago(prev => {
+      const mesaSeleccionados = prev[mesa] || [];
+      const yaSeleccionado = mesaSeleccionados.includes(productoId);
+      
+      return {
+        ...prev,
+        [mesa]: yaSeleccionado 
+          ? mesaSeleccionados.filter(id => id !== productoId)
+          : [...mesaSeleccionados, productoId]
+      };
+    });
+  };
+
+  // Función para seleccionar/deseleccionar todos los productos de una mesa para pago
+  const toggleSeleccionarTodosParaPago = (mesa) => {
+    const productos = productosPorMesa[mesa] || [];
+    const seleccionados = productosSeleccionadosParaPago[mesa] || [];
+    
+    if (seleccionados.length === productos.length) {
+      // Si todos están seleccionados, deseleccionar todos
+      setProductosSeleccionadosParaPago(prev => ({
+        ...prev,
+        [mesa]: []
+      }));
+    } else {
+      // Seleccionar todos
+      setProductosSeleccionadosParaPago(prev => ({
+        ...prev,
+        [mesa]: productos.map(p => p.id)
+      }));
+    }
+  };
+
+  // Función para calcular el total de una mesa (solo productos seleccionados para pago)
   const calcularTotalMesa = (mesa) => {
     const productos = productosPorMesa[mesa] || [];
+    const productosSeleccionados = productosSeleccionadosParaPago[mesa] || [];
+    
+    // Si hay productos seleccionados, calcular solo esos
+    if (productosSeleccionados.length > 0) {
+      return productos
+        .filter(p => productosSeleccionados.includes(p.id))
+        .reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
+    }
+    
+    // Si no hay seleccionados, calcular todos (comportamiento por defecto)
     return productos.reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
   };
 
@@ -494,6 +555,88 @@ export default function Pedidos() {
     const productosGuardados = { ...productosPorMesa };
     delete productosGuardados[mesaAEliminar];
     localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
+  };
+
+  // Función para iniciar edición de nombre de mesa
+  const iniciarEdicionNombreMesa = (mesa) => {
+    setMesaEditando(mesa);
+    setNombreMesaTemporal(mesa);
+  };
+
+  // Función para guardar nombre de mesa editado
+  const guardarNombreMesa = (mesaAntigua) => {
+    if (!nombreMesaTemporal.trim()) {
+      alert('El nombre de la mesa no puede estar vacío');
+      return;
+    }
+
+    // Actualizar productosPorMesa con el nuevo nombre
+    if (productosPorMesa[mesaAntigua]) {
+      setProductosPorMesa(prev => {
+        const nuevosProductos = { ...prev };
+        nuevosProductos[nombreMesaTemporal] = nuevosProductos[mesaAntigua];
+        delete nuevosProductos[mesaAntigua];
+        return nuevosProductos;
+      });
+    }
+
+    // Actualizar selectores de cocina con el nuevo nombre
+    if (productosSeleccionadosParaCocina[mesaAntigua]) {
+      setProductosSeleccionadosParaCocina(prev => {
+        const nuevosSeleccionados = { ...prev };
+        nuevosSeleccionados[nombreMesaTemporal] = nuevosSeleccionados[mesaAntigua];
+        delete nuevosSeleccionados[mesaAntigua];
+        return nuevosSeleccionados;
+      });
+    }
+
+    // Actualizar selectores de pago con el nuevo nombre
+    if (productosSeleccionadosParaPago[mesaAntigua]) {
+      setProductosSeleccionadosParaPago(prev => {
+        const nuevosSeleccionados = { ...prev };
+        nuevosSeleccionados[nombreMesaTemporal] = nuevosSeleccionados[mesaAntigua];
+        delete nuevosSeleccionados[mesaAntigua];
+        return nuevosSeleccionados;
+      });
+    }
+
+    // Actualizar el array de mesas
+    setMesas(prevMesas => prevMesas.map(m => m === mesaAntigua ? nombreMesaTemporal : m));
+    
+    // Actualizar mesa seleccionada si era la que se editó
+    if (mesaSeleccionada === mesaAntigua) {
+      setMesaSeleccionada(nombreMesaTemporal);
+    }
+
+    // Actualizar localStorage
+    const mesasActualizadas = mesas.map(m => m === mesaAntigua ? nombreMesaTemporal : m);
+    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+
+    // Limpiar estados de edición
+    setMesaEditando(null);
+    setNombreMesaTemporal('');
+  };
+
+  // Función para cancelar edición de nombre de mesa
+  const cancelarEdicionNombreMesa = () => {
+    setMesaEditando(null);
+    setNombreMesaTemporal('');
+  };
+
+  // Función para obtener el nombre de la mesa (ahora la columna mesa guarda texto)
+  const obtenerNombreMesa = (valorMesa) => {
+    // Si valorMesa ya es un string (texto), retornarlo directamente
+    if (typeof valorMesa === 'string') {
+      return valorMesa;
+    }
+    
+    // Si es un número (para compatibilidad con registros antiguos)
+    if (typeof valorMesa === 'number') {
+      return `Mesa ${valorMesa}`;
+    }
+    
+    // Si es null o undefined, retornar un valor por defecto
+    return '-';
   };
 
   // Función para cambiar estado de pedido
@@ -983,7 +1126,7 @@ export default function Pedidos() {
         .from('pedidos')
         .update({
           fecha: valoresEdicion.fecha_cl,
-          mesa: valoresEdicion.mesa ? parseInt(valoresEdicion.mesa) : null,
+          mesa: valoresEdicion.mesa || null,
           producto: valoresEdicion.producto.trim(),
           unidad: valoresEdicion.unidad,
           cantidad: valoresEdicion.cantidad,
@@ -1055,8 +1198,8 @@ export default function Pedidos() {
       const fechaChile = new Date().toLocaleString("en-US", {timeZone: "America/Santiago"});
       const fechaCl = new Date(fechaChile).toISOString().split('T')[0];
 
-      // Extraer número de mesa
-      const numeroMesa = parseInt(mesa.replace('Mesa ', ''));
+      // Usar el nombre completo de la mesa (ahora la columna mesa acepta texto)
+      const nombreMesaCompleto = mesa;
 
       // Filtrar solo los productos seleccionados
       const productosAEnviar = productosPorMesa[mesa].filter(p => seleccionados.includes(p.id));
@@ -1069,7 +1212,7 @@ export default function Pedidos() {
           usuario_id: usuarioId,
           cliente_id: cliente_id,
           fecha_cl: fechaCl,
-          mesa: numeroMesa,  // Todas las filas tienen mesa (para agrupar)
+          mesa: String(nombreMesaCompleto),  // Forzar a string
           // hora_inicio_pedido se genera automáticamente con DEFAULT de la tabla
           producto: producto.producto,
           unidad: producto.unidad,
@@ -1080,6 +1223,8 @@ export default function Pedidos() {
         if (i === 0) {
           pedidoCocina.estado = 'pendiente';
         }
+
+        console.log('📋 Insertando en pedidos_cocina:', pedidoCocina);
 
         const { error } = await supabase
           .from('pedidos_cocina')
@@ -1095,11 +1240,7 @@ export default function Pedidos() {
       alert(`✅ ${productosAEnviar.length} producto(s) de ${mesa} enviados a cocina exitosamente`);
       console.log(`🍳 ${productosAEnviar.length} productos enviados a cocina`);
 
-      // Limpiar selección después de enviar a cocina
-      setProductosSeleccionadosParaCocina(prev => ({
-        ...prev,
-        [mesa]: []
-      }));
+      // NO limpiar selección para mantener visualización de productos enviados
 
     } catch (error) {
       console.error('❌ Error inesperado al enviar a cocina:', error);
@@ -1117,9 +1258,10 @@ export default function Pedidos() {
       return;
     }
 
-    // Validar que haya productos en la mesa
-    if (!productosPorMesa[mesa] || productosPorMesa[mesa].length === 0) {
-      alert('❌ No hay productos en esta mesa para registrar');
+    // Validar que haya productos seleccionados para pago
+    const productosSeleccionados = productosSeleccionadosParaPago[mesa] || [];
+    if (productosSeleccionados.length === 0) {
+      alert('❌ Por favor selecciona al menos un producto para pagar');
       return;
     }
 
@@ -1164,16 +1306,19 @@ export default function Pedidos() {
        return;
      }
 
-     // Extraer el número de mesa (ej: "Mesa 1" -> 1)
-     const numeroMesa = parseInt(mesa.replace('Mesa ', ''));
+     // Usar el nombre completo de la mesa (ahora la columna mesa acepta texto)
+     const nombreMesaCompleto = mesa;
 
            // Calcular el total final de la mesa (con propina si está activa)
       const totalFinal = calcularTotalConPropina(mesa);
 
     try {
-      // Registrar cada producto como una fila individual en la tabla pedidos
-      for (let i = 0; i < productosPorMesa[mesa].length; i++) {
-        const producto = productosPorMesa[mesa][i];
+      // Filtrar solo los productos seleccionados para pago
+      const productosAPagar = productosPorMesa[mesa].filter(p => productosSeleccionados.includes(p.id));
+      
+      // Registrar cada producto seleccionado como una fila individual en la tabla pedidos
+      for (let i = 0; i < productosAPagar.length; i++) {
+        const producto = productosAPagar[i];
                  // Calcular fecha_cl en zona horaria de Chile
          const fechaChile = new Date().toLocaleString("en-US", {timeZone: "America/Santiago"});
          const fechaCl = new Date(fechaChile).toISOString().split('T')[0]; // Formato YYYY-MM-DD
@@ -1188,7 +1333,7 @@ export default function Pedidos() {
           if (i === 0) {
             totalFinalValue = totalFinal; // Solo el valor numérico del total
             estadoValue = 'pagado'; // Estado solo en la primera fila
-            mesaValue = numeroMesa; // Mesa solo en la primera fila
+            mesaValue = nombreMesaCompleto; // Mesa solo en la primera fila (nombre completo)
             tipoPagoValue = pedido.tipo_pago; // Tipo de pago solo en la primera fila
             propinaValue = calcularPropina(mesa); // Propina solo en la primera fila
           }
@@ -1227,14 +1372,39 @@ export default function Pedidos() {
         }
       }
 
-             alert(`✅ Pedido de ${mesa} registrado correctamente con ${productosPorMesa[mesa].length} productos. Total: $${totalFinal.toLocaleString()}`);
+             alert(`✅ ${productosAPagar.length} producto(s) de ${mesa} registrado(s) correctamente. Total: $${totalFinal.toLocaleString()}`);
        
-       // Limpiar los productos de la mesa registrada
+       // Limpiar solo los productos PAGADOS, dejar los pendientes en la mesa
+       const productosPendientes = productosPorMesa[mesa].filter(p => !productosSeleccionados.includes(p.id));
+       
        setProductosPorMesa(prev => {
          const nuevosProductos = { ...prev };
-         delete nuevosProductos[mesa];
+         
+         if (productosPendientes.length > 0) {
+           nuevosProductos[mesa] = productosPendientes;
+         } else {
+           // Si no quedan productos, eliminar la mesa completa
+           delete nuevosProductos[mesa];
+         }
          return nuevosProductos;
        });
+       
+       // Limpiar selección de productos para pago después de registrar
+       setProductosSeleccionadosParaPago(prev => ({
+         ...prev,
+         [mesa]: []
+       }));
+       
+       // Limpiar selectores de cocina SOLO si se registró todo el pedido completo
+       if (productosPendientes.length === 0) {
+         setProductosSeleccionadosParaCocina(prev => {
+           const nuevosSeleccionados = { ...prev };
+           if (nuevosSeleccionados[mesa]) {
+             delete nuevosSeleccionados[mesa];
+           }
+           return nuevosSeleccionados;
+         });
+       }
 
        // Limpiar el tipo de pago y campos de vuelto
        setPedido(prev => ({
@@ -1246,10 +1416,22 @@ export default function Pedidos() {
        setMontoPagado('');
        setMostrarVuelto(false);
 
-       // Actualizar localStorage
+       // Actualizar localStorage con solo los productos pendientes
        const productosGuardados = { ...productosPorMesa };
-       delete productosGuardados[mesa];
+       
+       if (productosPendientes.length > 0) {
+         productosGuardados[mesa] = productosPendientes;
+       } else {
+         delete productosGuardados[mesa];
+       }
        localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
+       
+       // Si se registró todo el pedido, limpiar selectores de cocina en localStorage
+       if (productosPendientes.length === 0) {
+         const selectoresCocina = JSON.parse(localStorage.getItem('productosSeleccionadosParaCocina') || '{}');
+         delete selectoresCocina[mesa];
+         localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(selectoresCocina));
+       }
 
        // Recargar la tabla de pedidos registrados
        cargarPedidosRegistrados();
@@ -1298,12 +1480,27 @@ export default function Pedidos() {
         console.error('Error al cargar productos del localStorage:', error);
       }
     }
+    
+    // Cargar selectores de cocina guardados en localStorage
+    const seleccionadosCocina = localStorage.getItem('productosSeleccionadosParaCocina');
+    if (seleccionadosCocina) {
+      try {
+        setProductosSeleccionadosParaCocina(JSON.parse(seleccionadosCocina));
+      } catch (error) {
+        console.error('Error al cargar selectores de cocina del localStorage:', error);
+      }
+    }
   }, []);
 
   // Guardar productos en localStorage cuando cambien
   useEffect(() => {
     localStorage.setItem('productosPorMesa', JSON.stringify(productosPorMesa));
   }, [productosPorMesa]);
+
+  // Guardar selectores de cocina en localStorage cuando cambien
+  useEffect(() => {
+    localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(productosSeleccionadosParaCocina));
+  }, [productosSeleccionadosParaCocina]);
 
   // Guardar mesas en localStorage cuando cambien
   useEffect(() => {
@@ -1618,28 +1815,82 @@ export default function Pedidos() {
                         : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
-                    <button
-                      onClick={() => setMesaSeleccionada(mesa)}
-                      className="flex-1 text-left"
-                    >
-                      {mesa}
-                    </button>
-                    
-                    {/* Botón de eliminar mesa */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        eliminarMesa(mesa);
-                      }}
-                      className={`ml-1 text-xs hover:scale-110 transition-all duration-200 ${
-                        mesaSeleccionada === mesa
-                          ? 'text-red-200 hover:text-red-100'
-                          : 'text-red-400 hover:text-red-300'
-                      }`}
-                      title="Eliminar mesa"
-                    >
-                      ❌
-                    </button>
+                    {mesaEditando === mesa ? (
+                      // Modo edición
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={nombreMesaTemporal}
+                          onChange={(e) => setNombreMesaTemporal(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              guardarNombreMesa(mesa);
+                            } else if (e.key === 'Escape') {
+                              cancelarEdicionNombreMesa();
+                            }
+                          }}
+                          autoFocus
+                          className="px-2 py-1 rounded text-sm bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-green-400"
+                          style={{ width: '150px' }}
+                        />
+                        <button
+                          onClick={() => guardarNombreMesa(mesa)}
+                          className="text-green-300 hover:text-green-200 text-sm"
+                          title="Guardar"
+                        >
+                          ✅
+                        </button>
+                        <button
+                          onClick={cancelarEdicionNombreMesa}
+                          className="text-red-300 hover:text-red-200 text-sm"
+                          title="Cancelar"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ) : (
+                      // Modo visualización
+                      <>
+                        <button
+                          onClick={() => setMesaSeleccionada(mesa)}
+                          className="flex-1 text-left"
+                        >
+                          {mesa}
+                        </button>
+                        
+                        {/* Botón de editar nombre */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            iniciarEdicionNombreMesa(mesa);
+                          }}
+                          className={`text-xs hover:scale-110 transition-all duration-200 ${
+                            mesaSeleccionada === mesa
+                              ? 'text-blue-200 hover:text-blue-100'
+                              : 'text-blue-400 hover:text-blue-300'
+                          }`}
+                          title="Editar nombre de mesa"
+                        >
+                          ✏️
+                        </button>
+                        
+                        {/* Botón de eliminar mesa */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            eliminarMesa(mesa);
+                          }}
+                          className={`ml-1 text-xs hover:scale-110 transition-all duration-200 ${
+                            mesaSeleccionada === mesa
+                              ? 'text-red-200 hover:text-red-100'
+                              : 'text-red-400 hover:text-red-300'
+                          }`}
+                          title="Eliminar mesa"
+                        >
+                          ❌
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1657,7 +1908,7 @@ export default function Pedidos() {
                 ) : (
                   <div className="space-y-4">
                     {/* Controles de selección para cocina */}
-                    <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-3 border border-orange-400/30">
+                    <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-3 border border-orange-400/30 mb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-orange-300 text-sm font-medium">🍳 Seleccionar para Cocina:</span>
@@ -1676,28 +1927,51 @@ export default function Pedidos() {
                       </div>
                     </div>
 
+                    {/* Controles de selección para pago */}
+                    <div className="bg-green-500/10 backdrop-blur-sm rounded-lg p-3 border border-green-400/30 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-300 text-sm font-medium">💰 Seleccionar para Pago:</span>
+                          <span className="text-green-200 text-xs">
+                            ({(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} de {productosPorMesa[mesaSeleccionada].length})
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => toggleSeleccionarTodosParaPago(mesaSeleccionada)}
+                          className="text-green-300 hover:text-green-200 text-xs font-medium underline"
+                        >
+                          {(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
+                            ? '❌ Deseleccionar todos'
+                            : '✅ Seleccionar todos'}
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Lista de productos de la mesa */}
                     <div className="space-y-2">
                       {productosPorMesa[mesaSeleccionada].map((producto) => {
-                        const estaSeleccionado = (productosSeleccionadosParaCocina[mesaSeleccionada] || []).includes(producto.id);
+                        const estaSeleccionadoCocina = (productosSeleccionadosParaCocina[mesaSeleccionada] || []).includes(producto.id);
+                        const estaSeleccionadoPago = (productosSeleccionadosParaPago[mesaSeleccionada] || []).includes(producto.id);
                         
                         return (
                           <div 
                             key={producto.id} 
-                            className={`flex items-center justify-between rounded-lg p-3 border transition-all duration-200 ${
-                              estaSeleccionado 
-                                ? 'bg-orange-500/20 border-orange-400/50 shadow-lg' 
-                                : 'bg-white/20 border-white/30'
+                            className={`flex items-center justify-between py-3 px-2 transition-all duration-200 ${
+                              estaSeleccionadoPago 
+                                ? 'bg-green-500/20 border border-green-400/50 rounded-lg shadow-lg' 
+                                : estaSeleccionadoCocina
+                                ? 'bg-orange-500/20 border border-orange-400/50 rounded-lg shadow-lg'
+                                : ''
                             }`}
                           >
-                            {/* Checkbox para seleccionar producto */}
-                            <div className="flex items-center gap-3 flex-1">
+                            {/* Checkbox para Cocina (a la izquierda) */}
+                            <div className="flex items-center gap-2 flex-1">
                               <input
                                 type="checkbox"
-                                checked={estaSeleccionado}
+                                checked={estaSeleccionadoCocina}
                                 onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
-                                className="w-5 h-5 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-2 cursor-pointer"
-                                title="Seleccionar para enviar a cocina"
+                                className="w-4 h-4 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer"
+                                title="Enviar a cocina"
                               />
                               
                               <div className="flex-1">
@@ -1708,7 +1982,16 @@ export default function Pedidos() {
                               </div>
                             </div>
                             
+                            {/* Checkbox para Pago y valores (a la derecha) */}
                             <div className="flex items-center gap-3">
+                              {/* Checkbox para Pago */}
+                              <input
+                                type="checkbox"
+                                checked={estaSeleccionadoPago}
+                                onChange={() => toggleSeleccionProductoPago(mesaSeleccionada, producto.id)}
+                                className="w-4 h-4 text-green-600 bg-white/10 border-green-400 rounded focus:ring-green-500 focus:ring-1 cursor-pointer"
+                                title="Seleccionar para pago"
+                              />
                               <span className="text-green-400 font-bold">
                                 ${parseFloat(producto.subtotal).toLocaleString()}
                               </span>
@@ -1729,8 +2012,11 @@ export default function Pedidos() {
                       <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                        <div className="flex justify-between items-center mb-3">
                          <div className="text-white">
-                           <span className="font-medium">Total de Productos: </span>
-                           <span className="text-gray-300">{productosPorMesa[mesaSeleccionada].length}</span>
+                           <span className="font-medium">
+                             {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
+                               ? `Productos Seleccionados: ${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} / ${productosPorMesa[mesaSeleccionada].length}`
+                               : `Total de Productos: ${productosPorMesa[mesaSeleccionada].length}`)}
+                           </span>
                          </div>
                          <div className="text-green-400 font-bold text-lg">
                            Subtotal: ${calcularTotalMesa(mesaSeleccionada).toLocaleString()}
@@ -1945,12 +2231,21 @@ export default function Pedidos() {
                  <div>
                    <button
                      onClick={() => registrarPedido(mesaSeleccionada)}
-                     className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-lg shadow-lg"
+                     disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0}
+                     className={`font-bold py-3 px-8 rounded-lg transition-all duration-300 transform text-lg shadow-lg ${
+                       (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0
+                         ? 'bg-gray-600 cursor-not-allowed scale-100'
+                         : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+                     } text-white`}
                    >
-                     📝 Registrar Pedido de {mesaSeleccionada}
+                     💳 Registrar Pago de {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
+                       ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}) ` 
+                       : '')}{mesaSeleccionada}
                    </button>
                    <p className="text-gray-400 text-sm mt-2">
-                     Registra el pedido completo con pago
+                     {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0
+                       ? `Registrará ${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} producto(s) seleccionado(s)`
+                       : '⚠️ Selecciona al menos un producto para pagar')}
                    </p>
                  </div>
                </div>
@@ -2115,16 +2410,16 @@ export default function Pedidos() {
                               <td className="px-4 py-3">
                                 {estaEditando ? (
                                   <input
-                                    type="number"
+                                    type="text"
                                     value={valoresEdicion.mesa}
                                     onChange={(e) => handleEdicionChange('mesa', e.target.value)}
                                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
-                                    placeholder="Número mesa"
+                                    placeholder="Nombre de la mesa"
                                   />
                                 ) : (
                                   pedido.mesa ? (
                                     <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs">
-                                      Mesa {pedido.mesa}
+                                      {obtenerNombreMesa(pedido.mesa)}
                                     </span>
                                   ) : (
                                     <span className="text-gray-500 text-xs">-</span>

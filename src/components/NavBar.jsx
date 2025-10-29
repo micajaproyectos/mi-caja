@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient.js';
 import SubscriptionNotification from './SubscriptionNotification.jsx';
 import NewFeaturesNotification from './NewFeaturesNotification.jsx';
 import RatingNotification from './RatingNotification.jsx';
+import ClaveInternaNotification from './ClaveInternaNotification.jsx';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const NavBar = () => {
   const [showNewFeaturesVisualNotification, setShowNewFeaturesVisualNotification] = useState(false);
   const [showRatingNotification, setShowRatingNotification] = useState(false);
   const [showRatingVisualNotification, setShowRatingVisualNotification] = useState(false);
+  const [showClaveInternaNotification, setShowClaveInternaNotification] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -86,6 +88,25 @@ const NavBar = () => {
   const openRatingNotification = () => {
     setShowRatingNotification(true);
     setIsMenuOpen(false); // Cerrar el menú
+  };
+
+  // Función para abrir la notificación de clave interna
+  const openClaveInternaNotification = () => {
+    setShowClaveInternaNotification(true);
+    setIsMenuOpen(false); // Cerrar el menú
+  };
+
+  // Función para cerrar la notificación de clave interna
+  const closeClaveInternaNotification = () => {
+    setShowClaveInternaNotification(false);
+  };
+
+  // Función para manejar cuando se guarda la clave
+  const handleClaveGuardada = () => {
+    // Solo cierra el modal, Seguimiento.jsx detectará el cambio al navegar
+    if (import.meta.env.DEV) {
+      console.log('✅ Clave interna configurada/actualizada');
+    }
   };
 
   // Función para cerrar la notificación de calificación
@@ -544,6 +565,13 @@ const NavBar = () => {
                     Perfil
                   </button>
                   <button
+                    onClick={openClaveInternaNotification}
+                    className="w-full text-left px-4 py-2 rounded-lg mb-2 transition-colors hover:bg-white/5"
+                    style={{ backgroundColor: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
+                    🔒 Clave Interna
+                  </button>
+                  <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 rounded-lg transition-all"
                     style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'white', border: '1px solid rgba(239, 68, 68, 0.35)' }}
@@ -623,6 +651,14 @@ const NavBar = () => {
       {/* Notificación de calificación */}
       {showRatingNotification && (
         <RatingNotification onClose={closeRatingNotification} show={true} />
+      )}
+
+      {showClaveInternaNotification && (
+        <ClaveInternaNotification 
+          isOpen={showClaveInternaNotification}
+          onClose={closeClaveInternaNotification}
+          onSave={handleClaveGuardada}
+        />
       )}
     </>
   );

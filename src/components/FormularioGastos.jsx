@@ -9,6 +9,7 @@ import {
   obtenerAniosUnicos
 } from '../lib/dateUtils.js';
 import Footer from './Footer';
+import SeguimientoBloqueado from './SeguimientoBloqueado';
 
 const FormularioGastos = () => {
   const navigate = useNavigate();
@@ -41,6 +42,11 @@ const FormularioGastos = () => {
   const [loading, setLoading] = useState(false);
   const [loadingDatos, setLoadingDatos] = useState(false); // Cambiado a false para testing
   const [error, setError] = useState(null);
+  
+  // Estados para bloqueo por clave interna
+  const [claveInternaValidada, setClaveInternaValidada] = useState(false);
+  const [tieneClaveInterna, setTieneClaveInterna] = useState(false);
+  const [verificandoClave, setVerificandoClave] = useState(false);
 
   // Estados para filtros
   const [busquedaDetalle, setBusquedaDetalle] = useState('');
@@ -129,6 +135,49 @@ const FormularioGastos = () => {
     
     // Convertir a array y ordenar de mayor a menor
     return Array.from(anios).sort((a, b) => b - a);
+  };
+
+  // Función para verificar si el usuario tiene clave interna y si está validada
+  const verificarClaveInterna = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      
+      if (!usuarioId) {
+        setTieneClaveInterna(false);
+        setClaveInternaValidada(false);
+        return;
+      }
+
+      // Obtener si el usuario tiene clave interna configurada
+      const { data: usuarioData, error } = await supabase
+        .from('usuarios')
+        .select('clave_interna')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (error || !usuarioData || !usuarioData.clave_interna) {
+        setTieneClaveInterna(false);
+        setClaveInternaValidada(true); // Si no tiene clave, puede acceder libremente
+        return;
+      }
+
+      // Usuario tiene clave interna configurada
+      setTieneClaveInterna(true);
+      setClaveInternaValidada(false);
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.error('❌ Error verificando clave interna:', e);
+      }
+      setTieneClaveInterna(false);
+      setClaveInternaValidada(true);
+    } finally {
+      setVerificandoClave(false);
+    }
+  };
+
+  // Función para manejar cuando la clave es validada correctamente
+  const handleClaveValidada = () => {
+    setClaveInternaValidada(true);
   };
 
   // Función para cargar gastos registrados filtrados por usuario
@@ -480,6 +529,12 @@ const FormularioGastos = () => {
     .filter(item => item.tipo_gasto === 'Variable')
     .reduce((sum, item) => sum + (Number(item.monto) || 0), 0);
 
+  // Verificar clave interna al montar el componente
+  useEffect(() => {
+    setVerificandoClave(true);
+    verificarClaveInterna();
+  }, []);
+
   // Cargar datos al montar el componente
   useEffect(() => {
     // Log de montaje (solo en desarrollo)
@@ -671,7 +726,7 @@ const FormularioGastos = () => {
           </div>
 
           {/* Filtros */}
-          {gastosRegistrados.length > 0 && (
+          {gastosRegistrados.length > 0 && !(tieneClaveInterna && !claveInternaValidada) && (
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
               <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 text-center">
                 Filtros de Búsqueda
@@ -841,13 +896,20 @@ const FormularioGastos = () => {
           )}
 
           {/* Tabla de gastos registrados */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 relative">
             <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 md:mb-6 text-center">
               Gastos Registrados
             </h3>
-            
 
+            {/* Bloqueo por clave interna - overlay */}
+            {tieneClaveInterna && !claveInternaValidada && !verificandoClave && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center">
+                <SeguimientoBloqueado onClaveValidada={handleClaveValidada} />
+              </div>
+            )}
 
+            {/* Contenido de la tabla con blur condicional */}
+            <div className={tieneClaveInterna && !claveInternaValidada && !verificandoClave ? "blur-sm pointer-events-none select-none" : ""}>
             {loadingDatos ? (
               <div className="text-center py-6 md:py-8">
                 <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-green-400"></div>
@@ -1096,6 +1158,7 @@ const FormularioGastos = () => {
                 )}
               </>
             )}
+            </div>
           </div>
         </div>
       </div>
