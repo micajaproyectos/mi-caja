@@ -44,6 +44,7 @@ export default function Pedidos() {
   const [mesaSeleccionada, setMesaSeleccionada] = useState('');
   const [cantidadMesas, setCantidadMesas] = useState(4);
   const [productosPorMesa, setProductosPorMesa] = useState({});
+  const [datosInicialCargados, setDatosInicialCargados] = useState(false);
   
   // Estados para edición de nombres de mesas
   const [mesaEditando, setMesaEditando] = useState(null);
@@ -246,6 +247,231 @@ export default function Pedidos() {
     }
   };
 
+  // ============================================================
+  // FUNCIONES DE SINCRONIZACIÓN CON SUPABASE (PRODUCTOS TEMPORALES)
+  // ============================================================
+
+  // Función para cargar productos temporales desde Supabase
+  const cargarProductosTemporales = async () => {
+    try {
+      // DEBUG: Verificar sesión de Supabase
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log('🔐 DEBUG - Sesión de Supabase:', {
+        tieneSession: !!sessionData?.session,
+        userId: sessionData?.session?.user?.id,
+        errorSession: sessionError
+      });
+
+      const usuarioId = await authService.getCurrentUserId();
+      console.log('👤 DEBUG - Usuario ID obtenido:', usuarioId);
+      
+      if (!usuarioId) {
+        console.log('⚠️ No hay usuario autenticado para cargar productos temporales');
+        return;
+      }
+
+      console.log('📡 Consultando Supabase para usuario:', usuarioId);
+
+      const { data, error } = await supabase
+        .from('productos_mesas_temp')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error al cargar productos temporales:', error);
+        console.error('🔍 DEBUG - Detalles del error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        return;
+      }
+
+      console.log('📊 Datos recibidos de Supabase:', data);
+      console.log('🔢 DEBUG - Total de registros:', data?.length || 0);
+
+      // Convertir datos de Supabase al formato local (productosPorMesa)
+      const productosPorMesaTemp = {};
+      (data || []).forEach(item => {
+        if (!productosPorMesaTemp[item.mesa]) {
+          productosPorMesaTemp[item.mesa] = [];
+        }
+        productosPorMesaTemp[item.mesa].push({
+          id: item.producto_id,
+          producto: item.producto,
+          cantidad: item.cantidad,
+          unidad: item.unidad,
+          precio_unitario: item.precio_unitario,
+          subtotal: item.subtotal,
+          comentarios: item.comentarios || ''
+        });
+      });
+
+      setProductosPorMesa(productosPorMesaTemp);
+      console.log('✅ Productos temporales cargados desde Supabase:', Object.keys(productosPorMesaTemp).length, 'mesas');
+      
+      // Marcar que los datos iniciales ya fueron cargados
+      setDatosInicialCargados(true);
+
+    } catch (error) {
+      console.error('Error inesperado al cargar productos temporales:', error);
+      // Marcar como cargados incluso si hay error para no bloquear la app
+      setDatosInicialCargados(true);
+    }
+  };
+
+  // Función para guardar un producto en Supabase
+  const guardarProductoEnSupabase = async (mesa, producto) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        return;
+      }
+
+      // Obtener cliente_id
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('❌ Error al obtener cliente_id del usuario:', {
+          error: usuarioError,
+          code: usuarioError?.code,
+          message: usuarioError?.message,
+          details: usuarioError?.details,
+          hint: usuarioError?.hint
+        });
+        alert('❌ Error: No se puede acceder a los datos del usuario. Verifica las políticas RLS de la tabla usuarios.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('productos_mesas_temp')
+        .insert([{
+          usuario_id: usuarioId,
+          cliente_id: usuarioData.cliente_id,
+          mesa: mesa,
+          producto: producto.producto,
+          cantidad: producto.cantidad,
+          unidad: producto.unidad,
+          precio_unitario: parseFloat(producto.precio_unitario),
+          subtotal: parseFloat(producto.subtotal),
+          comentarios: producto.comentarios || null,
+          producto_id: producto.id
+        }]);
+
+      if (error) {
+        console.error('Error al guardar producto en Supabase:', error);
+        return;
+      }
+
+      console.log('✅ Producto guardado en Supabase:', producto.producto);
+
+    } catch (error) {
+      console.error('Error inesperado al guardar producto:', error);
+    }
+  };
+
+  // Función para eliminar un producto de Supabase
+  const eliminarProductoDeSupabase = async (productoId) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('productos_mesas_temp')
+        .delete()
+        .eq('producto_id', productoId)
+        .eq('usuario_id', usuarioId);
+
+      if (error) {
+        console.error('Error al eliminar producto de Supabase:', error);
+        return;
+      }
+
+      console.log('✅ Producto eliminado de Supabase:', productoId);
+
+    } catch (error) {
+      console.error('Error inesperado al eliminar producto:', error);
+    }
+  };
+
+  // Función para limpiar productos de una mesa en Supabase (después de pagar)
+  const limpiarMesaEnSupabase = async (mesa, productosIds) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        return;
+      }
+
+      // Si se proporcionan IDs específicos, eliminar solo esos
+      if (productosIds && productosIds.length > 0) {
+        const { error } = await supabase
+          .from('productos_mesas_temp')
+          .delete()
+          .eq('usuario_id', usuarioId)
+          .eq('mesa', mesa)
+          .in('producto_id', productosIds);
+
+        if (error) {
+          console.error('Error al limpiar productos específicos:', error);
+          return;
+        }
+      } else {
+        // Si no hay IDs, limpiar toda la mesa
+        const { error } = await supabase
+          .from('productos_mesas_temp')
+          .delete()
+          .eq('usuario_id', usuarioId)
+          .eq('mesa', mesa);
+
+        if (error) {
+          console.error('Error al limpiar mesa en Supabase:', error);
+          return;
+        }
+      }
+
+      console.log('✅ Mesa limpiada en Supabase:', mesa);
+
+    } catch (error) {
+      console.error('Error inesperado al limpiar mesa:', error);
+    }
+  };
+
+  // Función para actualizar comentarios en Supabase
+  const actualizarComentariosEnSupabase = async (productoId, comentarios) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { error } = await supabase
+        .from('productos_mesas_temp')
+        .update({ comentarios: comentarios || null })
+        .eq('producto_id', productoId)
+        .eq('usuario_id', usuarioId);
+
+      if (error) {
+        console.error('Error al actualizar comentarios en Supabase:', error);
+      }
+
+    } catch (error) {
+      console.error('Error inesperado al actualizar comentarios:', error);
+    }
+  };
+
+  // ============================================================
+  // FIN FUNCIONES DE SINCRONIZACIÓN
+  // ============================================================
+
   // Función para filtrar productos según la búsqueda
   const filtrarProductos = (busqueda) => {
     if (!busqueda.trim()) {
@@ -327,7 +553,7 @@ export default function Pedidos() {
   };
 
   // Función para agregar un producto a la mesa seleccionada
-  const agregarProductoAMesa = () => {
+  const agregarProductoAMesa = async () => {
     if (!productoActual.producto || !productoActual.cantidad || !productoActual.precio_unitario) {
       alert('Por favor completa todos los campos del producto');
       return;
@@ -344,6 +570,9 @@ export default function Pedidos() {
       [mesaSeleccionada]: [...(prev[mesaSeleccionada] || []), nuevoProducto]
     }));
     
+    // Guardar en Supabase (sincronización multi-dispositivo)
+    await guardarProductoEnSupabase(mesaSeleccionada, nuevoProducto);
+    
     // Limpiar el formulario de producto
     setProductoActual({
       producto: '',
@@ -359,7 +588,7 @@ export default function Pedidos() {
     setProductosFiltrados([]);
     setMostrarDropdown(false);
 
-    // Guardar en localStorage
+    // Guardar en localStorage (cache secundario)
     const productosGuardados = {
       ...productosPorMesa,
       [mesaSeleccionada]: [...(productosPorMesa[mesaSeleccionada] || []), nuevoProducto]
@@ -367,7 +596,7 @@ export default function Pedidos() {
     localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
   };
 
-  // Función para actualizar comentarios de un producto
+  // Función para actualizar comentarios de un producto (solo local - para onChange)
   const actualizarComentariosProducto = (mesa, productoId, comentarios) => {
     setProductosPorMesa(prev => ({
       ...prev,
@@ -378,13 +607,21 @@ export default function Pedidos() {
       )
     }));
   };
+  
+  // Función para guardar comentarios en Supabase (solo cuando termina de escribir - para onBlur)
+  const guardarComentariosEnSupabase = async (productoId, comentarios) => {
+    await actualizarComentariosEnSupabase(productoId, comentarios.toUpperCase());
+  };
 
   // Función para eliminar un producto de una mesa
-  const eliminarProducto = (mesa, productoId) => {
+  const eliminarProducto = async (mesa, productoId) => {
     setProductosPorMesa(prev => ({
       ...prev,
       [mesa]: prev[mesa].filter(p => p.id !== productoId)
     }));
+    
+    // Eliminar de Supabase (sincronización multi-dispositivo)
+    await eliminarProductoDeSupabase(productoId);
     
     // También eliminar de seleccionados para cocina si estaba seleccionado
     setProductosSeleccionadosParaCocina(prev => {
@@ -1456,6 +1693,9 @@ export default function Pedidos() {
          localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(selectoresCocina));
        }
 
+       // Limpiar productos pagados de Supabase (sincronización multi-dispositivo)
+       await limpiarMesaEnSupabase(mesa, productosSeleccionados);
+
        // Recargar la tabla de pedidos registrados
        cargarPedidosRegistrados();
 
@@ -1494,15 +1734,8 @@ export default function Pedidos() {
       setMesaSeleccionada('Mesa 1');
     }
     
-    // Cargar productos guardados en localStorage
-    const productosGuardados = localStorage.getItem('productosPorMesa');
-    if (productosGuardados) {
-      try {
-        setProductosPorMesa(JSON.parse(productosGuardados));
-      } catch (error) {
-        console.error('Error al cargar productos del localStorage:', error);
-      }
-    }
+    // Cargar productos desde Supabase (PRIORIDAD: sincronización multi-dispositivo)
+    cargarProductosTemporales();
     
     // Cargar selectores de cocina guardados en localStorage
     const seleccionadosCocina = localStorage.getItem('productosSeleccionadosParaCocina');
@@ -1513,12 +1746,37 @@ export default function Pedidos() {
         console.error('Error al cargar selectores de cocina del localStorage:', error);
       }
     }
+
+    // Configurar suscripción Realtime para sincronización automática entre dispositivos
+    const channel = supabase
+      .channel('productos_mesas_temp_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'productos_mesas_temp'
+        },
+        (payload) => {
+          console.log('🔄 Cambio detectado en productos_mesas_temp:', payload);
+          // Recargar productos cuando hay cambios
+          cargarProductosTemporales();
+        }
+      )
+      .subscribe();
+
+    // Cleanup: desuscribir al desmontar
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Guardar productos en localStorage cuando cambien
+  // Guardar productos en localStorage cuando cambien (solo después de cargar datos iniciales)
   useEffect(() => {
-    localStorage.setItem('productosPorMesa', JSON.stringify(productosPorMesa));
-  }, [productosPorMesa]);
+    if (datosInicialCargados) {
+      localStorage.setItem('productosPorMesa', JSON.stringify(productosPorMesa));
+    }
+  }, [productosPorMesa, datosInicialCargados]);
 
   // Guardar selectores de cocina en localStorage cuando cambien
   useEffect(() => {
@@ -2006,9 +2264,9 @@ export default function Pedidos() {
                                     value={producto.comentarios || ''}
                                     onChange={(e) => actualizarComentariosProducto(mesaSeleccionada, producto.id, e.target.value)}
                                     onBlur={(e) => {
-                                      // Asegurar que se guarde en mayúsculas
+                                      // Guardar en Supabase solo cuando termina de escribir (sincronización multi-dispositivo)
                                       const comentariosUpper = e.target.value.toUpperCase();
-                                      actualizarComentariosProducto(mesaSeleccionada, producto.id, comentariosUpper);
+                                      guardarComentariosEnSupabase(producto.id, comentariosUpper);
                                     }}
                                     className="flex-1 max-w-xs px-2 py-1 rounded border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
                                     placeholder="Comentarios..."

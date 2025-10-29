@@ -19,8 +19,9 @@ export default function Stock() {
   
   // Estados para productos sin ventas por más de 30 días
   const [productosSinVentas, setProductosSinVentas] = useState([]);
-  const [loadingSinVentas, setLoadingSinVentas] = useState(true);
+  const [loadingSinVentas, setLoadingSinVentas] = useState(false); // Iniciar como false para carga bajo demanda
   const [errorSinVentas, setErrorSinVentas] = useState(null);
+  const [consultaSinVentasIntentada, setConsultaSinVentasIntentada] = useState(false); // Controlar si se ha intentado cargar
   
   // Estado para indicar actualización automática
   const [actualizandoAutomaticamente, setActualizandoAutomaticamente] = useState(false);
@@ -131,22 +132,56 @@ export default function Stock() {
     try {
       setLoadingSinVentas(true);
       setErrorSinVentas(null);
+      setConsultaSinVentasIntentada(true); // Marcar que se intentó cargar
 
       console.log('🔄 Cargando productos sin ventas...');
 
-      // TODO: Implementar paginación con .range() o limit/offset si se necesita más de 50 registros
+      // Obtener el usuario_id del usuario autenticado para filtrar en la vista
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setProductosSinVentas([]);
+        setErrorSinVentas('Usuario no autenticado');
+        return;
+      }
+
+      // Intentar cargar solo los primeros 10 productos para evitar timeout
+      // La vista puede ser muy pesada cuando hay muchos productos sin ventas
       const { data, error } = await supabase
         .from('productos_sin_ventas_30d_view')
         .select('producto, fecha_ingreso, stock_restante')
+        .eq('usuario_id', usuarioId)
         .order('fecha_ingreso', { ascending: true })
-        .limit(50);
+        .limit(10); // Solo 10 productos para evitar timeout
 
       if (error) {
         console.error('❌ Error al cargar productos sin ventas:', {
           code: error.code,
           message: error.message
         });
-        setErrorSinVentas('Error al cargar productos sin ventas');
+
+        // Manejar errores de timeout específicamente
+        if (error.code === '57014' || error.message?.includes('timeout') || error.message?.includes('canceling statement')) {
+          setErrorSinVentas('⚠️ La consulta tardó demasiado (timeout). La vista productos_sin_ventas_30d_view necesita optimización en la base de datos. Solo se cargaron los primeros productos disponibles.');
+          // Intentar una consulta más simple sin ordenamiento
+          try {
+            const { data: dataSimple, error: errorSimple } = await supabase
+              .from('productos_sin_ventas_30d_view')
+              .select('producto, fecha_ingreso, stock_restante')
+              .eq('usuario_id', usuarioId)
+              .limit(5);
+            
+            if (!errorSimple && dataSimple && dataSimple.length > 0) {
+              setProductosSinVentas(dataSimple);
+              setErrorSinVentas(`Se cargaron ${dataSimple.length} productos (consulta simplificada debido a timeout).`);
+              return;
+            }
+          } catch (simpleError) {
+            console.error('Error en consulta simplificada:', simpleError);
+          }
+        } else {
+          setErrorSinVentas(`Error al cargar productos sin ventas: ${error.message || 'Error desconocido'}`);
+        }
         setProductosSinVentas([]);
         return;
       }
@@ -156,7 +191,13 @@ export default function Stock() {
 
     } catch (error) {
       console.error('❌ Error inesperado al cargar productos sin ventas:', error);
-      setErrorSinVentas('Error inesperado al cargar productos sin ventas');
+      
+      // Manejar errores de timeout en el catch también
+      if (error.message?.includes('timeout') || error.code === '57014' || error.message?.includes('canceling statement')) {
+        setErrorSinVentas('La consulta tardó demasiado (timeout). Intenta nuevamente.');
+      } else {
+        setErrorSinVentas(`Error inesperado al cargar productos sin ventas: ${error.message || 'Error desconocido'}`);
+      }
       setProductosSinVentas([]);
     } finally {
       setLoadingSinVentas(false);
@@ -305,7 +346,7 @@ export default function Stock() {
   useEffect(() => {
     cargarStock();
     cargarProductoMasVendido();
-    cargarProductosSinVentas();
+    // cargarProductosSinVentas(); // Removido: ahora se carga bajo demanda con botón
     cargarProductosInventario(); // Cargar inventario con imágenes
     
     // Configurar suscripción en tiempo real
@@ -325,7 +366,7 @@ export default function Stock() {
     setActualizandoAutomaticamente(true);
     cargarStock();
     cargarProductoMasVendido();
-    cargarProductosSinVentas();
+    // cargarProductosSinVentas(); // Removido: ahora se carga bajo demanda con botón
     cargarProductosInventario(); // Recargar inventario con imágenes
     setTimeout(() => setActualizandoAutomaticamente(false), 2000);
   };
@@ -705,7 +746,8 @@ export default function Stock() {
             </div>
           </div>
 
-          {/* Sección de Productos Sin Ventas por más de 30 días */}
+          {/* Sección de Productos Sin Ventas por más de 30 días - DESHABILITADA TEMPORALMENTE */}
+          {false && (
           <div className="mt-6 md:mt-8">
             <div className="flex items-center justify-center gap-3 mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-semibold text-red-400 text-center">
@@ -714,10 +756,27 @@ export default function Stock() {
             </div>
             
             <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-red-400/30">
-              {loadingSinVentas ? (
+              {!consultaSinVentasIntentada ? (
+                <div className="text-center py-6 md:py-8">
+                  <div className="text-orange-400 text-4xl md:text-5xl mb-4">📊</div>
+                  <p className="text-gray-300 text-base md:text-lg mb-2 font-medium">
+                    Consulta productos sin ventas (+30 días)
+                  </p>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Esta consulta puede tardar varios segundos. Haz clic en el botón para ejecutarla.
+                  </p>
+                  <button
+                    onClick={cargarProductosSinVentas}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    🔍 Cargar Productos Sin Ventas
+                  </button>
+                </div>
+              ) : loadingSinVentas ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-red-400"></div>
                   <p className="text-white mt-3 md:mt-4 text-sm md:text-base">Cargando productos sin ventas...</p>
+                  <p className="text-gray-400 text-xs md:text-sm mt-2">Esta consulta puede tardar varios segundos</p>
                 </div>
               ) : errorSinVentas ? (
                 <div className="text-center py-6 md:py-8">
@@ -796,12 +855,19 @@ export default function Stock() {
                     </table>
                   </div>
                   
-                  <div className="mt-4 text-center">
+                  <div className="mt-4 text-center space-y-3">
                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                       <p className="text-gray-300 text-sm">
                         <span className="text-red-400 font-medium">Total:</span> {productosSinVentas.length} productos sin ventas por más de 30 días
                       </p>
                     </div>
+                    <button
+                      onClick={cargarProductosSinVentas}
+                      disabled={loadingSinVentas}
+                      className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm md:text-base disabled:cursor-not-allowed"
+                    >
+                      {loadingSinVentas ? '⏳ Cargando...' : '🔄 Recargar'}
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -815,6 +881,7 @@ export default function Stock() {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
       

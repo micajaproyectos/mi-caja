@@ -56,8 +56,6 @@ export default function GestionCocina() {
   // Función para cambiar estado de un pedido
   const cambiarEstadoPedido = async (pedidoId, nuevoEstado) => {
     try {
-      setActualizandoPedido(pedidoId);
-
       if (nuevoEstado === 'terminado') {
         // Usar función RPC que guarda hora de Santiago (igual que hora_inicio)
         const { error } = await supabase.rpc('marcar_pedido_terminado', {
@@ -66,8 +64,7 @@ export default function GestionCocina() {
 
         if (error) {
           console.error('❌ Error al marcar terminado:', error);
-          alert('❌ Error al actualizar el estado del pedido');
-          return;
+          throw new Error('Error al actualizar el estado del pedido');
         }
       } else {
         // Marcar como pendiente y limpiar hora_termino
@@ -81,8 +78,7 @@ export default function GestionCocina() {
 
         if (error) {
           console.error('❌ Error al actualizar estado:', error);
-          alert('❌ Error al actualizar el estado del pedido');
-          return;
+          throw new Error('Error al actualizar el estado del pedido');
         }
       }
 
@@ -90,8 +86,7 @@ export default function GestionCocina() {
 
     } catch (error) {
       console.error('❌ Error inesperado:', error);
-    } finally {
-      setActualizandoPedido(null);
+      throw error; // Re-lanzar error para que lo maneje cambiarEstadoMesa
     }
   };
 
@@ -299,17 +294,35 @@ export default function GestionCocina() {
 
   // Función para cambiar estado de un grupo específico de pedidos (enviados juntos)
   const cambiarEstadoMesa = async (mesa, nuevoEstado) => {
-    // Obtener solo los productos de ESTE envío específico (mismo grupo)
-    // Usa la misma lógica que obtenerProductosCompletosDelPedido
-    const pedidosDelGrupo = pedidosCocina.filter(p => 
-      p.mesa === mesa.mesa && 
-      p.fecha_cl === mesa.pedidos[0].fecha_cl &&
-      Math.abs(new Date(p.hora_inicio_pedido) - new Date(mesa.hora_inicio)) < 5000 // Mismo grupo (dentro de 5 segundos)
-    );
-    
-    // Cambiar estado solo de los pedidos de este grupo específico
-    for (const pedido of pedidosDelGrupo) {
-      await cambiarEstadoPedido(pedido.id, nuevoEstado);
+    try {
+      setActualizandoPedido(mesa.id_principal); // Bloquear botón mientras procesa
+      
+      // Obtener solo los productos de ESTE envío específico (mismo grupo)
+      // Usa la misma lógica que obtenerProductosCompletosDelPedido
+      const pedidosDelGrupo = pedidosCocina.filter(p => 
+        p.mesa === mesa.mesa && 
+        p.fecha_cl === mesa.pedidos[0].fecha_cl &&
+        Math.abs(new Date(p.hora_inicio_pedido) - new Date(mesa.hora_inicio)) < 5000 // Mismo grupo (dentro de 5 segundos)
+      );
+      
+      console.log(`🔄 Cambiando estado de ${pedidosDelGrupo.length} productos a ${nuevoEstado}...`);
+      
+      // Cambiar estado solo de los pedidos de este grupo específico
+      // IMPORTANTE: Usar await para esperar cada actualización
+      for (const pedido of pedidosDelGrupo) {
+        await cambiarEstadoPedido(pedido.id, nuevoEstado);
+      }
+      
+      console.log(`✅ Todos los productos actualizados a ${nuevoEstado}`);
+      
+      // Recargar pedidos manualmente para asegurar actualización inmediata
+      await cargarPedidosCocina();
+      
+    } catch (error) {
+      console.error('❌ Error al cambiar estado de la mesa:', error);
+      alert('❌ Error al actualizar el estado del pedido');
+    } finally {
+      setActualizandoPedido(null); // Desbloquear botón
     }
   };
 
@@ -552,17 +565,17 @@ export default function GestionCocina() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => cambiarEstadoMesa(mesa, 'pendiente')}
-                      disabled={mesa.estado === 'pendiente' || actualizandoPedido}
+                      disabled={mesa.estado === 'pendiente' || actualizandoPedido === mesa.id_principal}
                       className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 disabled:scale-100"
                     >
-                      ⏳ Pendiente
+                      {actualizandoPedido === mesa.id_principal ? '⏳ Procesando...' : '⏳ Pendiente'}
                     </button>
                     <button
                       onClick={() => cambiarEstadoMesa(mesa, 'terminado')}
-                      disabled={mesa.estado === 'terminado' || actualizandoPedido}
+                      disabled={mesa.estado === 'terminado' || actualizandoPedido === mesa.id_principal}
                       className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 disabled:scale-100"
                     >
-                      ✅ Terminado
+                      {actualizandoPedido === mesa.id_principal ? '⏳ Procesando...' : '✅ Terminado'}
                     </button>
                   </div>
                 </div>
