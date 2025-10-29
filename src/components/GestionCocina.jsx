@@ -34,7 +34,7 @@ export default function GestionCocina() {
 
       const { data, error } = await supabase
         .from('pedidos_cocina')
-        .select('*')
+        .select('*') // Incluye todos los campos: id, usuario_id, cliente_id, fecha_cl, mesa, producto, unidad, cantidad, comentarios, estado, hora_inicio_pedido, hora_termino
         .eq('usuario_id', usuarioId)
         .order('hora_inicio_pedido', { ascending: false });
 
@@ -340,6 +340,64 @@ export default function GestionCocina() {
     }
   };
 
+  // Función para eliminar un pedido (solo del usuario actual)
+  const eliminarPedido = async (pedidoId) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este pedido? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      setActualizandoPedido(pedidoId);
+
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('Error al obtener cliente_id del usuario:', usuarioError);
+        alert('❌ Error: No se pudo obtener la información del usuario.');
+        return;
+      }
+
+      const cliente_id = usuarioData.cliente_id;
+
+      const { error } = await supabase
+        .from('pedidos_cocina')
+        .delete()
+        .eq('id', pedidoId)
+        .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo eliminar pedidos del usuario actual
+        .eq('cliente_id', cliente_id); // 🔒 SEGURIDAD: Solo eliminar pedidos del cliente actual
+
+      if (error) {
+        console.error('❌ Error al eliminar pedido:', error);
+        alert('❌ Error al eliminar el pedido: ' + error.message);
+        return;
+      }
+
+      alert('✅ Pedido eliminado exitosamente');
+      
+      // Recargar la lista de pedidos
+      await cargarPedidosCocina();
+      
+    } catch (error) {
+      console.error('❌ Error general al eliminar pedido:', error);
+      alert('❌ Error al eliminar pedido: ' + error.message);
+    } finally {
+      setActualizandoPedido(null);
+      setEditandoId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Header con navegación */}
@@ -481,6 +539,11 @@ export default function GestionCocina() {
                         <div className="text-sm text-gray-400 mt-1">
                           Unidad: {pedido.unidad}
                         </div>
+                        {pedido.comentarios && (
+                          <div className="text-sm text-blue-300 mt-2 font-medium bg-blue-900/30 px-2 py-1 rounded border border-blue-500/50">
+                            💬 {pedido.comentarios}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -699,7 +762,12 @@ export default function GestionCocina() {
                             {pedido.estado ? pedido.mesa : ''}
                           </td>
                           <td className="text-white p-3 text-sm font-medium">
-                            {pedido.producto}
+                            <div>{pedido.producto}</div>
+                            {pedido.comentarios && (
+                              <div className="text-blue-300 text-xs mt-1 font-medium bg-blue-900/30 px-2 py-1 rounded border border-blue-500/50 inline-block">
+                                💬 {pedido.comentarios}
+                              </div>
+                            )}
                           </td>
                           <td className="text-gray-200 p-3 text-sm">
                             {pedido.cantidad} {pedido.unidad}
@@ -744,25 +812,33 @@ export default function GestionCocina() {
                           </td>
                           <td className="p-3">
                             {pedido.estado && (
-                              editandoId === pedido.id ? (
-                                <div className="flex gap-2">
+                              <div className="flex items-center gap-2">
+                                {editandoId === pedido.id ? (
                                   <button
                                     onClick={() => setEditandoId(null)}
                                     className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs transition-all"
+                                    title="Cancelar edición"
                                   >
                                     ❌
                                   </button>
-                                </div>
-                              ) : pedido.estado === 'terminado' ? (
+                                ) : pedido.estado === 'terminado' ? (
+                                  <button
+                                    onClick={() => setEditandoId(pedido.id)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-all"
+                                    title="Editar estado"
+                                  >
+                                    ✏️ Editar
+                                  </button>
+                                ) : null}
                                 <button
-                                  onClick={() => setEditandoId(pedido.id)}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-all"
+                                  onClick={() => eliminarPedido(pedido.id)}
+                                  disabled={actualizandoPedido === pedido.id}
+                                  className="text-red-400 hover:text-red-300 text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Eliminar pedido"
                                 >
-                                  ✏️ Editar
+                                  🗑️
                                 </button>
-                              ) : (
-                                <span className="text-gray-500 text-xs">-</span>
-                              )
+                              </div>
                             )}
                           </td>
                         </tr>

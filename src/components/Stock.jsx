@@ -10,6 +10,7 @@ export default function Stock() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busquedaProducto, setBusquedaProducto] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState(''); // Filtro por estado: '', 'Disponible', 'Bajo', 'Agotado'
   
   // Nuevos estados para el producto más vendido
   const [productoMasVendido, setProductoMasVendido] = useState(null);
@@ -34,10 +35,30 @@ export default function Stock() {
   const intervalRef = useRef(null);
   const subscriptionRef = useRef(null);
 
-  // Filtrar productos por nombre
-  const productosFiltrados = stockData.filter(item =>
-    item.producto?.toLowerCase().includes(busquedaProducto.toLowerCase())
-  );
+  // Función para calcular el estado basado en el stock restante
+  const calcularEstado = (stockRestante) => {
+    const cantidad = Number(stockRestante) || 0;
+    
+    if (cantidad <= 0) {
+      return 'Agotado';
+    } else if (cantidad <= 5) {
+      return 'Bajo';
+    } else {
+      return 'Disponible';
+    }
+  };
+
+  // Filtrar productos por nombre y estado
+  const productosFiltrados = stockData.filter(item => {
+    // Filtro por nombre
+    const coincideNombre = item.producto?.toLowerCase().includes(busquedaProducto.toLowerCase());
+    
+    // Filtro por estado
+    const estadoProducto = calcularEstado(item.stock_restante);
+    const coincideEstado = !filtroEstado || estadoProducto === filtroEstado;
+    
+    return coincideNombre && coincideEstado;
+  });
   
   // Obtener productos a mostrar (50 inicialmente o todos si mostrarTodos es true)
   const productosAMostrar = mostrarTodos ? productosFiltrados : productosFiltrados.slice(0, 50);
@@ -242,19 +263,6 @@ export default function Stock() {
       });
   };
 
-  // Función para calcular el estado basado en el stock restante
-  const calcularEstado = (stockRestante) => {
-    const cantidad = Number(stockRestante) || 0;
-    
-    if (cantidad <= 0) {
-      return 'Agotado';
-    } else if (cantidad <= 5) {
-      return 'Bajo';
-    } else {
-      return 'Disponible';
-    }
-  };
-
   // Función para obtener el estilo del estado
   const obtenerEstiloEstado = (estado) => {
     switch (estado?.toLowerCase()) {
@@ -411,32 +419,69 @@ export default function Stock() {
             {/* Tabla de datos */}
             {!loading && !error && (
               <>
-                {/* Barra de búsqueda */}
+                {/* Barra de búsqueda y filtro de estado */}
                 {stockData.length > 0 && (
                   <div className="mb-6">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400 text-lg">🔍</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      {/* Barra de búsqueda */}
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-400 text-lg">🔍</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={busquedaProducto}
+                          onChange={(e) => setBusquedaProducto(e.target.value)}
+                          placeholder="Buscar producto por nombre..."
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                        />
+                        {busquedaProducto && (
+                          <button
+                            onClick={() => setBusquedaProducto('')}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                          >
+                            <span className="text-lg">✕</span>
+                          </button>
+                        )}
                       </div>
-                      <input
-                        type="text"
-                        value={busquedaProducto}
-                        onChange={(e) => setBusquedaProducto(e.target.value)}
-                        placeholder="Buscar producto por nombre..."
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
-                      />
-                      {busquedaProducto && (
-                        <button
-                          onClick={() => setBusquedaProducto('')}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                      
+                      {/* Filtro por estado */}
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-400 text-lg">📊</span>
+                        </div>
+                        <select
+                          value={filtroEstado}
+                          onChange={(e) => setFiltroEstado(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base appearance-none cursor-pointer"
+                          style={{ 
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 1rem center',
+                            paddingRight: '2.5rem'
+                          }}
                         >
-                          <span className="text-lg">✕</span>
-                        </button>
-                      )}
+                          <option value="" className="bg-gray-800 text-white">Todos los estados</option>
+                          <option value="Disponible" className="bg-gray-800 text-white">✅ Disponible</option>
+                          <option value="Bajo" className="bg-gray-800 text-white">⚠️ Bajo</option>
+                          <option value="Agotado" className="bg-gray-800 text-white">❌ Agotado</option>
+                        </select>
+                        {filtroEstado && (
+                          <button
+                            onClick={() => setFiltroEstado('')}
+                            className="absolute inset-y-0 right-8 flex items-center text-gray-400 hover:text-white transition-colors"
+                          >
+                            <span className="text-lg">✕</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {busquedaProducto && (
+                    {(busquedaProducto || filtroEstado) && (
                       <div className="mt-2 text-sm text-gray-300">
                         Mostrando {productosAMostrar.length} de {productosFiltrados.length} productos
+                        {filtroEstado && (
+                          <span className="ml-2 text-green-400">• Filtrado por: {filtroEstado}</span>
+                        )}
                       </div>
                     )}
                   </div>

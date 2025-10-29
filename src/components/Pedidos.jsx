@@ -26,6 +26,7 @@ export default function Pedidos() {
     unidad: '',
     precio_unitario: '',
     subtotal: 0,
+    comentarios: '',
   });
   
   // Estados para búsqueda de productos del inventario
@@ -94,7 +95,8 @@ export default function Pedidos() {
     total_final: '',
     propina: '',
     tipo_pago: '',
-    estado: ''
+    estado: '',
+    comentarios: ''
   });
 
   // Estado para pantalla completa
@@ -178,7 +180,7 @@ export default function Pedidos() {
       // Intentar consulta con fecha_cl primero
       let { data, error } = await supabase
         .from('pedidos')
-        .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, usuario_id, created_at')
+        .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .eq('cliente_id', cliente_id) // 🔒 FILTRO CRÍTICO POR CLIENTE
         .order('fecha_cl', { ascending: false })
@@ -190,7 +192,7 @@ export default function Pedidos() {
         console.warn('⚠️ Columna fecha_cl no existe en pedidos, usando fecha');
         const fallbackQuery = await supabase
           .from('pedidos')
-          .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, usuario_id, created_at')
+          .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
           .eq('cliente_id', cliente_id)
           .order('fecha', { ascending: false })
@@ -264,7 +266,8 @@ export default function Pedidos() {
       producto: producto.producto,
       precio_unitario: producto.precio_venta.toString(),
       unidad: producto.unidad,
-      subtotal: 0
+      subtotal: 0,
+      comentarios: ''
     });
     setBusquedaProducto(producto.producto);
     setMostrarDropdown(false);
@@ -348,6 +351,7 @@ export default function Pedidos() {
       unidad: '',
       precio_unitario: '',
       subtotal: 0,
+      comentarios: '',
     });
     
     // Limpiar también el campo de búsqueda y el dropdown
@@ -361,6 +365,18 @@ export default function Pedidos() {
       [mesaSeleccionada]: [...(productosPorMesa[mesaSeleccionada] || []), nuevoProducto]
     };
     localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
+  };
+
+  // Función para actualizar comentarios de un producto
+  const actualizarComentariosProducto = (mesa, productoId, comentarios) => {
+    setProductosPorMesa(prev => ({
+      ...prev,
+      [mesa]: prev[mesa].map(p => 
+        p.id === productoId 
+          ? { ...p, comentarios: comentarios.toUpperCase() }
+          : p
+      )
+    }));
   };
 
   // Función para eliminar un producto de una mesa
@@ -1023,7 +1039,8 @@ export default function Pedidos() {
       total_final: pedido.total_final ? pedido.total_final.toString() : '',
       propina: pedido.propina ? pedido.propina.toString() : '',
       tipo_pago: pedido.tipo_pago || '',
-      estado: pedido.estado || ''
+      estado: pedido.estado || '',
+      comentarios: pedido.comentarios || ''
     });
   };
 
@@ -1041,7 +1058,8 @@ export default function Pedidos() {
       total_final: '',
       propina: '',
       tipo_pago: '',
-      estado: ''
+      estado: '',
+      comentarios: ''
     });
   };
 
@@ -1135,7 +1153,8 @@ export default function Pedidos() {
           total_final: valoresEdicion.total_final ? parseFloat(valoresEdicion.total_final) : null,
           propina: valoresEdicion.propina ? parseFloat(valoresEdicion.propina) : null,
           tipo_pago: valoresEdicion.tipo_pago || null,
-          estado: valoresEdicion.estado || null
+          estado: valoresEdicion.estado || null,
+          comentarios: valoresEdicion.comentarios ? valoresEdicion.comentarios.toUpperCase().trim() : null
         })
         .eq('id', id)
         .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo editar pedidos del usuario actual
@@ -1147,7 +1166,7 @@ export default function Pedidos() {
         return;
       }
 
-      alert('✅ Pedido actualizado exitosamente');
+      alert('Pedido actualizado exitosamente');
       cancelarEdicion();
       await cargarPedidosRegistrados();
 
@@ -1216,7 +1235,9 @@ export default function Pedidos() {
           // hora_inicio_pedido se genera automáticamente con DEFAULT de la tabla
           producto: producto.producto,
           unidad: producto.unidad,
-          cantidad: parseFloat(producto.cantidad) || 0
+          cantidad: parseFloat(producto.cantidad) || 0,
+          // Comentarios del producto (normalizado a mayúsculas)
+          comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null
         };
 
         // Solo la primera fila tiene estado (igual que total_final en RegistroVenta)
@@ -1224,7 +1245,7 @@ export default function Pedidos() {
           pedidoCocina.estado = 'pendiente';
         }
 
-        console.log('📋 Insertando en pedidos_cocina:', pedidoCocina);
+        console.log('Insertando en pedidos_cocina:', pedidoCocina);
 
         const { error } = await supabase
           .from('pedidos_cocina')
@@ -1352,6 +1373,8 @@ export default function Pedidos() {
             estado: estadoValue, // Estado solo en la primera fila
             tipo_pago: tipoPagoValue, // Tipo de pago solo en la primera fila
             propina: propinaValue, // Propina solo en la primera fila
+            // Comentarios del producto (normalizado a mayúsculas)
+            comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null,
             // Agregar el usuario_id del usuario autenticado
             usuario_id: usuarioId,
             // IMPORTANTE: La política RLS requiere que cliente_id coincida con usuarios.cliente_id
@@ -1366,8 +1389,8 @@ export default function Pedidos() {
           .insert([pedidoParaInsertar]);
 
         if (error) {
-          console.error('❌ Error al registrar producto del pedido:', error);
-          alert('❌ Error al registrar pedido: ' + error.message);
+          console.error('Error al registrar producto del pedido:', error);
+          alert('Error al registrar pedido: ' + error.message);
           return;
         }
       }
@@ -1437,7 +1460,7 @@ export default function Pedidos() {
        cargarPedidosRegistrados();
 
     } catch (error) {
-      console.error('❌ Error general al registrar pedido:', error);
+      console.error('Error general al registrar pedido:', error);
       alert('❌ Error al registrar pedido: ' + error.message);
     }
   };
@@ -1975,7 +1998,23 @@ export default function Pedidos() {
                               />
                               
                               <div className="flex-1">
-                                <p className="text-white font-medium">{producto.producto}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-white font-medium">{producto.producto}</p>
+                                  {/* Campo de comentarios */}
+                                  <input
+                                    type="text"
+                                    value={producto.comentarios || ''}
+                                    onChange={(e) => actualizarComentariosProducto(mesaSeleccionada, producto.id, e.target.value)}
+                                    onBlur={(e) => {
+                                      // Asegurar que se guarde en mayúsculas
+                                      const comentariosUpper = e.target.value.toUpperCase();
+                                      actualizarComentariosProducto(mesaSeleccionada, producto.id, comentariosUpper);
+                                    }}
+                                    className="flex-1 max-w-xs px-2 py-1 rounded border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                                    placeholder="Comentarios..."
+                                    style={{ textTransform: 'uppercase' }}
+                                  />
+                                </div>
                                 <p className="text-gray-300 text-sm">
                                   {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
                                 </p>
@@ -2365,6 +2404,7 @@ export default function Pedidos() {
                           <th className="px-4 py-3 rounded-l-lg">Fecha</th>
                           <th className="px-4 py-3">Mesa</th>
                           <th className="px-4 py-3">Producto</th>
+                          <th className="px-4 py-3">Comentarios</th>
                           <th className="px-4 py-3">Cantidad</th>
                           <th className="px-4 py-3">Precio</th>
                           <th className="px-4 py-3">Total</th>
@@ -2451,6 +2491,33 @@ export default function Pedidos() {
                                     <div className="font-medium">{pedido.producto}</div>
                                     <div className="text-gray-400 text-xs">{pedido.unidad}</div>
                                   </div>
+                                )}
+                              </td>
+
+                              {/* Comentarios */}
+                              <td className="px-4 py-3">
+                                {estaEditando ? (
+                                  <input
+                                    type="text"
+                                    value={valoresEdicion.comentarios || ''}
+                                    onChange={(e) => handleEdicionChange('comentarios', e.target.value)}
+                                    onBlur={(e) => {
+                                      // Asegurar que se guarde en mayúsculas
+                                      const comentariosUpper = e.target.value.toUpperCase();
+                                      handleEdicionChange('comentarios', comentariosUpper);
+                                    }}
+                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                                    placeholder="Comentarios..."
+                                    style={{ textTransform: 'uppercase' }}
+                                  />
+                                ) : (
+                                  pedido.comentarios ? (
+                                    <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs">
+                                      {pedido.comentarios}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500 text-xs">-</span>
+                                  )
                                 )}
                               </td>
 
