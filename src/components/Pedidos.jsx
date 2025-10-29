@@ -9,6 +9,16 @@ import {
 } from '../lib/dateUtils.js';
 import Footer from './Footer';
 
+// Modo DEBUG: Solo activo en desarrollo (detecta si es localhost)
+const IS_DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Función de log condicional para debugging
+const debugLog = (...args) => {
+  if (IS_DEBUG) {
+    console.log(...args);
+  }
+};
+
 export default function Pedidos() {
   const navigate = useNavigate();
   
@@ -256,21 +266,21 @@ export default function Pedidos() {
     try {
       // DEBUG: Verificar sesión de Supabase
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('🔐 DEBUG - Sesión de Supabase:', {
+      debugLog('🔐 DEBUG - Sesión de Supabase:', {
         tieneSession: !!sessionData?.session,
         userId: sessionData?.session?.user?.id,
         errorSession: sessionError
       });
 
       const usuarioId = await authService.getCurrentUserId();
-      console.log('👤 DEBUG - Usuario ID obtenido:', usuarioId);
+      debugLog('👤 DEBUG - Usuario ID obtenido:', usuarioId);
       
       if (!usuarioId) {
-        console.log('⚠️ No hay usuario autenticado para cargar productos temporales');
+        debugLog('⚠️ No hay usuario autenticado para cargar productos temporales');
         return;
       }
 
-      console.log('📡 Consultando Supabase para usuario:', usuarioId);
+      debugLog('📡 Consultando Supabase para usuario:', usuarioId);
 
       const { data, error } = await supabase
         .from('productos_mesas_temp')
@@ -280,7 +290,7 @@ export default function Pedidos() {
 
       if (error) {
         console.error('❌ Error al cargar productos temporales:', error);
-        console.error('🔍 DEBUG - Detalles del error:', {
+        debugLog('🔍 DEBUG - Detalles del error:', {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -289,8 +299,8 @@ export default function Pedidos() {
         return;
       }
 
-      console.log('📊 Datos recibidos de Supabase:', data);
-      console.log('🔢 DEBUG - Total de registros:', data?.length || 0);
+      debugLog('📊 Datos recibidos de Supabase:', data);
+      debugLog('🔢 DEBUG - Total de registros:', data?.length || 0);
 
       // Convertir datos de Supabase al formato local (productosPorMesa)
       const productosPorMesaTemp = {};
@@ -310,7 +320,7 @@ export default function Pedidos() {
       });
 
       setProductosPorMesa(productosPorMesaTemp);
-      console.log('✅ Productos temporales cargados desde Supabase:', Object.keys(productosPorMesaTemp).length, 'mesas');
+      debugLog('✅ Productos temporales cargados desde Supabase:', Object.keys(productosPorMesaTemp).length, 'mesas');
       
       // Marcar que los datos iniciales ya fueron cargados
       setDatosInicialCargados(true);
@@ -370,7 +380,7 @@ export default function Pedidos() {
         return;
       }
 
-      console.log('✅ Producto guardado en Supabase:', producto.producto);
+      debugLog('✅ Producto guardado en Supabase:', producto.producto);
 
     } catch (error) {
       console.error('Error inesperado al guardar producto:', error);
@@ -397,7 +407,7 @@ export default function Pedidos() {
         return;
       }
 
-      console.log('✅ Producto eliminado de Supabase:', productoId);
+      debugLog('✅ Producto eliminado de Supabase:', productoId);
 
     } catch (error) {
       console.error('Error inesperado al eliminar producto:', error);
@@ -440,7 +450,7 @@ export default function Pedidos() {
         }
       }
 
-      console.log('✅ Mesa limpiada en Supabase:', mesa);
+      debugLog('✅ Mesa limpiada en Supabase:', mesa);
 
     } catch (error) {
       console.error('Error inesperado al limpiar mesa:', error);
@@ -1758,7 +1768,7 @@ export default function Pedidos() {
           table: 'productos_mesas_temp'
         },
         (payload) => {
-          console.log('🔄 Cambio detectado en productos_mesas_temp:', payload);
+          debugLog('🔄 Cambio detectado en productos_mesas_temp:', payload);
           // Recargar productos cuando hay cambios
           cargarProductosTemporales();
         }
