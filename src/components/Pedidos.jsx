@@ -50,11 +50,12 @@ export default function Pedidos() {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
   // Estados para gestión de mesas
-  const [mesas, setMesas] = useState([]);
-  const [mesaSeleccionada, setMesaSeleccionada] = useState('');
+  const [mesas, setMesas] = useState(['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4']); // Inicializar con mesas por defecto
+  const [mesaSeleccionada, setMesaSeleccionada] = useState('Mesa 1'); // Seleccionar la primera por defecto
   const [cantidadMesas, setCantidadMesas] = useState(4);
   const [productosPorMesa, setProductosPorMesa] = useState({});
   const [datosInicialCargados, setDatosInicialCargados] = useState(false);
+  const [mesasInicialCargadas, setMesasInicialCargadas] = useState(false);
   
   // Estados para edición de nombres de mesas
   const [mesaEditando, setMesaEditando] = useState(null);
@@ -485,9 +486,13 @@ export default function Pedidos() {
   // Función para cargar mesas desde Supabase
   const cargarMesasDesdeSupabase = async () => {
     try {
+      // Evitar carga múltiple
+      if (mesasInicialCargadas) return;
+      
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
         debugLog('⚠️ No hay usuario autenticado para cargar mesas');
+        setMesasInicialCargadas(true);
         return;
       }
 
@@ -501,6 +506,8 @@ export default function Pedidos() {
 
       if (error) {
         console.error('Error al cargar mesas desde Supabase:', error);
+        setMesasInicialCargadas(true);
+        // Mantener las mesas por defecto que ya están en el estado
         return;
       }
 
@@ -508,20 +515,24 @@ export default function Pedidos() {
         const mesasArray = data.map(m => m.nombre_mesa);
         setMesas(mesasArray);
         
-        // Seleccionar la primera mesa si no hay ninguna seleccionada
-        if (!mesaSeleccionada && mesasArray.length > 0) {
+        // Solo cambiar la selección si la mesa actual no existe en las nuevas
+        if (!mesasArray.includes(mesaSeleccionada)) {
           setMesaSeleccionada(mesasArray[0]);
         }
         
         debugLog('✅ Mesas cargadas desde Supabase:', mesasArray.length);
+        setMesasInicialCargadas(true);
       } else {
-        // Si no hay mesas en Supabase, crear las por defecto
+        // Si no hay mesas en Supabase, crear las por defecto de forma asíncrona
         debugLog('📝 No hay mesas en Supabase, creando mesas por defecto...');
-        await inicializarMesasPorDefecto();
+        setMesasInicialCargadas(true);
+        // Inicializar en background sin bloquear
+        inicializarMesasPorDefecto();
       }
 
     } catch (error) {
       console.error('Error inesperado al cargar mesas:', error);
+      setMesasInicialCargadas(true);
     }
   };
 
@@ -1927,11 +1938,12 @@ export default function Pedidos() {
     cargarProductosInventario();
     cargarPedidosRegistrados();
     
-    // Cargar mesas desde Supabase (PRIORIDAD: sincronización multi-dispositivo)
-    cargarMesasDesdeSupabase();
-    
     // Cargar productos desde Supabase (PRIORIDAD: sincronización multi-dispositivo)
     cargarProductosTemporales();
+    
+    // Cargar mesas desde Supabase en background (no bloquear el render)
+    // Las mesas ya tienen valores por defecto, esta carga es para sincronizar
+    setTimeout(() => cargarMesasDesdeSupabase(), 100);
     
     // Cargar selectores de cocina guardados en localStorage
     const seleccionadosCocina = localStorage.getItem('productosSeleccionadosParaCocina');
@@ -1975,8 +1987,10 @@ export default function Pedidos() {
         },
         (payload) => {
           debugLog('🔄 Cambio detectado en mesas_config:', payload);
-          // Recargar mesas cuando hay cambios
-          cargarMesasDesdeSupabase();
+          // Resetear flag para permitir recarga
+          setMesasInicialCargadas(false);
+          // Recargar mesas cuando hay cambios (solo si no son del mismo usuario)
+          setTimeout(() => cargarMesasDesdeSupabase(), 500);
         }
       )
       .subscribe();
