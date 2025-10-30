@@ -50,12 +50,40 @@ export default function Pedidos() {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
   // Estados para gestión de mesas
-  const [mesas, setMesas] = useState(['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4']); // Inicializar con mesas por defecto
-  const [mesaSeleccionada, setMesaSeleccionada] = useState('Mesa 1'); // Seleccionar la primera por defecto
+  // Inicializar con cache de localStorage para carga instantánea
+  const [mesas, setMesas] = useState(() => {
+    try {
+      const cached = localStorage.getItem('mesasPedidos');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar mesas del cache:', error);
+    }
+    return ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4']; // Fallback solo para primera vez
+  });
+  const [mesaSeleccionada, setMesaSeleccionada] = useState(() => {
+    try {
+      const cached = localStorage.getItem('mesasPedidos');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed[0];
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar mesa seleccionada del cache:', error);
+    }
+    return 'Mesa 1';
+  });
   const [cantidadMesas, setCantidadMesas] = useState(4);
   const [productosPorMesa, setProductosPorMesa] = useState({});
   const [datosInicialCargados, setDatosInicialCargados] = useState(false);
   const [mesasInicialCargadas, setMesasInicialCargadas] = useState(false);
+  const [loadingMesas, setLoadingMesas] = useState(false); // NO mostrar spinner inicial, cargar en background
   
   // Estados para edición de nombres de mesas
   const [mesaEditando, setMesaEditando] = useState(null);
@@ -483,11 +511,14 @@ export default function Pedidos() {
   // FUNCIONES DE SINCRONIZACIÓN DE MESAS
   // ============================================================
 
-  // Función para cargar mesas desde Supabase
-  const cargarMesasDesdeSupabase = async () => {
+  // Función para cargar mesas desde Supabase (sin bloquear UI, actualización silenciosa)
+  const cargarMesasDesdeSupabase = async (fromRealtime = false) => {
     try {
-      // Evitar carga múltiple
-      if (mesasInicialCargadas) return;
+      // Evitar carga múltiple (solo si no viene de Realtime)
+      if (!fromRealtime && mesasInicialCargadas) {
+        debugLog('⏭️ Mesas ya cargadas, saltando carga');
+        return;
+      }
       
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
@@ -496,7 +527,7 @@ export default function Pedidos() {
         return;
       }
 
-      debugLog('📡 Cargando mesas desde Supabase para usuario:', usuarioId);
+      debugLog('📡 Cargando mesas desde Supabase (background) para usuario:', usuarioId);
 
       const { data, error } = await supabase
         .from('mesas_config')
@@ -507,26 +538,36 @@ export default function Pedidos() {
       if (error) {
         console.error('Error al cargar mesas desde Supabase:', error);
         setMesasInicialCargadas(true);
-        // Mantener las mesas por defecto que ya están en el estado
         return;
       }
 
       if (data && data.length > 0) {
         const mesasArray = data.map(m => m.nombre_mesa);
-        setMesas(mesasArray);
         
-        // Solo cambiar la selección si la mesa actual no existe en las nuevas
-        if (!mesasArray.includes(mesaSeleccionada)) {
-          setMesaSeleccionada(mesasArray[0]);
+        // Actualizar silenciosamente solo si hay cambios
+        const mesasActualesStr = JSON.stringify(mesas);
+        const mesasNuevasStr = JSON.stringify(mesasArray);
+        
+        if (mesasActualesStr !== mesasNuevasStr) {
+          debugLog('🔄 Actualizando mesas silenciosamente:', mesasArray.length);
+          setMesas(mesasArray);
+          
+          // Guardar en localStorage para próxima sesión
+          localStorage.setItem('mesasPedidos', JSON.stringify(mesasArray));
+          
+          // Solo cambiar la mesa seleccionada si ya no existe en el nuevo array
+          if (!mesasArray.includes(mesaSeleccionada)) {
+            setMesaSeleccionada(mesasArray[0]);
+          }
+        } else {
+          debugLog('✅ Mesas sin cambios');
         }
         
-        debugLog('✅ Mesas cargadas desde Supabase:', mesasArray.length);
         setMesasInicialCargadas(true);
       } else {
-        // Si no hay mesas en Supabase, crear las por defecto de forma asíncrona
-        debugLog('📝 No hay mesas en Supabase, creando mesas por defecto...');
+        // Si no hay mesas en Supabase, crear las por defecto
+        debugLog('📝 No hay mesas en Supabase, inicializando...');
         setMesasInicialCargadas(true);
-        // Inicializar en background sin bloquear
         inicializarMesasPorDefecto();
       }
 
@@ -536,7 +577,7 @@ export default function Pedidos() {
     }
   };
 
-  // Función para inicializar mesas por defecto en Supabase
+  // Función para inicializar mesas por defecto en Supabase (solo crear en DB, no actualizar estado)
   const inicializarMesasPorDefecto = async () => {
     try {
       const usuarioId = await authService.getCurrentUserId();
@@ -564,14 +605,9 @@ export default function Pedidos() {
         .insert(mesasParaInsertar);
 
       if (error) {
-        console.error('Error al crear mesas por defecto:', error);
-        // Si falla, usar mesas locales
-        setMesas(mesasDefault);
-        setMesaSeleccionada(mesasDefault[0]);
+        console.error('Error al crear mesas por defecto en Supabase:', error);
       } else {
-        debugLog('✅ Mesas por defecto creadas en Supabase');
-        setMesas(mesasDefault);
-        setMesaSeleccionada(mesasDefault[0]);
+        debugLog('✅ Mesas por defecto creadas en Supabase (background)');
       }
 
     } catch (error) {
@@ -1935,15 +1971,15 @@ export default function Pedidos() {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    cargarProductosInventario();
-    cargarPedidosRegistrados();
-    
-    // Cargar productos desde Supabase (PRIORIDAD: sincronización multi-dispositivo)
-    cargarProductosTemporales();
-    
-    // Cargar mesas desde Supabase en background (no bloquear el render)
-    // Las mesas ya tienen valores por defecto, esta carga es para sincronizar
-    setTimeout(() => cargarMesasDesdeSupabase(), 100);
+    // Ejecutar todas las cargas en paralelo para máxima velocidad
+    Promise.all([
+      cargarProductosInventario(),
+      cargarPedidosRegistrados(),
+      cargarProductosTemporales(),
+      cargarMesasDesdeSupabase() // Carga en background, no bloquea UI
+    ]).catch(err => {
+      console.error('Error al cargar datos iniciales:', err);
+    });
     
     // Cargar selectores de cocina guardados en localStorage
     const seleccionadosCocina = localStorage.getItem('productosSeleccionadosParaCocina');
@@ -1987,10 +2023,8 @@ export default function Pedidos() {
         },
         (payload) => {
           debugLog('🔄 Cambio detectado en mesas_config:', payload);
-          // Resetear flag para permitir recarga
-          setMesasInicialCargadas(false);
-          // Recargar mesas cuando hay cambios (solo si no son del mismo usuario)
-          setTimeout(() => cargarMesasDesdeSupabase(), 500);
+          // Recargar mesas inmediatamente cuando hay cambios
+          cargarMesasDesdeSupabase(true);
         }
       )
       .subscribe();
@@ -2102,8 +2136,8 @@ export default function Pedidos() {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
-        <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-7xl mx-auto'}`}>
+      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-3 sm:p-4 md:p-8'}`}>
+        <div className={`${pantallaCompleta ? 'h-full px-3 sm:px-4 py-4' : 'max-w-7xl mx-auto'}`}>
           {/* Botón de regreso */}
           {!pantallaCompleta && (
             <div className="mb-4 md:mb-6">
@@ -2277,180 +2311,181 @@ export default function Pedidos() {
             document.body
           )}
 
-                     {/* Sección de Gestión de Mesas y Productos */}
-           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
-            <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          {/* Sección de Gestión de Mesas y Productos */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 sm:p-4 md:p-8 border border-white/20">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-green-400 text-center mb-4 sm:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Gestión de Mesas y Productos
             </h2>
             
-                                                   {/* Gestión de Mesas */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 mb-6 border border-white/10">
-               <div className="flex items-center justify-between gap-4">
-                 <div className="flex items-center gap-3">
-                   <label className="text-white text-sm whitespace-nowrap">Cantidad:</label>
-                   <input
-                     type="number"
-                     min="1"
-                     max="20"
-                     value={cantidadMesas}
-                     onChange={(e) => setCantidadMesas(parseInt(e.target.value) || 1)}
-                     className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-sm"
-                   />
-                 </div>
-                 
-                 <button
-                   onClick={agregarMesas}
-                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap"
-                 >
-                   ➕ Agregar
-                 </button>
-                 
-                 <span className="text-gray-300 text-sm whitespace-nowrap">
-                   Total: {mesas.length} mesas
-                 </span>
-               </div>
-             </div>
-
-            {/* Pestañas de Mesas */}
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2 justify-center">
-                {mesas.map(mesa => (
-                  <div
-                    key={mesa}
-                    className={`relative group flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                      mesaSeleccionada === mesa
-                        ? 'bg-green-600 text-white shadow-lg'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    {mesaEditando === mesa ? (
-                      // Modo edición
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={nombreMesaTemporal}
-                          onChange={(e) => setNombreMesaTemporal(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              guardarNombreMesa(mesa);
-                            } else if (e.key === 'Escape') {
-                              cancelarEdicionNombreMesa();
-                            }
-                          }}
-                          autoFocus
-                          className="px-2 py-1 rounded text-sm bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-green-400"
-                          style={{ width: '150px' }}
-                        />
-                        <button
-                          onClick={() => guardarNombreMesa(mesa)}
-                          className="text-green-300 hover:text-green-200 text-sm"
-                          title="Guardar"
-                        >
-                          ✅
-                        </button>
-                        <button
-                          onClick={cancelarEdicionNombreMesa}
-                          className="text-red-300 hover:text-red-200 text-sm"
-                          title="Cancelar"
-                        >
-                          ❌
-                        </button>
-                      </div>
-                    ) : (
-                      // Modo visualización
-                      <>
-                        <button
-                          onClick={() => setMesaSeleccionada(mesa)}
-                          className="flex-1 text-left"
-                        >
-                          {mesa}
-                        </button>
-                        
-                        {/* Botón de editar nombre */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            iniciarEdicionNombreMesa(mesa);
-                          }}
-                          className={`text-xs hover:scale-110 transition-all duration-200 ${
-                            mesaSeleccionada === mesa
-                              ? 'text-blue-200 hover:text-blue-100'
-                              : 'text-blue-400 hover:text-blue-300'
-                          }`}
-                          title="Editar nombre de mesa"
-                        >
-                          ✏️
-                        </button>
-                        
-                        {/* Botón de eliminar mesa */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            eliminarMesa(mesa);
-                          }}
-                          className={`ml-1 text-xs hover:scale-110 transition-all duration-200 ${
-                            mesaSeleccionada === mesa
-                              ? 'text-red-200 hover:text-red-100'
-                              : 'text-red-400 hover:text-red-300'
-                          }`}
-                          title="Eliminar mesa"
-                        >
-                          ❌
-                        </button>
-                      </>
-                    )}
+            {/* Gestión de Mesas */}
+            <>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 md:p-4 mb-6 border border-white/10">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start">
+                      <label className="text-white text-xs sm:text-sm">Cantidad:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={cantidadMesas}
+                        onChange={(e) => setCantidadMesas(parseInt(e.target.value) || 1)}
+                        className="w-12 sm:w-16 px-1 sm:px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-xs sm:text-sm"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={agregarMesas}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm w-full sm:w-auto"
+                    >
+                      ➕ Agregar
+                    </button>
+                    
+                    <span className="text-gray-300 text-xs sm:text-sm">
+                      Total: {mesas.length} mesas
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-                         {/* Contenido de la Mesa Seleccionada */}
-             {mesaSeleccionada && (
-               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <h3 className="text-lg font-semibold text-white mb-4 text-center">
-                  🪑 {mesaSeleccionada}
-                </h3>
-                
-                {(!productosPorMesa[mesaSeleccionada] || productosPorMesa[mesaSeleccionada].length === 0) ? (
-                  <p className="text-gray-400 text-center py-6">No hay productos en esta mesa</p>
-                ) : (
-                  <div className="space-y-4">
+                {/* Pestañas de Mesas */}
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {mesas.map(mesa => (
+                      <div
+                        key={mesa}
+                        className={`relative group flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm ${
+                          mesaSeleccionada === mesa
+                            ? 'bg-green-600 text-white shadow-lg'
+                            : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
+                      >
+                        {mesaEditando === mesa ? (
+                          // Modo edición
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={nombreMesaTemporal}
+                              onChange={(e) => setNombreMesaTemporal(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  guardarNombreMesa(mesa);
+                                } else if (e.key === 'Escape') {
+                                  cancelarEdicionNombreMesa();
+                                }
+                              }}
+                              autoFocus
+                              className="px-2 py-1 rounded text-sm bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-green-400"
+                              style={{ width: '150px' }}
+                            />
+                            <button
+                              onClick={() => guardarNombreMesa(mesa)}
+                              className="text-green-300 hover:text-green-200 text-sm"
+                              title="Guardar"
+                            >
+                              ✅
+                            </button>
+                            <button
+                              onClick={cancelarEdicionNombreMesa}
+                              className="text-red-300 hover:text-red-200 text-sm"
+                              title="Cancelar"
+                            >
+                              ❌
+                            </button>
+                          </div>
+                        ) : (
+                          // Modo visualización
+                          <>
+                            <button
+                              onClick={() => setMesaSeleccionada(mesa)}
+                              className="flex-1 text-left"
+                            >
+                              {mesa}
+                            </button>
+                            
+                            {/* Botón de editar nombre */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                iniciarEdicionNombreMesa(mesa);
+                              }}
+                              className={`text-xs hover:scale-110 transition-all duration-200 ${
+                                mesaSeleccionada === mesa
+                                  ? 'text-blue-200 hover:text-blue-100'
+                                  : 'text-blue-400 hover:text-blue-300'
+                              }`}
+                              title="Editar nombre de mesa"
+                            >
+                              ✏️
+                            </button>
+                            
+                            {/* Botón de eliminar mesa */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                eliminarMesa(mesa);
+                              }}
+                              className={`ml-1 text-xs hover:scale-110 transition-all duration-200 ${
+                                mesaSeleccionada === mesa
+                                  ? 'text-red-200 hover:text-red-100'
+                                  : 'text-red-400 hover:text-red-300'
+                              }`}
+                              title="Eliminar mesa"
+                            >
+                              ❌
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Contenido de la Mesa Seleccionada */}
+                {mesaSeleccionada && (
+                  <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 text-center">
+                      🪑 {mesaSeleccionada}
+                    </h3>
+                    
+                    {(!productosPorMesa[mesaSeleccionada] || productosPorMesa[mesaSeleccionada].length === 0) ? (
+                      <p className="text-gray-400 text-center py-6">No hay productos en esta mesa</p>
+                    ) : (
+                      <div className="space-y-4">
                     {/* Controles de selección para cocina */}
-                    <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-3 border border-orange-400/30 mb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-orange-300 text-sm font-medium">🍳 Seleccionar para Cocina:</span>
+                    <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-orange-400/30 mb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-orange-300 text-xs sm:text-sm font-medium">🍳 <span className="hidden xs:inline">Seleccionar para </span>Cocina:</span>
                           <span className="text-orange-200 text-xs">
-                            ({(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length} de {productosPorMesa[mesaSeleccionada].length})
+                            ({(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
                           </span>
                         </div>
                         <button
                           onClick={() => toggleSeleccionarTodosParaCocina(mesaSeleccionada)}
-                          className="text-orange-300 hover:text-orange-200 text-xs font-medium underline"
+                          className="text-orange-300 hover:text-orange-200 text-xs font-medium underline whitespace-nowrap"
                         >
                           {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
-                            ? '❌ Deseleccionar todos'
-                            : '✅ Seleccionar todos'}
+                            ? '❌ Deseleccionar'
+                            : '✅ Seleccionar'}
                         </button>
                       </div>
                     </div>
 
                     {/* Controles de selección para pago */}
-                    <div className="bg-green-500/10 backdrop-blur-sm rounded-lg p-3 border border-green-400/30 mb-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-300 text-sm font-medium">💰 Seleccionar para Pago:</span>
+                    <div className="bg-green-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-green-400/30 mb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-green-300 text-xs sm:text-sm font-medium">💰 <span className="hidden xs:inline">Seleccionar para </span>Pago:</span>
                           <span className="text-green-200 text-xs">
-                            ({(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} de {productosPorMesa[mesaSeleccionada].length})
+                            ({(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
                           </span>
                         </div>
                         <button
                           onClick={() => toggleSeleccionarTodosParaPago(mesaSeleccionada)}
-                          className="text-green-300 hover:text-green-200 text-xs font-medium underline"
+                          className="text-green-300 hover:text-green-200 text-xs font-medium underline whitespace-nowrap"
                         >
                           {(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
-                            ? '❌ Deseleccionar todos'
-                            : '✅ Seleccionar todos'}
+                            ? '❌ Deseleccionar'
+                            : '✅ Seleccionar'}
                         </button>
                       </div>
                     </div>
@@ -2464,7 +2499,7 @@ export default function Pedidos() {
                         return (
                           <div 
                             key={producto.id} 
-                            className={`flex items-center justify-between py-3 px-2 transition-all duration-200 ${
+                            className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 sm:py-3 px-2 gap-2 transition-all duration-200 ${
                               estaSeleccionadoPago 
                                 ? 'bg-green-500/20 border border-green-400/50 rounded-lg shadow-lg' 
                                 : estaSeleccionadoCocina
@@ -2472,19 +2507,19 @@ export default function Pedidos() {
                                 : ''
                             }`}
                           >
-                            {/* Checkbox para Cocina (a la izquierda) */}
-                            <div className="flex items-center gap-2 flex-1">
+                            {/* Checkbox para Cocina y contenido principal */}
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
                               <input
                                 type="checkbox"
                                 checked={estaSeleccionadoCocina}
                                 onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
-                                className="w-4 h-4 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer"
+                                className="w-4 h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
                                 title="Enviar a cocina"
                               />
                               
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-white font-medium">{producto.producto}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-col gap-1">
+                                  <p className="text-white font-medium text-sm truncate">{producto.producto}</p>
                                   {/* Campo de comentarios */}
                                   <input
                                     type="text"
@@ -2495,19 +2530,19 @@ export default function Pedidos() {
                                       const comentariosUpper = e.target.value.toUpperCase();
                                       guardarComentariosEnSupabase(producto.id, comentariosUpper);
                                     }}
-                                    className="flex-1 max-w-xs px-2 py-1 rounded border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                                    className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs sm:text-sm"
                                     placeholder="Comentarios..."
                                     style={{ textTransform: 'uppercase' }}
                                   />
+                                  <p className="text-gray-300 text-xs">
+                                    {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
+                                  </p>
                                 </div>
-                                <p className="text-gray-300 text-sm">
-                                  {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
-                                </p>
                               </div>
                             </div>
                             
-                            {/* Checkbox para Pago y valores (a la derecha) */}
-                            <div className="flex items-center gap-3">
+                            {/* Checkbox para Pago y valores */}
+                            <div className="flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0">
                               {/* Checkbox para Pago */}
                               <input
                                 type="checkbox"
@@ -2516,12 +2551,12 @@ export default function Pedidos() {
                                 className="w-4 h-4 text-green-600 bg-white/10 border-green-400 rounded focus:ring-green-500 focus:ring-1 cursor-pointer"
                                 title="Seleccionar para pago"
                               />
-                              <span className="text-green-400 font-bold">
+                              <span className="text-green-400 font-bold text-sm whitespace-nowrap">
                                 ${parseFloat(producto.subtotal).toLocaleString()}
                               </span>
                               <button
                                 onClick={() => eliminarProducto(mesaSeleccionada, producto.id)}
-                                className="text-red-400 hover:text-red-300 text-lg"
+                                className="text-red-400 hover:text-red-300 text-base sm:text-lg"
                                 title="Eliminar producto"
                               >
                                 🗑️
@@ -2532,20 +2567,20 @@ export default function Pedidos() {
                       })}
                     </div>
                     
-                                                               {/* Resumen de la mesa */}
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                       <div className="flex justify-between items-center mb-3">
-                         <div className="text-white">
-                           <span className="font-medium">
-                             {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
-                               ? `Productos Seleccionados: ${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} / ${productosPorMesa[mesaSeleccionada].length}`
-                               : `Total de Productos: ${productosPorMesa[mesaSeleccionada].length}`)}
-                           </span>
-                         </div>
-                         <div className="text-green-400 font-bold text-lg">
-                           Subtotal: ${calcularTotalMesa(mesaSeleccionada).toLocaleString()}
-                         </div>
-                       </div>
+                    {/* Resumen de la mesa */}
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/20">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+                        <div className="text-white text-xs sm:text-sm">
+                          <span className="font-medium">
+                            {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
+                              ? `Seleccionados: ${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}/${productosPorMesa[mesaSeleccionada].length}`
+                              : `Total: ${productosPorMesa[mesaSeleccionada].length} productos`)}
+                          </span>
+                        </div>
+                        <div className="text-green-400 font-bold text-base sm:text-lg">
+                          Subtotal: ${calcularTotalMesa(mesaSeleccionada).toLocaleString()}
+                        </div>
+                      </div>
                        
                        {/* Campo de Propina */}
                        <div className="flex items-center justify-between mb-3 p-3 bg-white/5 rounded-lg border border-white/10">
@@ -2714,66 +2749,68 @@ export default function Pedidos() {
                       </div>
                     </div>
                   </div>
+                  )}
+                </div>
                 )}
-              </div>
+              </>
             )}
 
-                         {/* Botones de Acción: Enviar a Cocina y Registrar Pedido */}
-             {mesaSeleccionada && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && (
-               <div className="text-center mt-6 space-y-4">
-                 {/* Botón NUEVO: Enviar a Cocina (SOLO PRODUCTOS SELECCIONADOS) */}
-                 <div>
-                   <button
-                     onClick={() => enviarACocina(mesaSeleccionada)}
-                     disabled={enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0}
-                     className={`font-bold py-3 px-8 rounded-lg transition-all duration-300 transform text-lg shadow-lg ${
-                       enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
-                         ? 'bg-gray-600 cursor-not-allowed scale-100'
-                         : 'bg-orange-600 hover:bg-orange-700 hover:scale-105'
-                     } text-white`}
-                   >
-                     {enviandoACocina 
-                       ? '⏳ Enviando a cocina...' 
-                       : `🍳 Enviar ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length > 0 
-                           ? `(${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}) ` 
-                           : ''}a Cocina`
-                     }
-                   </button>
-                   <p className={`text-sm mt-2 ${
-                     (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0 
-                       ? 'text-orange-400' 
-                       : 'text-gray-400'
-                   }`}>
-                     {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
-                       ? '⚠️ Selecciona al menos un producto para enviar a cocina'
-                       : `Enviará ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length} producto(s) seleccionado(s) a cocina`
-                     }
-                   </p>
-                 </div>
+            {/* Botones de Acción: Enviar a Cocina y Registrar Pedido */}
+            {mesaSeleccionada && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && (
+              <div className="text-center mt-6 space-y-4 px-2">
+                {/* Botón NUEVO: Enviar a Cocina (SOLO PRODUCTOS SELECCIONADOS) */}
+                <div>
+                  <button
+                    onClick={() => enviarACocina(mesaSeleccionada)}
+                    disabled={enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0}
+                    className={`w-full sm:w-auto font-bold py-3 px-4 sm:px-8 rounded-lg transition-all duration-300 transform text-sm sm:text-lg shadow-lg ${
+                      enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
+                        ? 'bg-gray-600 cursor-not-allowed scale-100'
+                        : 'bg-orange-600 hover:bg-orange-700 hover:scale-105'
+                    } text-white`}
+                  >
+                    {enviandoACocina 
+                      ? '⏳ Enviando...' 
+                      : `🍳 Enviar ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length > 0 
+                          ? `(${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}) ` 
+                          : ''}a Cocina`
+                    }
+                  </button>
+                  <p className={`text-xs sm:text-sm mt-2 px-2 ${
+                    (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0 
+                      ? 'text-orange-400' 
+                      : 'text-gray-400'
+                  }`}>
+                    {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
+                      ? '⚠️ Selecciona productos'
+                      : `${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length} producto(s) a cocina`
+                    }
+                  </p>
+                </div>
 
-                 {/* Botón EXISTENTE: Registrar Pedido (para pago) */}
-                 <div>
-                   <button
-                     onClick={() => registrarPedido(mesaSeleccionada)}
-                     disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0}
-                     className={`font-bold py-3 px-8 rounded-lg transition-all duration-300 transform text-lg shadow-lg ${
-                       (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0
-                         ? 'bg-gray-600 cursor-not-allowed scale-100'
-                         : 'bg-green-600 hover:bg-green-700 hover:scale-105'
-                     } text-white`}
-                   >
-                     💳 Registrar Pago de {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
-                       ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}) ` 
-                       : '')}{mesaSeleccionada}
-                   </button>
-                   <p className="text-gray-400 text-sm mt-2">
-                     {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0
-                       ? `Registrará ${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} producto(s) seleccionado(s)`
-                       : '⚠️ Selecciona al menos un producto para pagar')}
-                   </p>
-                 </div>
-               </div>
-                           )}
+                {/* Botón EXISTENTE: Registrar Pedido (para pago) */}
+                <div>
+                  <button
+                    onClick={() => registrarPedido(mesaSeleccionada)}
+                    disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0}
+                    className={`w-full sm:w-auto font-bold py-3 px-4 sm:px-8 rounded-lg transition-all duration-300 transform text-sm sm:text-lg shadow-lg ${
+                      (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0
+                        ? 'bg-gray-600 cursor-not-allowed scale-100'
+                        : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+                    } text-white`}
+                  >
+                    💳 Registrar Pago {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
+                      ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length})` 
+                      : '')}
+                  </button>
+                  <p className="text-gray-400 text-xs sm:text-sm mt-2 px-2">
+                    {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0
+                      ? `${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} producto(s) seleccionado(s)`
+                      : '⚠️ Selecciona productos para pagar')}
+                  </p>
+                </div>
+              </div>
+            )}
            </div>
 
            {/* Tabla de Pedidos Registrados */}
