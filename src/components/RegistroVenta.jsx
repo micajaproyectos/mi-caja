@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -313,14 +313,16 @@ export default function RegistroVenta() {
     setProductosVenta(productosVenta.filter(p => p.id !== id));
   };
 
-  // Función para calcular el total de la venta
-  const calcularTotalVenta = () => {
+  // Función para calcular el total de la venta (MEMOIZADA para evitar recalcular en cada render)
+  const totalVenta = useMemo(() => {
     return productosVenta.reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
-  };
+  }, [productosVenta]);
+  
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularTotalVenta = () => totalVenta;
   
   // Función para calcular el vuelto
   const calcularVuelto = () => {
-    const totalVenta = calcularTotalVenta();
     const montoPagadoNum = parseFloat(montoPagado) || 0;
     return montoPagadoNum - totalVenta;
   };
@@ -612,8 +614,8 @@ export default function RegistroVenta() {
     }
   };
 
-  // Función para calcular estadísticas dinámicas según filtros aplicados
-  const calcularEstadisticasDinamicas = useCallback(() => {
+  // Función para calcular estadísticas dinámicas según filtros aplicados (MEMOIZADA para optimizar rendimiento)
+  const estadisticasDinamicas = useMemo(() => {
     let ventasFiltradas = [...ventasRegistradas];
 
     // Si no hay filtros activos, mostrar solo las ventas del día actual
@@ -723,6 +725,9 @@ export default function RegistroVenta() {
 
     return estadisticas;
   }, [ventasRegistradas, filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
+  
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularEstadisticasDinamicas = () => estadisticasDinamicas;
 
   // Función para obtener el título dinámico del resumen
   const obtenerTituloResumen = () => {
@@ -1318,8 +1323,8 @@ export default function RegistroVenta() {
       setMontoPagado('');
       setMostrarVuelto(false);
       
-      // Recargar la lista de ventas
-      cargarVentas();
+      // Recargar la lista de ventas (con await para asegurar sincronización)
+      await cargarVentas();
       
     } catch (error) {
       console.error('❌ Error general al registrar venta:', error);
