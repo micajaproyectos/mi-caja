@@ -479,6 +479,204 @@ export default function Pedidos() {
   };
 
   // ============================================================
+  // FUNCIONES DE SINCRONIZACIÓN DE MESAS
+  // ============================================================
+
+  // Función para cargar mesas desde Supabase
+  const cargarMesasDesdeSupabase = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        debugLog('⚠️ No hay usuario autenticado para cargar mesas');
+        return;
+      }
+
+      debugLog('📡 Cargando mesas desde Supabase para usuario:', usuarioId);
+
+      const { data, error } = await supabase
+        .from('mesas_config')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('orden', { ascending: true });
+
+      if (error) {
+        console.error('Error al cargar mesas desde Supabase:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const mesasArray = data.map(m => m.nombre_mesa);
+        setMesas(mesasArray);
+        
+        // Seleccionar la primera mesa si no hay ninguna seleccionada
+        if (!mesaSeleccionada && mesasArray.length > 0) {
+          setMesaSeleccionada(mesasArray[0]);
+        }
+        
+        debugLog('✅ Mesas cargadas desde Supabase:', mesasArray.length);
+      } else {
+        // Si no hay mesas en Supabase, crear las por defecto
+        debugLog('📝 No hay mesas en Supabase, creando mesas por defecto...');
+        await inicializarMesasPorDefecto();
+      }
+
+    } catch (error) {
+      console.error('Error inesperado al cargar mesas:', error);
+    }
+  };
+
+  // Función para inicializar mesas por defecto en Supabase
+  const inicializarMesasPorDefecto = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      // Obtener cliente_id
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (!usuarioData) return;
+
+      const mesasDefault = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4'];
+      
+      // Crear mesas en Supabase
+      const mesasParaInsertar = mesasDefault.map((nombre, index) => ({
+        usuario_id: usuarioId,
+        cliente_id: usuarioData.cliente_id,
+        nombre_mesa: nombre,
+        orden: index
+      }));
+
+      const { error } = await supabase
+        .from('mesas_config')
+        .insert(mesasParaInsertar);
+
+      if (error) {
+        console.error('Error al crear mesas por defecto:', error);
+        // Si falla, usar mesas locales
+        setMesas(mesasDefault);
+        setMesaSeleccionada(mesasDefault[0]);
+      } else {
+        debugLog('✅ Mesas por defecto creadas en Supabase');
+        setMesas(mesasDefault);
+        setMesaSeleccionada(mesasDefault[0]);
+      }
+
+    } catch (error) {
+      console.error('Error al inicializar mesas por defecto:', error);
+    }
+  };
+
+  // Función para guardar nuevas mesas en Supabase
+  const guardarMesasEnSupabase = async (nuevasMesas) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      // Obtener cliente_id
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (!usuarioData) return;
+
+      // Preparar mesas para insertar (solo las nuevas)
+      const mesasParaInsertar = nuevasMesas.map((nombre, index) => ({
+        usuario_id: usuarioId,
+        cliente_id: usuarioData.cliente_id,
+        nombre_mesa: nombre,
+        orden: mesas.length + index // Continuar desde el último orden
+      }));
+
+      const { error } = await supabase
+        .from('mesas_config')
+        .insert(mesasParaInsertar);
+
+      if (error) {
+        console.error('Error al guardar mesas en Supabase:', error);
+      } else {
+        debugLog('✅ Mesas guardadas en Supabase:', nuevasMesas.length);
+      }
+
+    } catch (error) {
+      console.error('Error inesperado al guardar mesas:', error);
+    }
+  };
+
+  // Función para eliminar una mesa de Supabase
+  const eliminarMesaDeSupabase = async (nombreMesa) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { error } = await supabase
+        .from('mesas_config')
+        .delete()
+        .eq('usuario_id', usuarioId)
+        .eq('nombre_mesa', nombreMesa);
+
+      if (error) {
+        console.error('Error al eliminar mesa de Supabase:', error);
+      } else {
+        debugLog('✅ Mesa eliminada de Supabase:', nombreMesa);
+      }
+
+    } catch (error) {
+      console.error('Error inesperado al eliminar mesa:', error);
+    }
+  };
+
+  // Función para renombrar una mesa en Supabase
+  const renombrarMesaEnSupabase = async (nombreAntiguo, nombreNuevo) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { error } = await supabase
+        .from('mesas_config')
+        .update({ nombre_mesa: nombreNuevo })
+        .eq('usuario_id', usuarioId)
+        .eq('nombre_mesa', nombreAntiguo);
+
+      if (error) {
+        console.error('Error al renombrar mesa en Supabase:', error);
+      } else {
+        debugLog('✅ Mesa renombrada en Supabase:', nombreAntiguo, '→', nombreNuevo);
+      }
+
+    } catch (error) {
+      console.error('Error inesperado al renombrar mesa:', error);
+    }
+  };
+
+  // Función para actualizar el orden de las mesas en Supabase
+  const actualizarOrdenMesasEnSupabase = async (mesasOrdenadas) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      // Actualizar el orden de cada mesa
+      for (let i = 0; i < mesasOrdenadas.length; i++) {
+        await supabase
+          .from('mesas_config')
+          .update({ orden: i })
+          .eq('usuario_id', usuarioId)
+          .eq('nombre_mesa', mesasOrdenadas[i]);
+      }
+
+      debugLog('✅ Orden de mesas actualizado en Supabase');
+
+    } catch (error) {
+      console.error('Error al actualizar orden de mesas:', error);
+    }
+  };
+
+  // ============================================================
   // FIN FUNCIONES DE SINCRONIZACIÓN
   // ============================================================
 
@@ -766,7 +964,7 @@ export default function Pedidos() {
   };
 
   // Función para agregar mesas
-  const agregarMesas = () => {
+  const agregarMesas = async () => {
     if (cantidadMesas <= 0) {
       alert('La cantidad de mesas debe ser mayor a 0');
       return;
@@ -781,12 +979,15 @@ export default function Pedidos() {
     setMesas(mesasActualizadas);
     setCantidadMesas(4); // Resetear a 4
     
-    // Guardar en localStorage inmediatamente
+    // Guardar en Supabase (sincronización multi-dispositivo)
+    await guardarMesasEnSupabase(nuevasMesas);
+    
+    // Guardar en localStorage (cache secundario)
     localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
   };
 
   // Función para eliminar una mesa
-  const eliminarMesa = (mesaAEliminar) => {
+  const eliminarMesa = async (mesaAEliminar) => {
     // No permitir eliminar si solo queda una mesa
     if (mesas.length <= 1) {
       alert('Debe mantener al menos una mesa');
@@ -811,10 +1012,17 @@ export default function Pedidos() {
       return nuevosProductos;
     });
 
-    // Actualizar localStorage de mesas
+    // Eliminar de Supabase (sincronización multi-dispositivo)
+    await eliminarMesaDeSupabase(mesaAEliminar);
+    await limpiarMesaEnSupabase(mesaAEliminar); // Eliminar también los productos de la mesa
+
+    // Actualizar orden de las mesas restantes
+    await actualizarOrdenMesasEnSupabase(mesasActualizadas);
+
+    // Actualizar localStorage de mesas (cache secundario)
     localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
     
-    // Actualizar localStorage de productos
+    // Actualizar localStorage de productos (cache secundario)
     const productosGuardados = { ...productosPorMesa };
     delete productosGuardados[mesaAEliminar];
     localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
@@ -827,7 +1035,7 @@ export default function Pedidos() {
   };
 
   // Función para guardar nombre de mesa editado
-  const guardarNombreMesa = (mesaAntigua) => {
+  const guardarNombreMesa = async (mesaAntigua) => {
     if (!nombreMesaTemporal.trim()) {
       alert('El nombre de la mesa no puede estar vacío');
       return;
@@ -871,7 +1079,10 @@ export default function Pedidos() {
       setMesaSeleccionada(nombreMesaTemporal);
     }
 
-    // Actualizar localStorage
+    // Renombrar en Supabase (sincronización multi-dispositivo)
+    await renombrarMesaEnSupabase(mesaAntigua, nombreMesaTemporal);
+
+    // Actualizar localStorage (cache secundario)
     const mesasActualizadas = mesas.map(m => m === mesaAntigua ? nombreMesaTemporal : m);
     localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
 
@@ -1720,29 +1931,8 @@ export default function Pedidos() {
     cargarProductosInventario();
     cargarPedidosRegistrados();
     
-    // Cargar mesas guardadas en localStorage
-    const mesasGuardadas = localStorage.getItem('mesasPedidos');
-    if (mesasGuardadas) {
-      try {
-        const mesasArray = JSON.parse(mesasGuardadas);
-        setMesas(mesasArray);
-        // Si hay mesas guardadas, seleccionar la primera
-        if (mesasArray.length > 0) {
-          setMesaSeleccionada(mesasArray[0]);
-        }
-      } catch (error) {
-        console.error('Error al cargar mesas del localStorage:', error);
-        // Si hay error, inicializar con mesas por defecto
-        const mesasDefault = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4'];
-        setMesas(mesasDefault);
-        setMesaSeleccionada('Mesa 1');
-      }
-    } else {
-      // Si no hay mesas guardadas, inicializar con mesas por defecto
-      const mesasDefault = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4'];
-      setMesas(mesasDefault);
-      setMesaSeleccionada('Mesa 1');
-    }
+    // Cargar mesas desde Supabase (PRIORIDAD: sincronización multi-dispositivo)
+    cargarMesasDesdeSupabase();
     
     // Cargar productos desde Supabase (PRIORIDAD: sincronización multi-dispositivo)
     cargarProductosTemporales();
@@ -1757,8 +1947,10 @@ export default function Pedidos() {
       }
     }
 
-    // Configurar suscripción Realtime para sincronización automática entre dispositivos
-    const channel = supabase
+    // Configurar suscripciones Realtime para sincronización automática entre dispositivos
+    
+    // Suscripción 1: productos_mesas_temp
+    const channelProductos = supabase
       .channel('productos_mesas_temp_changes')
       .on(
         'postgres_changes',
@@ -1775,9 +1967,28 @@ export default function Pedidos() {
       )
       .subscribe();
 
+    // Suscripción 2: mesas_config
+    const channelMesas = supabase
+      .channel('mesas_config_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'mesas_config'
+        },
+        (payload) => {
+          debugLog('🔄 Cambio detectado en mesas_config:', payload);
+          // Recargar mesas cuando hay cambios
+          cargarMesasDesdeSupabase();
+        }
+      )
+      .subscribe();
+
     // Cleanup: desuscribir al desmontar
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channelProductos);
+      supabase.removeChannel(channelMesas);
     };
   }, []);
 
@@ -1793,12 +2004,8 @@ export default function Pedidos() {
     localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(productosSeleccionadosParaCocina));
   }, [productosSeleccionadosParaCocina]);
 
-  // Guardar mesas en localStorage cuando cambien
-  useEffect(() => {
-    if (mesas.length > 0) {
-      localStorage.setItem('mesasPedidos', JSON.stringify(mesas));
-    }
-  }, [mesas]);
+  // Las mesas ahora se sincronizan con Supabase, no necesitamos guardar en localStorage
+  // El localStorage solo se usa como cache secundario en las funciones individuales
 
   // Aplicar filtros cuando cambien los valores de filtro
   useEffect(() => {
