@@ -746,8 +746,7 @@ export default function Stock() {
             </div>
           </div>
 
-          {/* Sección de Productos Sin Ventas por más de 30 días - DESHABILITADA TEMPORALMENTE */}
-          {false && (
+          {/* Sección de Productos Sin Ventas por más de 30 días */}
           <div className="mt-6 md:mt-8">
             <div className="flex items-center justify-center gap-3 mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-semibold text-red-400 text-center">
@@ -881,7 +880,6 @@ export default function Stock() {
               )}
             </div>
           </div>
-          )}
         </div>
       </div>
       

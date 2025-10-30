@@ -45,7 +45,7 @@ export default function Pedidos() {
   const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   
-  // Refs y estado para el portal del dropdown
+  // Ref para el input de búsqueda
   const searchInputRef = useRef(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
@@ -80,7 +80,22 @@ export default function Pedidos() {
     return 'Mesa 1';
   });
   const [cantidadMesas, setCantidadMesas] = useState(4);
-  const [productosPorMesa, setProductosPorMesa] = useState({});
+  // Inicializar productos desde cache para carga instantánea
+  const [productosPorMesa, setProductosPorMesa] = useState(() => {
+    try {
+      const cached = localStorage.getItem('productosPorMesa');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') {
+          debugLog('⚡ Productos cargados desde cache:', Object.keys(parsed).length, 'mesas');
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar productos del cache:', error);
+    }
+    return {};
+  });
   const [datosInicialCargados, setDatosInicialCargados] = useState(false);
   const [mesasInicialCargadas, setMesasInicialCargadas] = useState(false);
   const [loadingMesas, setLoadingMesas] = useState(false); // NO mostrar spinner inicial, cargar en background
@@ -90,7 +105,18 @@ export default function Pedidos() {
   const [nombreMesaTemporal, setNombreMesaTemporal] = useState('');
   
   // Estados para selección de productos para enviar a cocina
-  const [productosSeleccionadosParaCocina, setProductosSeleccionadosParaCocina] = useState({});
+  // Inicializar desde cache para carga instantánea
+  const [productosSeleccionadosParaCocina, setProductosSeleccionadosParaCocina] = useState(() => {
+    try {
+      const cached = localStorage.getItem('productosSeleccionadosParaCocina');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      console.error('Error al cargar selectores de cocina del cache:', error);
+    }
+    return {};
+  });
   
   // Estados para selección de productos para pago
   const [productosSeleccionadosParaPago, setProductosSeleccionadosParaPago] = useState({});
@@ -144,6 +170,9 @@ export default function Pedidos() {
   
   // Estado para notificación de dispositivos táctiles
   const [notificacionTactil, setNotificacionTactil] = useState(false);
+  
+  // Ref para debounce de Realtime (evita flash visual)
+  const realtimeTimeoutRef = useRef(null);
 
   // Función para detectar dispositivos táctiles (tablets/móviles) y navegadores específicos
   const esDispositivoTactil = () => {
@@ -201,20 +230,8 @@ export default function Pedidos() {
         return;
       }
 
-      // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
-      const { data: usuarioData, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('cliente_id')
-        .eq('usuario_id', usuarioId)
-        .single();
-
-      if (usuarioError || !usuarioData) {
-        console.error('Error al obtener cliente_id del usuario:', usuarioError);
-        setPedidosRegistrados([]);
-        return;
-      }
-
-      const cliente_id = usuarioData.cliente_id;
+      // Reducir logs para mejor rendimiento
+      if (IS_DEBUG) console.log('🔍 Cargando pedidos registrados');
 
       // Cargar TODOS los pedidos del usuario (sin filtro de fecha)
       // Intentar consulta con fecha_cl primero
@@ -222,7 +239,6 @@ export default function Pedidos() {
         .from('pedidos')
         .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
-        .eq('cliente_id', cliente_id) // 🔒 FILTRO CRÍTICO POR CLIENTE
         .order('fecha_cl', { ascending: false })
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false });
@@ -230,22 +246,29 @@ export default function Pedidos() {
       // Si hay error con fecha_cl, usar consulta sin fecha_cl
       if (error && error.message?.includes('fecha_cl')) {
         console.warn('⚠️ Columna fecha_cl no existe en pedidos, usando fecha');
-        const fallbackQuery = await supabase
+        
+        const fallbackResult = await supabase
           .from('pedidos')
           .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
-          .eq('cliente_id', cliente_id)
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
         
-        data = fallbackQuery.data;
-        error = fallbackQuery.error;
+        data = fallbackResult.data;
+        error = fallbackResult.error;
       }
 
       if (error) {
         console.error('❌ Error al cargar pedidos registrados:', error);
+        debugLog('🔍 Detalles del error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         setPedidosRegistrados([]);
       } else {
+        if (IS_DEBUG) console.log('✅ Pedidos:', data?.length || 0);
         setPedidosRegistrados(data || []);
         // No inicializar filtrados aquí, dejar que el efecto lo haga
       }
@@ -293,23 +316,12 @@ export default function Pedidos() {
   // Función para cargar productos temporales desde Supabase
   const cargarProductosTemporales = async () => {
     try {
-      // DEBUG: Verificar sesión de Supabase
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      debugLog('🔐 DEBUG - Sesión de Supabase:', {
-        tieneSession: !!sessionData?.session,
-        userId: sessionData?.session?.user?.id,
-        errorSession: sessionError
-      });
-
       const usuarioId = await authService.getCurrentUserId();
-      debugLog('👤 DEBUG - Usuario ID obtenido:', usuarioId);
       
       if (!usuarioId) {
-        debugLog('⚠️ No hay usuario autenticado para cargar productos temporales');
+        setDatosInicialCargados(true);
         return;
       }
-
-      debugLog('📡 Consultando Supabase para usuario:', usuarioId);
 
       const { data, error } = await supabase
         .from('productos_mesas_temp')
@@ -319,25 +331,23 @@ export default function Pedidos() {
 
       if (error) {
         console.error('❌ Error al cargar productos temporales:', error);
-        debugLog('🔍 DEBUG - Detalles del error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
+        setDatosInicialCargados(true);
         return;
       }
 
-      debugLog('📊 Datos recibidos de Supabase:', data);
-      debugLog('🔢 DEBUG - Total de registros:', data?.length || 0);
+      // Si no hay datos, actualizar estado inmediatamente y salir
+      if (!data || data.length === 0) {
+        setProductosPorMesa({});
+        setDatosInicialCargados(true);
+        return;
+      }
 
-      // Convertir datos de Supabase al formato local (productosPorMesa)
-      const productosPorMesaTemp = {};
-      (data || []).forEach(item => {
-        if (!productosPorMesaTemp[item.mesa]) {
-          productosPorMesaTemp[item.mesa] = [];
+      // Convertir datos usando reduce (más rápido que forEach)
+      const productosPorMesaTemp = data.reduce((acc, item) => {
+        if (!acc[item.mesa]) {
+          acc[item.mesa] = [];
         }
-        productosPorMesaTemp[item.mesa].push({
+        acc[item.mesa].push({
           id: item.producto_id,
           producto: item.producto,
           cantidad: item.cantidad,
@@ -346,17 +356,17 @@ export default function Pedidos() {
           subtotal: item.subtotal,
           comentarios: item.comentarios || ''
         });
-      });
+        return acc;
+      }, {});
 
+      // Un solo setState con ambos cambios para un solo re-render
       setProductosPorMesa(productosPorMesaTemp);
-      debugLog('✅ Productos temporales cargados desde Supabase:', Object.keys(productosPorMesaTemp).length, 'mesas');
-      
-      // Marcar que los datos iniciales ya fueron cargados
       setDatosInicialCargados(true);
+      
+      if (IS_DEBUG) console.log('✅ Productos:', Object.keys(productosPorMesaTemp).length, 'mesas');
 
     } catch (error) {
       console.error('Error inesperado al cargar productos temporales:', error);
-      // Marcar como cargados incluso si hay error para no bloquear la app
       setDatosInicialCargados(true);
     }
   };
@@ -370,30 +380,18 @@ export default function Pedidos() {
         return;
       }
 
-      // Obtener cliente_id
-      const { data: usuarioData, error: usuarioError } = await supabase
+      // Obtener cliente_id para el INSERT (requerido por RLS)
+      const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('cliente_id')
         .eq('usuario_id', usuarioId)
         .single();
 
-      if (usuarioError || !usuarioData) {
-        console.error('❌ Error al obtener cliente_id del usuario:', {
-          error: usuarioError,
-          code: usuarioError?.code,
-          message: usuarioError?.message,
-          details: usuarioError?.details,
-          hint: usuarioError?.hint
-        });
-        alert('❌ Error: No se puede acceder a los datos del usuario. Verifica las políticas RLS de la tabla usuarios.');
-        return;
-      }
-
       const { error } = await supabase
         .from('productos_mesas_temp')
         .insert([{
           usuario_id: usuarioId,
-          cliente_id: usuarioData.cliente_id,
+          cliente_id: usuarioData?.cliente_id || null,
           mesa: mesa,
           producto: producto.producto,
           cantidad: producto.cantidad,
@@ -516,18 +514,16 @@ export default function Pedidos() {
     try {
       // Evitar carga múltiple (solo si no viene de Realtime)
       if (!fromRealtime && mesasInicialCargadas) {
-        debugLog('⏭️ Mesas ya cargadas, saltando carga');
         return;
       }
       
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
-        debugLog('⚠️ No hay usuario autenticado para cargar mesas');
         setMesasInicialCargadas(true);
         return;
       }
 
-      debugLog('📡 Cargando mesas desde Supabase (background) para usuario:', usuarioId);
+      // Reducir logs para mejor rendimiento
 
       const { data, error } = await supabase
         .from('mesas_config')
@@ -549,18 +545,14 @@ export default function Pedidos() {
         const mesasNuevasStr = JSON.stringify(mesasArray);
         
         if (mesasActualesStr !== mesasNuevasStr) {
-          debugLog('🔄 Actualizando mesas silenciosamente:', mesasArray.length);
           setMesas(mesasArray);
-          
-          // Guardar en localStorage para próxima sesión
           localStorage.setItem('mesasPedidos', JSON.stringify(mesasArray));
           
           // Solo cambiar la mesa seleccionada si ya no existe en el nuevo array
           if (!mesasArray.includes(mesaSeleccionada)) {
             setMesaSeleccionada(mesasArray[0]);
           }
-        } else {
-          debugLog('✅ Mesas sin cambios');
+          if (IS_DEBUG) console.log('🔄 Mesas actualizadas');
         }
         
         setMesasInicialCargadas(true);
@@ -583,7 +575,7 @@ export default function Pedidos() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Obtener cliente_id (opcional)
+      // Obtener cliente_id para el INSERT (requerido por RLS)
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('cliente_id')
@@ -595,7 +587,7 @@ export default function Pedidos() {
       // Crear mesas en Supabase
       const mesasParaInsertar = mesasDefault.map((nombre, index) => ({
         usuario_id: usuarioId,
-        cliente_id: usuarioData?.cliente_id || null, // Permitir null si no hay cliente_id
+        cliente_id: usuarioData?.cliente_id || null,
         nombre_mesa: nombre,
         orden: index
       }));
@@ -621,7 +613,7 @@ export default function Pedidos() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Obtener cliente_id (opcional)
+      // Obtener cliente_id para el INSERT (requerido por RLS)
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('cliente_id')
@@ -631,7 +623,7 @@ export default function Pedidos() {
       // Preparar mesas para insertar (solo las nuevas)
       const mesasParaInsertar = nuevasMesas.map((nombre, index) => ({
         usuario_id: usuarioId,
-        cliente_id: usuarioData?.cliente_id || null, // Permitir null si no hay cliente_id
+        cliente_id: usuarioData?.cliente_id || null,
         nombre_mesa: nombre,
         orden: mesas.length + index // Continuar desde el último orden
       }));
@@ -763,7 +755,7 @@ export default function Pedidos() {
       filtrarProductos(valor);
       setMostrarDropdown(true);
       
-      // Calcular posición del dropdown para el portal
+      // Calcular posición del dropdown
       if (searchInputRef.current) {
         const rect = searchInputRef.current.getBoundingClientRect();
         setDropdownPosition({
@@ -838,13 +830,8 @@ export default function Pedidos() {
     setBusquedaProducto('');
     setProductosFiltrados([]);
     setMostrarDropdown(false);
-
-    // Guardar en localStorage (cache secundario)
-    const productosGuardados = {
-      ...productosPorMesa,
-      [mesaSeleccionada]: [...(productosPorMesa[mesaSeleccionada] || []), nuevoProducto]
-    };
-    localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
+    
+    // El guardado en localStorage se hace automáticamente por el useEffect
   };
 
   // Función para actualizar comentarios de un producto (solo local - para onChange)
@@ -1065,10 +1052,7 @@ export default function Pedidos() {
     // Actualizar localStorage de mesas (cache secundario)
     localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
     
-    // Actualizar localStorage de productos (cache secundario)
-    const productosGuardados = { ...productosPorMesa };
-    delete productosGuardados[mesaAEliminar];
-    localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
+    // El guardado de productos en localStorage se hace automáticamente por el useEffect
   };
 
   // Función para iniciar edición de nombre de mesa
@@ -1484,28 +1468,12 @@ export default function Pedidos() {
         alert('❌ Error: Usuario no autenticado');
         return;
       }
-      
-             // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
-       const { data: usuarioData, error: usuarioError } = await supabase
-         .from('usuarios')
-         .select('cliente_id')
-         .eq('usuario_id', usuarioId)
-         .single();
 
-       if (usuarioError || !usuarioData) {
-         console.error('Error al obtener cliente_id del usuario:', usuarioError);
-         alert('❌ Error: No se pudo obtener la información del usuario.');
-         return;
-       }
-
-       const cliente_id = usuarioData.cliente_id;
-
-       const { error } = await supabase
-         .from('pedidos')
-         .delete()
-         .eq('id', id)
-         .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo eliminar pedidos del usuario actual
-         .eq('cliente_id', cliente_id); // 🔒 SEGURIDAD: Solo eliminar pedidos del cliente actual
+      const { error } = await supabase
+        .from('pedidos')
+        .delete()
+        .eq('id', id)
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo eliminar pedidos del usuario actual
 
       if (error) {
         console.error('❌ Error al eliminar pedido:', error);
@@ -1626,21 +1594,6 @@ export default function Pedidos() {
         return;
       }
 
-      // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
-      const { data: usuarioData, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('cliente_id')
-        .eq('usuario_id', usuarioId)
-        .single();
-
-      if (usuarioError || !usuarioData) {
-        console.error('Error al obtener cliente_id del usuario:', usuarioError);
-        alert('❌ Error: No se pudo obtener la información del usuario.');
-        return;
-      }
-
-      const cliente_id = usuarioData.cliente_id;
-
       const { error } = await supabase
         .from('pedidos')
         .update({
@@ -1658,8 +1611,7 @@ export default function Pedidos() {
           comentarios: valoresEdicion.comentarios ? valoresEdicion.comentarios.toUpperCase().trim() : null
         })
         .eq('id', id)
-        .eq('usuario_id', usuarioId) // 🔒 SEGURIDAD: Solo editar pedidos del usuario actual
-        .eq('cliente_id', cliente_id); // 🔒 SEGURIDAD: Solo editar pedidos del cliente actual
+        .eq('usuario_id', usuarioId); // 🔒 SEGURIDAD: Solo editar pedidos del usuario actual
 
       if (error) {
         console.error('❌ Error al actualizar pedido:', error);
@@ -1699,24 +1651,17 @@ export default function Pedidos() {
         return;
       }
 
-      // Obtener cliente_id
-      const { data: usuarioData, error: usuarioError } = await supabase
+      // Obtener cliente_id para el INSERT (requerido por RLS)
+      const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('cliente_id')
         .eq('usuario_id', usuarioId)
         .single();
 
-      if (usuarioError || !usuarioData) {
-        console.error('Error al obtener cliente_id:', usuarioError);
-        alert('❌ Error al obtener información del usuario');
-        return;
-      }
+      const cliente_id = usuarioData?.cliente_id || null;
 
-      const cliente_id = usuarioData.cliente_id;
-
-      // Calcular fecha_cl en zona horaria de Chile
-      const fechaChile = new Date().toLocaleString("en-US", {timeZone: "America/Santiago"});
-      const fechaCl = new Date(fechaChile).toISOString().split('T')[0];
+      // Usar la fecha correcta del pedido (ya configurada con zona horaria de Chile)
+      const fechaCl = pedido.fecha;
 
       // Usar el nombre completo de la mesa (ahora la columna mesa acepta texto)
       const nombreMesaCompleto = mesa;
@@ -1799,40 +1744,27 @@ export default function Pedidos() {
       return;
     }
 
-         // Obtener el usuario_id del usuario autenticado
-     const usuarioId = await authService.getCurrentUserId();
-     if (!usuarioId) {
-       alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
-       return;
-     }
+    // Obtener el usuario_id del usuario autenticado
+    const usuarioId = await authService.getCurrentUserId();
+    if (!usuarioId) {
+      alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+      return;
+    }
 
-     // Obtener el cliente_id del usuario autenticado para satisfacer la política RLS
-     const { data: usuarioData, error: usuarioError } = await supabase
-       .from('usuarios')
-       .select('cliente_id')
-       .eq('usuario_id', usuarioId)
-       .single();
+    // Obtener cliente_id para el INSERT (requerido por RLS)
+    const { data: usuarioData } = await supabase
+      .from('usuarios')
+      .select('cliente_id')
+      .eq('usuario_id', usuarioId)
+      .single();
 
-     if (usuarioError || !usuarioData) {
-       console.error('Error al obtener cliente_id del usuario:', usuarioError);
-       alert('❌ Error: No se pudo obtener la información del usuario. Verifica la configuración de la tabla usuarios.');
-       return;
-     }
+    const cliente_id = usuarioData?.cliente_id || null;
 
-     const cliente_id = usuarioData.cliente_id;
+    // Usar el nombre completo de la mesa (ahora la columna mesa acepta texto)
+    const nombreMesaCompleto = mesa;
 
-     // Verificar que cliente_id esté presente (requerido por la política RLS)
-     if (!cliente_id) {
-       console.error('❌ Error: cliente_id es requerido para la política RLS');
-       alert('❌ Error: No se pudo obtener el cliente_id del usuario. Verifica la configuración de la tabla usuarios.');
-       return;
-     }
-
-     // Usar el nombre completo de la mesa (ahora la columna mesa acepta texto)
-     const nombreMesaCompleto = mesa;
-
-           // Calcular el total final de la mesa (con propina si está activa)
-      const totalFinal = calcularTotalConPropina(mesa);
+    // Calcular el total final de la mesa (con propina si está activa)
+    const totalFinal = calcularTotalConPropina(mesa);
 
     try {
       // Filtrar solo los productos seleccionados para pago
@@ -1841,11 +1773,11 @@ export default function Pedidos() {
       // Registrar cada producto seleccionado como una fila individual en la tabla pedidos
       for (let i = 0; i < productosAPagar.length; i++) {
         const producto = productosAPagar[i];
-                 // Calcular fecha_cl en zona horaria de Chile
-         const fechaChile = new Date().toLocaleString("en-US", {timeZone: "America/Santiago"});
-         const fechaCl = new Date(fechaChile).toISOString().split('T')[0]; // Formato YYYY-MM-DD
+        
+        // Usar la fecha correcta del pedido (ya configurada con zona horaria de Chile)
+        const fechaCl = pedido.fecha;
          
-                             // Preparar campos que solo van en la primera fila
+        // Preparar campos que solo van en la primera fila
           let totalFinalValue = null;
           let estadoValue = null;
           let mesaValue = null;
@@ -1878,8 +1810,8 @@ export default function Pedidos() {
             comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null,
             // Agregar el usuario_id del usuario autenticado
             usuario_id: usuarioId,
-            // IMPORTANTE: La política RLS requiere que cliente_id coincida con usuarios.cliente_id
-            cliente_id: cliente_id, // Campo OBLIGATORIO para la política RLS
+            // Agregar cliente_id (requerido por RLS)
+            cliente_id: cliente_id,
             // created_at se genera automáticamente con default: now()
           };
 
@@ -1940,28 +1872,13 @@ export default function Pedidos() {
        setMontoPagado('');
        setMostrarVuelto(false);
 
-       // Actualizar localStorage con solo los productos pendientes
-       const productosGuardados = { ...productosPorMesa };
-       
-       if (productosPendientes.length > 0) {
-         productosGuardados[mesa] = productosPendientes;
-       } else {
-         delete productosGuardados[mesa];
-       }
-       localStorage.setItem('productosPorMesa', JSON.stringify(productosGuardados));
-       
-       // Si se registró todo el pedido, limpiar selectores de cocina en localStorage
-       if (productosPendientes.length === 0) {
-         const selectoresCocina = JSON.parse(localStorage.getItem('productosSeleccionadosParaCocina') || '{}');
-         delete selectoresCocina[mesa];
-         localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(selectoresCocina));
-       }
+       // El guardado en localStorage se hace automáticamente por los useEffect
 
-       // Limpiar productos pagados de Supabase (sincronización multi-dispositivo)
-       await limpiarMesaEnSupabase(mesa, productosSeleccionados);
+      // Limpiar productos pagados de Supabase (sincronización multi-dispositivo)
+      await limpiarMesaEnSupabase(mesa, productosSeleccionados);
 
-       // Recargar la tabla de pedidos registrados
-       cargarPedidosRegistrados();
+      // Recargar la tabla de pedidos registrados
+      await cargarPedidosRegistrados();
 
     } catch (error) {
       console.error('Error general al registrar pedido:', error);
@@ -1971,25 +1888,24 @@ export default function Pedidos() {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    // Ejecutar todas las cargas en paralelo para máxima velocidad
-    Promise.all([
-      cargarProductosInventario(),
-      cargarPedidosRegistrados(),
-      cargarProductosTemporales(),
-      cargarMesasDesdeSupabase() // Carga en background, no bloquea UI
-    ]).catch(err => {
-      console.error('Error al cargar datos iniciales:', err);
+    // Cargar productos temporales INMEDIATAMENTE (prioridad crítica)
+    cargarProductosTemporales().catch(err => {
+      console.error('Error al cargar productos temporales:', err);
     });
     
-    // Cargar selectores de cocina guardados en localStorage
-    const seleccionadosCocina = localStorage.getItem('productosSeleccionadosParaCocina');
-    if (seleccionadosCocina) {
-      try {
-        setProductosSeleccionadosParaCocina(JSON.parse(seleccionadosCocina));
-      } catch (error) {
-        console.error('Error al cargar selectores de cocina del localStorage:', error);
-      }
-    }
+    // Cargar mesas en paralelo (prioridad alta)
+    cargarMesasDesdeSupabase().catch(err => {
+      console.error('Error al cargar mesas:', err);
+    });
+    
+    // Cargar inventario y pedidos en background (no bloquean UI)
+    cargarProductosInventario().catch(err => {
+      console.error('Error al cargar inventario:', err);
+    });
+    
+    cargarPedidosRegistrados().catch(err => {
+      console.error('Error al cargar pedidos:', err);
+    });
 
     // Configurar suscripciones Realtime para sincronización automática entre dispositivos
     
@@ -2004,9 +1920,13 @@ export default function Pedidos() {
           table: 'productos_mesas_temp'
         },
         (payload) => {
-          debugLog('🔄 Cambio detectado en productos_mesas_temp:', payload);
-          // Recargar productos cuando hay cambios
-          cargarProductosTemporales();
+          // Debounce: solo recargar después de 500ms sin cambios (evita flash visual)
+          if (realtimeTimeoutRef.current) {
+            clearTimeout(realtimeTimeoutRef.current);
+          }
+          realtimeTimeoutRef.current = setTimeout(() => {
+            cargarProductosTemporales();
+          }, 500);
         }
       )
       .subscribe();
@@ -2022,30 +1942,42 @@ export default function Pedidos() {
           table: 'mesas_config'
         },
         (payload) => {
-          debugLog('🔄 Cambio detectado en mesas_config:', payload);
           // Recargar mesas inmediatamente cuando hay cambios
           cargarMesasDesdeSupabase(true);
         }
       )
       .subscribe();
 
-    // Cleanup: desuscribir al desmontar
+    // Cleanup: desuscribir al desmontar y limpiar timeouts
     return () => {
+      if (realtimeTimeoutRef.current) {
+        clearTimeout(realtimeTimeoutRef.current);
+      }
       supabase.removeChannel(channelProductos);
       supabase.removeChannel(channelMesas);
     };
   }, []);
 
   // Guardar productos en localStorage cuando cambien (solo después de cargar datos iniciales)
+  // Usar debounce implícito con timeout para no bloquear la UI
   useEffect(() => {
     if (datosInicialCargados) {
-      localStorage.setItem('productosPorMesa', JSON.stringify(productosPorMesa));
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('productosPorMesa', JSON.stringify(productosPorMesa));
+      }, 100); // Pequeño delay para no bloquear
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [productosPorMesa, datosInicialCargados]);
 
   // Guardar selectores de cocina en localStorage cuando cambien
+  // Usar debounce implícito con timeout para no bloquear la UI
   useEffect(() => {
-    localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(productosSeleccionadosParaCocina));
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem('productosSeleccionadosParaCocina', JSON.stringify(productosSeleccionadosParaCocina));
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [productosSeleccionadosParaCocina]);
 
   // Las mesas ahora se sincronizan con Supabase, no necesitamos guardar en localStorage
@@ -2098,6 +2030,46 @@ export default function Pedidos() {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [pantallaCompleta]);
+
+  // Actualizar posición del dropdown al hacer scroll o redimensionar
+  useEffect(() => {
+    const updateDropdownPosition = () => {
+      if (mostrarDropdown && searchInputRef.current) {
+        const rect = searchInputRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      }
+    };
+
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    window.addEventListener('resize', updateDropdownPosition);
+
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener('resize', updateDropdownPosition);
+    };
+  }, [mostrarDropdown]);
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mostrarDropdown && searchInputRef.current && !searchInputRef.current.contains(event.target)) {
+        // Verificar si el clic fue en el dropdown
+        const dropdown = document.querySelector('[data-dropdown-productos]');
+        if (dropdown && !dropdown.contains(event.target)) {
+          setMostrarDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [mostrarDropdown]);
 
   // Opciones de unidad
   const opcionesUnidad = [
@@ -2183,14 +2155,14 @@ export default function Pedidos() {
             </div>
           </div>
 
-                     {/* Formulario de Pedido */}
-           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
+          {/* Formulario de Pedido */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-               Nuevo Pedido
-             </h2>
+              Nuevo Pedido
+            </h2>
 
-             {/* Fecha y Búsqueda en la misma fila */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Fecha y Búsqueda en la misma fila */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                {/* Fecha */}
                <div>
                  <label className="block text-white font-medium mb-2 text-sm">Fecha</label>
@@ -2275,26 +2247,27 @@ export default function Pedidos() {
 
           </div>
 
-          {/* Dropdown de productos filtrados - Portal */}
+          {/* Dropdown de productos filtrados - Portal fijo */}
           {mostrarDropdown && productosFiltrados.length > 0 && createPortal(
             <div 
+              data-dropdown-productos
               className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-2xl shadow-2xl max-h-80 overflow-y-auto"
               style={{ 
-                top: dropdownPosition.top + 12,
-                left: dropdownPosition.left,
-                width: dropdownPosition.width
+                top: `${dropdownPosition.top + 8}px`,
+                left: `${dropdownPosition.left}px`,
+                width: `${dropdownPosition.width}px`
               }}
             >
               {productosFiltrados.map((producto, index) => (
                 <div
                   key={producto.id || index}
                   onClick={() => seleccionarProducto(producto)}
-                  className="px-6 py-4 hover:bg-blue-600/30 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 hover:scale-[1.02]"
+                  className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="text-white font-bold text-lg mb-1">{producto.producto}</div>
-                      <div className="flex items-center space-x-4 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
+                      <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
                         <span className="text-green-300 font-medium">
                           ${parseFloat(producto.precio_venta).toLocaleString()}
                         </span>
@@ -2303,7 +2276,7 @@ export default function Pedidos() {
                         </span>
                       </div>
                     </div>
-                    <div className="text-blue-400 text-xl">→</div>
+                    <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
                   </div>
                 </div>
               ))}
@@ -2753,7 +2726,6 @@ export default function Pedidos() {
                 </div>
                 )}
               </>
-            )}
 
             {/* Botones de Acción: Enviar a Cocina y Registrar Pedido */}
             {mesaSeleccionada && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && (
