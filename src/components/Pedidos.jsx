@@ -531,21 +531,19 @@ export default function Pedidos() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Obtener cliente_id
+      // Obtener cliente_id (opcional)
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('cliente_id')
         .eq('usuario_id', usuarioId)
         .single();
 
-      if (!usuarioData) return;
-
       const mesasDefault = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4'];
       
       // Crear mesas en Supabase
       const mesasParaInsertar = mesasDefault.map((nombre, index) => ({
         usuario_id: usuarioId,
-        cliente_id: usuarioData.cliente_id,
+        cliente_id: usuarioData?.cliente_id || null, // Permitir null si no hay cliente_id
         nombre_mesa: nombre,
         orden: index
       }));
@@ -576,19 +574,17 @@ export default function Pedidos() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Obtener cliente_id
+      // Obtener cliente_id (opcional)
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('cliente_id')
         .eq('usuario_id', usuarioId)
         .single();
 
-      if (!usuarioData) return;
-
       // Preparar mesas para insertar (solo las nuevas)
       const mesasParaInsertar = nuevasMesas.map((nombre, index) => ({
         usuario_id: usuarioId,
-        cliente_id: usuarioData.cliente_id,
+        cliente_id: usuarioData?.cliente_id || null, // Permitir null si no hay cliente_id
         nombre_mesa: nombre,
         orden: mesas.length + index // Continuar desde el último orden
       }));
