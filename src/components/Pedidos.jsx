@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { 
@@ -47,7 +46,8 @@ export default function Pedidos() {
   
   // Ref para el input de búsqueda
   const searchInputRef = useRef(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  // Ref para guardar la última búsqueda y re-filtrar cuando se carguen los productos
+  const ultimaBusquedaRef = useRef('');
   
   // Estados para gestión de mesas
   // Inicializar con cache de localStorage para carga instantánea
@@ -87,7 +87,6 @@ export default function Pedidos() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed === 'object') {
-          debugLog('⚡ Productos cargados desde cache:', Object.keys(parsed).length, 'mesas');
           return parsed;
         }
       }
@@ -302,7 +301,8 @@ export default function Pedidos() {
         return;
       }
 
-      setProductosInventario(data || []);
+      const productosCargados = data || [];
+      setProductosInventario(productosCargados);
     } catch (error) {
       console.error('Error inesperado al cargar productos del inventario:', error);
       setProductosInventario([]);
@@ -715,16 +715,90 @@ export default function Pedidos() {
   // FIN FUNCIONES DE SINCRONIZACIÓN
   // ============================================================
 
-  // Función para filtrar productos según la búsqueda
+  // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+  const normalizarTexto = (texto) => {
+    return texto
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      .trim();
+  };
+
+  // Función mejorada para filtrar productos según la búsqueda
   const filtrarProductos = (busqueda) => {
     if (!busqueda.trim()) {
       setProductosFiltrados([]);
       return;
     }
 
-    const filtrados = productosInventario.filter(producto =>
-      producto.producto.toLowerCase().includes(busqueda.toLowerCase())
-    );
+    if (productosInventario.length === 0) {
+      setProductosFiltrados([]);
+      return;
+    }
+
+    const busquedaNormalizada = normalizarTexto(busqueda);
+    const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
+
+    // Filtrar y ordenar productos por relevancia
+    const productosConRelevancia = productosInventario.map(producto => {
+      const nombreNormalizado = normalizarTexto(producto.producto);
+      const palabrasProducto = nombreNormalizado.split(/\s+/);
+      
+      let puntuacion = 0;
+      let coincide = false;
+
+      // Verificar si todas las palabras de búsqueda están en el producto
+      const todasLasPalabrasCoinciden = palabrasBusqueda.every(palabraBusqueda =>
+        palabrasProducto.some(palabraProducto => palabraProducto.includes(palabraBusqueda))
+      );
+
+      if (!todasLasPalabrasCoinciden) {
+        return { producto, puntuacion: -1, coincide: false };
+      }
+
+      coincide = true;
+
+      // Prioridad 1: Coincidencia exacta al inicio del nombre completo
+      if (nombreNormalizado.startsWith(busquedaNormalizada)) {
+        puntuacion += 1000;
+      }
+      // Prioridad 2: Coincidencia al inicio de alguna palabra
+      else if (palabrasProducto.some(palabra => palabra.startsWith(busquedaNormalizada))) {
+        puntuacion += 500;
+      }
+      // Prioridad 3: Coincidencia al inicio de alguna palabra (para cada palabra de búsqueda)
+      else {
+        palabrasBusqueda.forEach(palabraBusqueda => {
+          if (palabrasProducto.some(palabra => palabra.startsWith(palabraBusqueda))) {
+            puntuacion += 100;
+          }
+        });
+      }
+
+      // Prioridad 4: Coincidencia en cualquier parte del nombre
+      if (nombreNormalizado.includes(busquedaNormalizada)) {
+        puntuacion += 50;
+      }
+
+      // Prioridad 5: Coincidencia en palabras individuales
+      palabrasBusqueda.forEach(palabraBusqueda => {
+        if (nombreNormalizado.includes(palabraBusqueda)) {
+          puntuacion += 10;
+        }
+      });
+
+      // Bonus: Productos más cortos tienen prioridad si tienen la misma puntuación
+      puntuacion += (100 - nombreNormalizado.length) / 10;
+
+      return { producto, puntuacion, coincide };
+    });
+
+    // Filtrar solo los que coinciden y ordenar por relevancia
+    const filtrados = productosConRelevancia
+      .filter(item => item.coincide)
+      .sort((a, b) => b.puntuacion - a.puntuacion)
+      .map(item => item.producto);
+
     setProductosFiltrados(filtrados);
   };
 
@@ -745,28 +819,37 @@ export default function Pedidos() {
   // Función para manejar cambios en la búsqueda de productos
   const handleBusquedaProducto = (e) => {
     const valor = e.target.value;
+    
+    // Evitar procesar si el valor no cambió realmente
+    if (valor === busquedaProducto && valor === ultimaBusquedaRef.current) {
+      return;
+    }
+
     setBusquedaProducto(valor);
     setProductoActual({
       ...productoActual,
       producto: valor
     });
     
+    // Guardar la última búsqueda en el ref (SIEMPRE, incluso si no hay productos aún)
+    ultimaBusquedaRef.current = valor;
+    
     if (valor.trim()) {
-      filtrarProductos(valor);
-      setMostrarDropdown(true);
-      
-      // Calcular posición del dropdown
-      if (searchInputRef.current) {
-        const rect = searchInputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width
-        });
+      // Si hay productos cargados, filtrar inmediatamente
+      if (productosInventario.length > 0) {
+        filtrarProductos(valor);
+        setMostrarDropdown(true);
+      } else {
+        // Si no hay productos aún, guardar la búsqueda y mostrar dropdown vacío
+        // El useEffect se encargará de re-filtrar cuando se carguen los productos
+        setProductosFiltrados([]);
+        setMostrarDropdown(true);
       }
     } else {
+      // Búsqueda vacía, limpiar todo
       setProductosFiltrados([]);
       setMostrarDropdown(false);
+      ultimaBusquedaRef.current = '';
     }
   };
 
@@ -2031,29 +2114,19 @@ export default function Pedidos() {
     };
   }, [pantallaCompleta]);
 
-  // Actualizar posición del dropdown al hacer scroll o redimensionar
+  // Re-filtrar productos cuando se cargan los productos del inventario si hay una búsqueda activa
+  // Esto soluciona el problema cuando el usuario escribe antes de que se carguen los productos
   useEffect(() => {
-    const updateDropdownPosition = () => {
-      if (mostrarDropdown && searchInputRef.current) {
-        const rect = searchInputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width
-        });
-      }
-    };
+    // Si hay productos cargados Y hay una búsqueda guardada, re-filtrar automáticamente
+    if (productosInventario.length > 0 && ultimaBusquedaRef.current.trim()) {
+      filtrarProductos(ultimaBusquedaRef.current);
+      setMostrarDropdown(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productosInventario.length]);
 
-    window.addEventListener('scroll', updateDropdownPosition, true);
-    window.addEventListener('resize', updateDropdownPosition);
 
-    return () => {
-      window.removeEventListener('scroll', updateDropdownPosition, true);
-      window.removeEventListener('resize', updateDropdownPosition);
-    };
-  }, [mostrarDropdown]);
-
-  // Cerrar dropdown al hacer clic fuera
+  // Cerrar dropdown al hacer clic fuera (soporte para móviles y desktop)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (mostrarDropdown && searchInputRef.current && !searchInputRef.current.contains(event.target)) {
@@ -2065,9 +2138,13 @@ export default function Pedidos() {
       }
     };
 
+    // Escuchar tanto eventos de mouse como táctiles para mejor compatibilidad móvil
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [mostrarDropdown]);
 
@@ -2156,7 +2233,7 @@ export default function Pedidos() {
           </div>
 
           {/* Formulario de Pedido */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
+          <div className="relative z-40 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Nuevo Pedido
             </h2>
@@ -2176,16 +2253,54 @@ export default function Pedidos() {
                </div>
 
                {/* Búsqueda de Producto */}
-               <div>
+               <div className="relative">
                  <label className="block text-white font-medium mb-2 text-sm">Buscar Producto</label>
                  <input
                    ref={searchInputRef}
                    type="text"
+                   inputMode="search"
+                   autoComplete="off"
                    value={busquedaProducto}
                    onChange={handleBusquedaProducto}
                    className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
                    placeholder="🔍 Escribe el nombre del producto..."
                  />
+                 
+                 {/* Dropdown de productos filtrados - FIJO bajo el input */}
+                 {mostrarDropdown && productosFiltrados.length > 0 && (
+                   <div
+                     data-dropdown-productos
+                     className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
+                   >
+                     {productosFiltrados.map((producto, index) => (
+                       <div
+                         key={producto.id || index}
+                         onClick={() => seleccionarProducto(producto)}
+                         onTouchStart={(e) => {
+                           e.preventDefault();
+                           seleccionarProducto(producto);
+                         }}
+                         className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 active:bg-blue-600/50 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation"
+                         style={{ WebkitTapHighlightColor: 'transparent' }}
+                       >
+                         <div className="flex items-center justify-between">
+                           <div className="flex-1 min-w-0">
+                             <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
+                             <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
+                               <span className="text-green-300 font-medium">
+                                 ${parseFloat(producto.precio_venta).toLocaleString()}
+                               </span>
+                               <span className="text-blue-300 font-medium">
+                                 {producto.unidad}
+                               </span>
+                             </div>
+                           </div>
+                           <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
                </div>
              </div>
                
@@ -2247,45 +2362,9 @@ export default function Pedidos() {
 
           </div>
 
-          {/* Dropdown de productos filtrados - Portal fijo */}
-          {mostrarDropdown && productosFiltrados.length > 0 && createPortal(
-            <div 
-              data-dropdown-productos
-              className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-2xl shadow-2xl max-h-80 overflow-y-auto"
-              style={{ 
-                top: `${dropdownPosition.top + 8}px`,
-                left: `${dropdownPosition.left}px`,
-                width: `${dropdownPosition.width}px`
-              }}
-            >
-              {productosFiltrados.map((producto, index) => (
-                <div
-                  key={producto.id || index}
-                  onClick={() => seleccionarProducto(producto)}
-                  className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
-                      <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
-                        <span className="text-green-300 font-medium">
-                          ${parseFloat(producto.precio_venta).toLocaleString()}
-                        </span>
-                        <span className="text-blue-300 font-medium">
-                          {producto.unidad}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
-                  </div>
-                </div>
-              ))}
-            </div>,
-            document.body
-          )}
-
           {/* Sección de Gestión de Mesas y Productos */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 sm:p-4 md:p-8 border border-white/20">
+          <section className="relative z-10">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 sm:p-4 md:p-8 border border-white/20">
             <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-green-400 text-center mb-4 sm:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Gestión de Mesas y Productos
             </h2>
@@ -2784,6 +2863,7 @@ export default function Pedidos() {
               </div>
             )}
            </div>
+          </section>
 
            {/* Tabla de Pedidos Registrados */}
            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mt-6">
