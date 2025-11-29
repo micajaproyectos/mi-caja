@@ -58,27 +58,28 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
           </h3>
           
           <div className="text-left space-y-4">
-            {/* Previsualización de Imágenes */}
+            {/* Clave Interna */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">🖼️</span>
+              <span className="text-2xl">🔒</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Previsualización de Productos</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Clave Interna</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Ahora puedes agregar imágenes a tus productos disponibles en Inventario.
-                  Para acceder, presiona "Editar" en algún producto de tu inventario, copia y pega el link de la imagen y luego guarda los cambios.
+                  Nueva funcionalidad de seguridad para proteger tus datos sensibles. Configura una clave interna 
+                  desde el menú de usuario (🔒 Clave Interna) y úsala para acceder a secciones protegidas como 
+                  Seguimiento y Gastos. Solo tú podrás acceder a esta información con tu clave personal.
                 </p>
               </div>
             </div>
 
-            {/* Cuadre de Caja */}
+            {/* Auditoría */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">💰</span>
+              <span className="text-2xl">🔍</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Cuadre de Caja Diario</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Auditoría</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Nueva calculadora de cuadre de caja en Registro de Venta. Escribe tu caja inicial 
-                  en la primera venta del día y ve cómo se acumula automáticamente con cada vez que se realiza una venta en efectivo. 
-                  Incluye calculadora de vuelto y total en caja actualizado en tiempo real.
+                  Nueva sección de Auditoría disponible en el menú principal. Revisa todos los cambios y actividades 
+                  realizadas en tu sistema: quién editó, eliminó o creó registros en Inventario, Ventas y más. 
+                  Incluye filtros por tabla, acción, mes y año para un control completo de las operaciones.
                 </p>
               </div>
             </div>
