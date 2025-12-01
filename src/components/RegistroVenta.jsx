@@ -1868,7 +1868,7 @@ export default function RegistroVenta() {
                 
                 {/* Cuadro del total - ocupa 1/3 del espacio */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-green-800/80 to-green-950/80 backdrop-blur-md rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
+                  <div className="bg-gradient-to-br from-green-800 to-green-950 backdrop-blur-md rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
                     <div className="text-center mb-3">
                       <div className="text-green-300 text-lg md:text-xl font-bold mb-1">💰 Total de la Venta</div>
                       <div className="text-green-100 text-sm">Resumen de productos</div>
