@@ -1868,7 +1868,7 @@ export default function RegistroVenta() {
                 
                 {/* Cuadro del total - ocupa 1/3 del espacio */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-md rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
+                  <div className="bg-gradient-to-br from-green-800/80 to-green-950/80 backdrop-blur-md rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
                     <div className="text-center mb-3">
                       <div className="text-green-300 text-lg md:text-xl font-bold mb-1">💰 Total de la Venta</div>
                       <div className="text-green-100 text-sm">Resumen de productos</div>
@@ -1877,12 +1877,12 @@ export default function RegistroVenta() {
                     <div className="space-y-2">
                       <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
                         <div className="text-green-200 text-sm font-medium mb-1">Cantidad de Items</div>
-                        <div className="text-green-300 text-xl font-bold">{productosVenta.length}</div>
+                        <div className="text-white text-xl font-bold">{productosVenta.length}</div>
                       </div>
                       
                       <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
                         <div className="text-green-200 text-sm font-medium mb-1">Total a Pagar</div>
-                        <div className="text-green-300 text-2xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
+                        <div className="text-white text-2xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
