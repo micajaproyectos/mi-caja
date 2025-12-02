@@ -111,7 +111,13 @@ export default function Home() {
       label: 'Proveedor',
       route: '/proveedores'
     },
-    // Cuarta fila: Clientes, Seguimiento, Auditoría, Comunidad Mi Caja
+    // Cuarta fila: Clientes, Seguimiento, Auditoría, Transporte
+    {
+      id: 'transporte',
+      icon: '🚛',
+      label: 'Transporte',
+      route: '/transporte'
+    },
     {
       id: 'clientes',
       icon: '👥',

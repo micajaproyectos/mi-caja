@@ -20,6 +20,7 @@ import VentaRapida from './components/VentaRapida';
 import Auditoria from './components/Auditoria';
 import Autoservicio from './components/Autoservicio';
 import GestionCocina from './components/GestionCocina';
+import Transporte from './components/Transporte';
 
 // Componentes placeholder para las otras secciones
 const Inventario = () => {
@@ -135,6 +136,11 @@ function App() {
           <Route path="/gestion-cocina" element={
             <RutaPrivada>
               <GestionCocina />
+            </RutaPrivada>
+          } />
+          <Route path="/transporte" element={
+            <RutaPrivada>
+              <Transporte />
             </RutaPrivada>
           } />
         </Routes>
