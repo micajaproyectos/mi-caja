@@ -14,7 +14,8 @@ export default function Transporte() {
   
   // Estados para filtros
   const [filtros, setFiltros] = useState({
-    fecha: '',
+    fecha_carga: '',
+    fecha_retiro: '',
     destino: '',
     estado: '',
     nombre: ''
@@ -357,9 +358,26 @@ export default function Transporte() {
 
   // Filtrar registros
   const registrosFiltrados = registros.filter(registro => {
-    // Filtro por fecha
-    if (filtros.fecha && registro.fecha_entrega !== filtros.fecha) {
+    // Filtro por fecha de carga (fecha_entrega)
+    if (filtros.fecha_carga && registro.fecha_entrega !== filtros.fecha_carga) {
       return false;
+    }
+    
+    // Filtro por fecha de retiro (fecha_hora_entrega)
+    if (filtros.fecha_retiro) {
+      if (!registro.fecha_hora_entrega) {
+        return false; // Si no hay fecha de entrega, no coincide
+      }
+      // Extraer solo la fecha (sin hora) de fecha_hora_entrega y convertir a formato YYYY-MM-DD
+      const fechaEntregaObj = new Date(registro.fecha_hora_entrega);
+      const año = fechaEntregaObj.getFullYear();
+      const mes = String(fechaEntregaObj.getMonth() + 1).padStart(2, '0');
+      const dia = String(fechaEntregaObj.getDate()).padStart(2, '0');
+      const fechaEntrega = `${año}-${mes}-${dia}`;
+      
+      if (fechaEntrega !== filtros.fecha_retiro) {
+        return false;
+      }
     }
     
     // Filtro por destino
@@ -388,7 +406,8 @@ export default function Transporte() {
   // Limpiar filtros
   const limpiarFiltros = () => {
     setFiltros({
-      fecha: '',
+      fecha_carga: '',
+      fecha_retiro: '',
       destino: '',
       estado: '',
       nombre: ''
@@ -527,7 +546,7 @@ export default function Transporte() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-4">
                 {/* Fecha Entrega */}
                 <div>
-                  <label className="block text-green-200 text-sm md:text-base font-medium mb-2">
+                  <label className="block text-green-200 text-xs sm:text-sm md:text-base font-medium mb-2">
                     Fecha Entrega
                   </label>
                   <input
@@ -535,7 +554,7 @@ export default function Transporte() {
                     name="fecha_entrega"
                     value={entrega.fecha_entrega}
                     onChange={handleEntregaChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-base"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                   />
                 </div>
 
@@ -695,67 +714,86 @@ export default function Transporte() {
                     <span>Filtros de Búsqueda</span>
                   </h3>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Filtro por Fecha */}
-                    <div>
-                      <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                        Fecha
-                      </label>
-                      <input
-                        type="date"
-                        value={filtros.fecha}
-                        onChange={(e) => setFiltros(prev => ({ ...prev, fecha: e.target.value }))}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                      />
+                  <div className="space-y-3">
+                    {/* Primera fila de filtros */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* Filtro por Fecha Carga */}
+                      <div>
+                        <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
+                          📅 Fecha Carga
+                        </label>
+                        <input
+                          type="date"
+                          value={filtros.fecha_carga}
+                          onChange={(e) => setFiltros(prev => ({ ...prev, fecha_carga: e.target.value }))}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                        />
+                      </div>
+
+                      {/* Filtro por Fecha Retiro */}
+                      <div>
+                        <label className="block text-blue-200 text-xs md:text-sm font-medium mb-1.5">
+                          ✅ Fecha Retiro
+                        </label>
+                        <input
+                          type="date"
+                          value={filtros.fecha_retiro}
+                          onChange={(e) => setFiltros(prev => ({ ...prev, fecha_retiro: e.target.value }))}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+
+                      {/* Filtro por Destino */}
+                      <div>
+                        <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
+                          📍 Destino
+                        </label>
+                        <input
+                          type="text"
+                          value={filtros.destino}
+                          onChange={(e) => setFiltros(prev => ({ ...prev, destino: e.target.value }))}
+                          placeholder="Buscar destino..."
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                        />
+                      </div>
                     </div>
 
-                    {/* Filtro por Destino */}
-                    <div>
-                      <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                        Destino
-                      </label>
-                      <input
-                        type="text"
-                        value={filtros.destino}
-                        onChange={(e) => setFiltros(prev => ({ ...prev, destino: e.target.value }))}
-                        placeholder="Buscar destino..."
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                      />
-                    </div>
+                    {/* Segunda fila de filtros */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Filtro por Estado */}
+                      <div>
+                        <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
+                          🚛 Estado
+                        </label>
+                        <select
+                          value={filtros.estado}
+                          onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value }))}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                        >
+                          <option value="" className="bg-gray-800">Todos</option>
+                          <option value="en_transito" className="bg-gray-800">En Tránsito</option>
+                          <option value="entregado" className="bg-gray-800">Entregado</option>
+                        </select>
+                      </div>
 
-                    {/* Filtro por Estado */}
-                    <div>
-                      <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                        Estado
-                      </label>
-                      <select
-                        value={filtros.estado}
-                        onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value }))}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                      >
-                        <option value="" className="bg-gray-800">Todos</option>
-                        <option value="en_transito" className="bg-gray-800">En Tránsito</option>
-                        <option value="entregado" className="bg-gray-800">Entregado</option>
-                      </select>
-                    </div>
-
-                    {/* Filtro por Nombre */}
-                    <div>
-                      <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                        Nombre
-                      </label>
-                      <input
-                        type="text"
-                        value={filtros.nombre}
-                        onChange={(e) => setFiltros(prev => ({ ...prev, nombre: e.target.value }))}
-                        placeholder="Entrega o retira..."
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                      />
+                      {/* Filtro por Nombre */}
+                      <div>
+                        <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
+                          👤 Nombre
+                        </label>
+                        <input
+                          type="text"
+                          value={filtros.nombre}
+                          onChange={(e) => setFiltros(prev => ({ ...prev, nombre: e.target.value }))}
+                          placeholder="Entrega o retira..."
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   {/* Botón Limpiar Filtros */}
-                  {(filtros.fecha || filtros.destino || filtros.estado || filtros.nombre) && (
+                  {(filtros.fecha_carga || filtros.fecha_retiro || filtros.destino || filtros.estado || filtros.nombre) && (
                     <div className="mt-3 flex justify-center">
                       <button
                         onClick={limpiarFiltros}
@@ -819,12 +857,12 @@ export default function Transporte() {
                     >
                       {/* Header: Destino, Fecha y Acciones */}
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-1">
-                        <div className="flex items-center gap-1 flex-1 min-w-0">
-                          <span className="text-sm sm:text-base flex-shrink-0">📍</span>
-                          <span className="font-bold text-white text-xs sm:text-sm truncate" title={registro.destino}>
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <span className="text-base sm:text-base flex-shrink-0">📍</span>
+                          <span className="font-bold text-white text-sm sm:text-sm truncate" title={registro.destino}>
                             {registro.destino}
                           </span>
-                          <span className="text-[10px] sm:text-xs text-gray-400 flex-shrink-0">
+                          <span className="text-xs sm:text-xs text-gray-400 flex-shrink-0">
                             📅 {registro.fecha_entrega}
                           </span>
                         </div>
@@ -832,7 +870,7 @@ export default function Transporte() {
                           <select
                             value={registro.estado}
                             onChange={(e) => cambiarEstado(registro.id, e.target.value)}
-                            className={`px-2 sm:px-1.5 py-1 sm:py-0.5 rounded-full text-[10px] sm:text-xs font-semibold border min-w-[90px] sm:min-w-[85px] ${obtenerColorEstado(registro.estado)}`}
+                            className={`px-2 sm:px-1.5 py-1 sm:py-0.5 rounded-full text-xs sm:text-xs font-semibold border min-w-[95px] sm:min-w-[85px] ${obtenerColorEstado(registro.estado)}`}
                             style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
                           >
                             <option value="en_transito" className="bg-gray-800">🚛 Tránsito</option>
@@ -840,7 +878,7 @@ export default function Transporte() {
                           </select>
                           <button
                             onClick={() => eliminarRegistro(registro.id)}
-                            className="bg-red-600/80 hover:bg-red-700 text-white px-2 sm:px-1.5 py-1 sm:py-0.5 rounded text-xs sm:text-[10px] transition-all duration-200 min-w-[32px]"
+                            className="bg-red-600/80 hover:bg-red-700 text-white px-2 sm:px-1.5 py-1 sm:py-0.5 rounded text-xs sm:text-[10px] transition-all duration-200 min-w-[36px]"
                             title="Eliminar"
                           >
                             🗑️
@@ -852,32 +890,32 @@ export default function Transporte() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-1 mb-1">
                         {/* Quien Entrega */}
                         <div className="bg-white/5 rounded p-1.5 sm:p-1 border border-white/10">
-                          <div className="text-green-300 text-[10px] sm:text-[9px] font-medium mb-0.5">👤 Entrega</div>
-                          <div className="text-white text-xs sm:text-[10px] font-medium truncate" title={registro.nombre_entrega}>
+                          <div className="text-green-300 text-xs sm:text-[9px] font-medium mb-0.5">👤 Entrega</div>
+                          <div className="text-white text-sm sm:text-[10px] font-medium truncate" title={registro.nombre_entrega}>
                             {registro.nombre_entrega}
                           </div>
                         </div>
 
                         {/* Quien Retira */}
                         <div className="bg-white/5 rounded p-1.5 sm:p-1 border border-white/10">
-                          <div className="text-blue-300 text-[10px] sm:text-[9px] font-medium mb-0.5">👥 Retira</div>
-                          <div className="text-white text-xs sm:text-[10px] font-medium truncate" title={registro.nombre_retira}>
+                          <div className="text-blue-300 text-xs sm:text-[9px] font-medium mb-0.5">👥 Retira</div>
+                          <div className="text-white text-sm sm:text-[10px] font-medium truncate" title={registro.nombre_retira}>
                             {registro.nombre_retira}
                           </div>
                         </div>
 
                         {/* Carga */}
                         <div className="bg-gradient-to-r from-green-700/40 to-green-900/40 rounded p-1.5 sm:p-1 border border-green-500/30">
-                          <div className="text-green-200 text-[10px] sm:text-[9px] font-medium mb-0.5">📦 Carga</div>
-                          <div className="text-white text-xs sm:text-[10px] font-bold truncate" title={`${registro.cantidad} ${registro.tipo_carga}`}>
+                          <div className="text-green-200 text-xs sm:text-[9px] font-medium mb-0.5">📦 Carga</div>
+                          <div className="text-white text-sm sm:text-[10px] font-bold truncate" title={`${registro.cantidad} ${registro.tipo_carga}`}>
                             {registro.cantidad} {registro.tipo_carga}
                           </div>
                         </div>
 
                         {/* Comentarios */}
                         <div className="bg-white/5 rounded p-1.5 sm:p-1 border border-white/10">
-                          <div className="text-yellow-300 text-[10px] sm:text-[9px] font-medium mb-0.5">💬 Nota</div>
-                          <div className="text-gray-300 text-xs sm:text-[10px] italic truncate" title={registro.comentarios || 'Sin comentarios'}>
+                          <div className="text-yellow-300 text-xs sm:text-[9px] font-medium mb-0.5">💬 Nota</div>
+                          <div className="text-gray-300 text-sm sm:text-[10px] italic truncate" title={registro.comentarios || 'Sin comentarios'}>
                             {registro.comentarios || 'N/A'}
                           </div>
                         </div>
@@ -888,8 +926,8 @@ export default function Transporte() {
                         <div className="bg-gradient-to-r from-green-600/30 to-green-700/30 rounded p-1.5 sm:p-1 border border-green-500/40">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
                             <div className="flex items-center gap-1.5 sm:gap-1">
-                              <span className="text-green-300 text-xs sm:text-[9px] font-semibold">✅</span>
-                              <span className="text-white text-xs sm:text-[10px] font-bold">
+                              <span className="text-green-300 text-sm sm:text-[9px] font-semibold">✅</span>
+                              <span className="text-white text-sm sm:text-[10px] font-bold">
                                 {new Date(registro.fecha_hora_entrega).toLocaleString('es-CL', { 
                                   timeZone: 'America/Santiago',
                                   day: '2-digit',
@@ -903,8 +941,8 @@ export default function Transporte() {
                             </div>
                             {registro.nombre_retiro && (
                               <div className="flex items-center gap-1.5 sm:gap-1 pl-0 sm:pl-2 border-l-0 sm:border-l border-green-500/40">
-                                <span className="text-green-300 text-xs sm:text-[9px] font-semibold">👤</span>
-                                <span className="text-white text-xs sm:text-[10px] font-bold truncate" title={registro.nombre_retiro}>
+                                <span className="text-green-300 text-sm sm:text-[9px] font-semibold">👤</span>
+                                <span className="text-white text-sm sm:text-[10px] font-bold truncate" title={registro.nombre_retiro}>
                                   {registro.nombre_retiro}
                                 </span>
                               </div>
