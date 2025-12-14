@@ -78,7 +78,8 @@ export default function RegistroVenta() {
   // Estado para la lista de productos de la venta
   const [productosVenta, setProductosVenta] = useState([]);
   const [ventasRegistradas, setVentasRegistradas] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingVentas, setLoadingVentas] = useState(false); // Para cargar tabla de ventas
+  const [loadingProcesar, setLoadingProcesar] = useState(false); // Para botón "Procesar Venta"
   
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
@@ -869,7 +870,7 @@ export default function RegistroVenta() {
 
   // Función para cargar ventas registradas filtradas por usuario
   const cargarVentas = async () => {
-    setLoading(true);
+    setLoadingVentas(true);
     try {
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
@@ -914,7 +915,7 @@ export default function RegistroVenta() {
       console.error('❌ Error general al cargar ventas:', error);
       setVentasRegistradas([]);
     } finally {
-      setLoading(false);
+      setLoadingVentas(false);
     }
   };
 
@@ -1288,32 +1289,32 @@ export default function RegistroVenta() {
     }
     
     // 🔒 PROTECCIÓN: Evitar múltiples clics durante el proceso
-    if (loading) {
+    if (loadingProcesar) {
       return;
     }
     
     // ⚡ IMPORTANTE: Activar loading INMEDIATAMENTE para bloquear clics rápidos
-    setLoading(true);
+    setLoadingProcesar(true);
     
     try {
       // Validar fecha primero
       if (!validarFecha(venta.fecha)) {
         mostrarNotificacion('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD', 'error');
-        setLoading(false);
+        setLoadingProcesar(false);
         return;
       }
       
       // Validar que todos los campos requeridos estén llenos
       if (!venta.fecha || !venta.tipo_pago) {
         mostrarNotificacion('❌ Por favor completa la fecha y tipo de pago', 'error');
-        setLoading(false);
+        setLoadingProcesar(false);
         return;
       }
 
       // Validar que haya al menos un producto
       if (productosVenta.length === 0) {
         mostrarNotificacion('❌ Por favor agrega al menos un producto a la venta', 'error');
-        setLoading(false);
+        setLoadingProcesar(false);
         return;
       }
 
@@ -1324,7 +1325,7 @@ export default function RegistroVenta() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
         mostrarNotificacion('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.', 'error');
-        setLoading(false);
+        setLoadingProcesar(false);
         return;
       }
 
@@ -1358,7 +1359,7 @@ export default function RegistroVenta() {
         if (error) {
           console.error('❌ Error al registrar producto:', error);
           mostrarNotificacion('❌ Error al registrar venta: ' + error.message, 'error');
-          setLoading(false);
+          setLoadingProcesar(false);
           return;
         }
       }
@@ -1396,7 +1397,7 @@ export default function RegistroVenta() {
       mostrarNotificacion('❌ Error al registrar venta: ' + error.message, 'error');
     } finally {
       // Desactivar estado de carga
-      setLoading(false);
+      setLoadingProcesar(false);
     }
   };
 
@@ -1408,7 +1409,7 @@ export default function RegistroVenta() {
     }
 
     try {
-      setLoading(true);
+      setLoadingVentas(true);
       
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
@@ -1438,7 +1439,7 @@ export default function RegistroVenta() {
       console.error('❌ Error inesperado al eliminar venta:', error);
       mostrarNotificacion('❌ Error inesperado al eliminar la venta', 'error');
     } finally {
-      setLoading(false);
+      setLoadingVentas(false);
     }
   };
 
@@ -1455,7 +1456,7 @@ export default function RegistroVenta() {
     }
 
     try {
-      setLoading(true);
+      setLoadingVentas(true);
       
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
@@ -1488,7 +1489,7 @@ export default function RegistroVenta() {
       console.error('❌ Error inesperado al eliminar ventas:', error);
       mostrarNotificacion('❌ Error inesperado al eliminar las ventas', 'error');
     } finally {
-      setLoading(false);
+      setLoadingVentas(false);
     }
   };
 
@@ -1575,7 +1576,7 @@ export default function RegistroVenta() {
         return;
       }
 
-      setLoading(true);
+      setLoadingVentas(true);
 
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
@@ -1613,7 +1614,7 @@ export default function RegistroVenta() {
       console.error('❌ Error inesperado al actualizar venta:', error);
       mostrarNotificacion('❌ Error inesperado al actualizar la venta', 'error');
     } finally {
-      setLoading(false);
+      setLoadingVentas(false);
     }
   };
 
@@ -2160,10 +2161,10 @@ export default function RegistroVenta() {
                 <button
                   type="button"
                   onClick={registrarVenta}
-                  disabled={loading}
-                  className={`${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-bold p-2 md:p-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm shadow-lg hover:shadow-xl col-span-2 sm:col-span-1 flex items-center justify-center gap-1 md:gap-2 disabled:opacity-70 disabled:transform-none`}
+                  disabled={loadingProcesar}
+                  className={`${loadingProcesar ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-bold p-2 md:p-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 text-xs md:text-sm shadow-lg hover:shadow-xl col-span-2 sm:col-span-1 flex items-center justify-center gap-1 md:gap-2 disabled:opacity-70 disabled:transform-none`}
                 >
-                  {loading ? (
+                  {loadingProcesar ? (
                     <>
                       <span className="animate-spin">⏳</span>
                       <span className="hidden md:inline">Procesando...</span>
