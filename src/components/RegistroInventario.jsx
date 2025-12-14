@@ -10,6 +10,7 @@ import {
   validarFechaISO
 } from '../lib/dateUtils.js';
 import Footer from './Footer';
+import BarcodeScanner from './BarcodeScanner';
 
 const RegistroInventario = () => {
   const [inventario, setInventario] = useState({
@@ -27,6 +28,10 @@ const RegistroInventario = () => {
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
   const [mostrarTodos, setMostrarTodos] = useState(false);
+  
+  // Estados para código de barras
+  const [codigoInterno, setCodigoInterno] = useState('');
+  const [mostrarScanner, setMostrarScanner] = useState(false);
   
   // Estados para edición inline
   const [editandoId, setEditandoId] = useState(null);
@@ -275,7 +280,8 @@ const RegistroInventario = () => {
         costo_total: parseFloat(inventario.costo_total) || 0,
         precio_unitario: parseFloat(precios.precio_unitario) || 0,
         precio_venta: parseFloat(precios.precio_venta) || 0,
-        usuario_id: usuarioId // 🔒 AGREGAR USER ID PARA SEGURIDAD
+        usuario_id: usuarioId, // 🔒 AGREGAR USER ID PARA SEGURIDAD
+        codigo_interno: codigoInterno ? parseFloat(codigoInterno) : null // 📷 Código de barras (opcional)
       };
 
       const { error } = await supabase
@@ -299,6 +305,7 @@ const RegistroInventario = () => {
         costo_total: '',
         porcentaje_ganancia: '' // Campo para cálculos (no se guarda en BD)
       });
+      setCodigoInterno(''); // Limpiar código de barras
 
       // Recargar inventario
       await cargarInventario();
@@ -589,6 +596,54 @@ const RegistroInventario = () => {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Código de Barras (Opcional) */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 mt-4 border border-white/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl">📷</span>
+                  <h3 className="text-lg font-semibold text-blue-400">
+                    Código de Barras (Opcional)
+                  </h3>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Campo para mostrar/editar el código */}
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={codigoInterno}
+                      onChange={(e) => setCodigoInterno(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Escanea o ingresa el código de barras"
+                      className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base font-mono"
+                      maxLength={13}
+                    />
+                  </div>
+                  {/* Botón para escanear */}
+                  <button
+                    type="button"
+                    onClick={() => setMostrarScanner(true)}
+                    className="flex items-center justify-center gap-2 px-6 py-3 md:py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    <span className="text-lg">📷</span>
+                    <span>Escanear</span>
+                  </button>
+                  {/* Botón para limpiar código */}
+                  {codigoInterno && (
+                    <button
+                      type="button"
+                      onClick={() => setCodigoInterno('')}
+                      className="flex items-center justify-center px-4 py-3 md:py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all duration-200"
+                      title="Limpiar código"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {codigoInterno && (
+                  <p className="mt-2 text-sm text-green-400">
+                    ✓ Código registrado: <span className="font-mono font-bold">{codigoInterno}</span>
+                  </p>
+                )}
               </div>
 
               {/* Cálculos Automáticos */}
@@ -1016,6 +1071,17 @@ const RegistroInventario = () => {
       
       {/* Footer */}
       <Footer />
+
+      {/* Modal del Escáner de Código de Barras */}
+      <BarcodeScanner
+        isOpen={mostrarScanner}
+        onScan={(code) => {
+          setCodigoInterno(code);
+          setMostrarScanner(false);
+        }}
+        onClose={() => setMostrarScanner(false)}
+        title="Escanear Código de Barras"
+      />
     </div>
   );
 };

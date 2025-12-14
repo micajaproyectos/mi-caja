@@ -18,7 +18,8 @@ export default function Transporte() {
     fecha_retiro: '',
     destino: '',
     estado: '',
-    nombre: ''
+    nombre: '',
+    nombre_retiro: ''
   });
 
   // Estados para el popup de confirmación de entrega
@@ -400,6 +401,16 @@ export default function Transporte() {
       }
     }
     
+    // Filtro por nombre de quien retiró (nombre_retiro - campo de confirmación de entrega)
+    if (filtros.nombre_retiro) {
+      if (!registro.nombre_retiro) {
+        return false; // Si no hay nombre_retiro registrado, no coincide
+      }
+      if (!registro.nombre_retiro.toLowerCase().includes(filtros.nombre_retiro.toLowerCase())) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
@@ -410,7 +421,8 @@ export default function Transporte() {
       fecha_retiro: '',
       destino: '',
       estado: '',
-      nombre: ''
+      nombre: '',
+      nombre_retiro: ''
     });
   };
 
@@ -720,7 +732,7 @@ export default function Transporte() {
                       {/* Filtro por Fecha Carga */}
                       <div>
                         <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                          📅 Fecha Carga
+                          Fecha Carga
                         </label>
                         <input
                           type="date"
@@ -732,21 +744,21 @@ export default function Transporte() {
 
                       {/* Filtro por Fecha Retiro */}
                       <div>
-                        <label className="block text-blue-200 text-xs md:text-sm font-medium mb-1.5">
-                          ✅ Fecha Retiro
+                        <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
+                          Fecha Retiro
                         </label>
                         <input
                           type="date"
                           value={filtros.fecha_retiro}
                           onChange={(e) => setFiltros(prev => ({ ...prev, fecha_retiro: e.target.value }))}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                         />
                       </div>
 
                       {/* Filtro por Destino */}
                       <div>
                         <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                          📍 Destino
+                          Destino
                         </label>
                         <input
                           type="text"
@@ -759,11 +771,11 @@ export default function Transporte() {
                     </div>
 
                     {/* Segunda fila de filtros */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* Filtro por Estado */}
                       <div>
                         <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                          🚛 Estado
+                          Estado
                         </label>
                         <select
                           value={filtros.estado}
@@ -779,13 +791,27 @@ export default function Transporte() {
                       {/* Filtro por Nombre */}
                       <div>
                         <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
-                          👤 Nombre
+                          Nombre remitente
                         </label>
                         <input
                           type="text"
                           value={filtros.nombre}
                           onChange={(e) => setFiltros(prev => ({ ...prev, nombre: e.target.value }))}
-                          placeholder="Entrega o retira..."
+                          placeholder="Quien entrega la carga..."
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                        />
+                      </div>
+
+                      {/* Filtro por Nombre Retiro */}
+                      <div>
+                        <label className="block text-green-200 text-xs md:text-sm font-medium mb-1.5">
+                          Nombre retiro
+                        </label>
+                        <input
+                          type="text"
+                          value={filtros.nombre_retiro}
+                          onChange={(e) => setFiltros(prev => ({ ...prev, nombre_retiro: e.target.value }))}
+                          placeholder="Quien retiró la carga..."
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                         />
                       </div>
@@ -793,7 +819,7 @@ export default function Transporte() {
                   </div>
 
                   {/* Botón Limpiar Filtros */}
-                  {(filtros.fecha_carga || filtros.fecha_retiro || filtros.destino || filtros.estado || filtros.nombre) && (
+                  {(filtros.fecha_carga || filtros.fecha_retiro || filtros.destino || filtros.estado || filtros.nombre || filtros.nombre_retiro) && (
                     <div className="mt-3 flex justify-center">
                       <button
                         onClick={limpiarFiltros}

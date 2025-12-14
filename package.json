@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.53.0",
+    "html5-qrcode": "^2.3.8",
     "idb": "^8.0.3",
+    "jsbarcode": "^3.12.1",
     "mammoth": "^1.10.0",
     "pdfjs-dist": "^5.4.54",
     "react": "^18.2.0",
