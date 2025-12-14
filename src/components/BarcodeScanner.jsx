@@ -16,6 +16,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
   const [error, setError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+  const [enfocando, setEnfocando] = useState(false);
   const scannerRef = useRef(null);
   const html5QrcodeRef = useRef(null);
 
@@ -31,14 +32,71 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
     };
   }, [isOpen]);
 
-  // Configuración del escáner
+  // Configuración del escáner optimizada para rápida detección
   const getScannerConfig = () => ({
-    fps: 10,
-    qrbox: { width: 250, height: 100 },
+    fps: 15, // Aumentado de 10 a 15 para detección más rápida
+    qrbox: { width: 280, height: 120 }, // Área de escaneo más grande
     formatsToSupport: [
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
-    ]
+    ],
+    aspectRatio: 1.0,
+    disableFlip: false,
+    // Configuraciones adicionales para mejor rendimiento
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true // Usar detector nativo si está disponible
+    }
   });
+
+  // Aplicar configuraciones avanzadas de enfoque a la cámara
+  const aplicarConfiguracionesEnfoque = async () => {
+    try {
+      // Obtener el stream de video actual
+      const videoElement = document.querySelector('#barcode-scanner-region video');
+      if (!videoElement || !videoElement.srcObject) {
+        console.log('📷 No se pudo acceder al stream de video');
+        return;
+      }
+
+      const stream = videoElement.srcObject;
+      const videoTrack = stream.getVideoTracks()[0];
+      
+      if (!videoTrack) {
+        console.log('📷 No se encontró video track');
+        return;
+      }
+
+      // Obtener capacidades de la cámara
+      const capabilities = videoTrack.getCapabilities();
+      console.log('📷 Capacidades de la cámara:', capabilities);
+
+      // Configurar constraints avanzados
+      const constraints = {};
+      
+      // Configurar enfoque si está disponible
+      if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+        constraints.focusMode = 'continuous';
+        console.log('✅ Enfoque continuo habilitado');
+      }
+      
+      // Configurar zoom si está disponible (valor 1.0 = sin zoom)
+      if (capabilities.zoom) {
+        constraints.zoom = Math.max(capabilities.zoom.min, 1.0);
+        console.log('✅ Zoom configurado:', constraints.zoom);
+      }
+
+      // Aplicar las configuraciones
+      if (Object.keys(constraints).length > 0) {
+        await videoTrack.applyConstraints({
+          advanced: [constraints]
+        });
+        console.log('✅ Configuraciones de enfoque aplicadas exitosamente');
+      }
+
+    } catch (error) {
+      console.warn('⚠️ No se pudieron aplicar todas las configuraciones de enfoque:', error);
+      // No lanzar error, continuar con configuración por defecto
+    }
+  };
 
   const startScanner = async () => {
     try {
@@ -79,6 +137,30 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
       // Callback de error (ignorar, son normales)
       const onScanError = () => {};
 
+      // Función auxiliar mejorada para enfoque rápido
+      const esperarEnfoque = async () => {
+        setEnfocando(true);
+        console.log('📷 Iniciando proceso de enfoque...');
+        
+        try {
+          // Esperar un momento inicial para que el stream se estabilice
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Aplicar configuraciones avanzadas de enfoque
+          await aplicarConfiguracionesEnfoque();
+          
+          // Dar tiempo adicional para que el enfoque se estabilice
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          console.log('✅ Enfoque completado y optimizado');
+        } catch (error) {
+          console.warn('⚠️ Error en proceso de enfoque:', error);
+          // Continuar aunque haya error
+        } finally {
+          setEnfocando(false);
+        }
+      };
+
       // Intentar primero obtener las cámaras disponibles
       try {
         const cameras = await Html5Qrcode.getCameras();
@@ -96,21 +178,42 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
           const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
           console.log('📷 Usando cámara:', cameraId);
 
+          // Configuración mejorada para la cámara
+          const videoConstraints = {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: { ideal: 'continuous' },
+            facingMode: 'environment'
+          };
+
           await html5Qrcode.start(
-            cameraId,
+            { deviceId: { exact: cameraId } },
             config,
             onScanSuccess,
             onScanError
           );
+          
+          // Esperar a que la cámara enfoque antes de marcar como lista
+          await esperarEnfoque();
         } else {
           // Si no se pueden enumerar, intentar con facingMode ideal
           console.log('📷 Intentando con facingMode ideal: environment...');
           await html5Qrcode.start(
-            { facingMode: { ideal: 'environment' } },
+            { 
+              facingMode: { ideal: 'environment' },
+              advanced: [
+                { focusMode: 'continuous' },
+                { width: { ideal: 1920 } },
+                { height: { ideal: 1080 } }
+              ]
+            },
             config,
             onScanSuccess,
             onScanError
           );
+          
+          // Esperar a que la cámara enfoque antes de marcar como lista
+          await esperarEnfoque();
         }
 
         setCameraReady(true);
@@ -122,11 +225,15 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
         try {
           console.log('📷 Fallback 1: facingMode ideal environment...');
           await html5Qrcode.start(
-            { facingMode: { ideal: 'environment' } },
+            { 
+              facingMode: { ideal: 'environment' },
+              advanced: [{ focusMode: 'continuous' }]
+            },
             config,
             onScanSuccess,
             onScanError
           );
+          await esperarEnfoque();
           setCameraReady(true);
         } catch (fallbackErr1) {
           console.error('📷 Fallback 1 falló, intentando fallback 2...', fallbackErr1);
@@ -135,11 +242,15 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
           try {
             console.log('📷 Fallback 2: facingMode ideal user...');
             await html5Qrcode.start(
-              { facingMode: { ideal: 'user' } },
+              { 
+                facingMode: { ideal: 'user' },
+                advanced: [{ focusMode: 'continuous' }]
+              },
               config,
               onScanSuccess,
               onScanError
             );
+            await esperarEnfoque();
             setCameraReady(true);
           } catch (fallbackErr2) {
             console.error('📷 Fallback 2 falló, intentando fallback 3...', fallbackErr2);
@@ -153,6 +264,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
                 onScanSuccess,
                 onScanError
               );
+              await esperarEnfoque();
               setCameraReady(true);
             } catch (lastErr) {
               console.error('📷 Todos los fallbacks fallaron', lastErr);
@@ -274,7 +386,14 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
               <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-xl z-10">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-400 mx-auto mb-3"></div>
-                  <p className="text-gray-300 text-sm">Iniciando cámara...</p>
+                  <p className="text-gray-300 text-sm">
+                    {enfocando ? '🎯 Ajustando enfoque...' : 'Iniciando cámara...'}
+                  </p>
+                  {enfocando && (
+                    <p className="text-gray-400 text-xs mt-2">
+                      Optimizando nitidez para escaneo
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -306,12 +425,34 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
 
           {/* Instrucciones */}
           <div className="mt-4 text-center">
-            <p className="text-gray-300 text-sm">
-              📌 Apunta la cámara hacia el código de barras
-            </p>
-            <p className="text-gray-400 text-xs mt-1">
-              Mantén el código dentro del recuadro verde
-            </p>
+            {cameraReady ? (
+              <>
+                <p className="text-green-400 text-sm font-semibold">
+                  ✅ Cámara lista para escanear
+                </p>
+                <p className="text-gray-300 text-xs mt-1">
+                  Apunta hacia el código de barras y mantén firme
+                </p>
+              </>
+            ) : enfocando ? (
+              <>
+                <p className="text-yellow-400 text-sm font-semibold">
+                  🎯 Ajustando enfoque...
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Espera un momento para mejor nitidez
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-300 text-sm">
+                  📌 Apunta la cámara hacia el código de barras
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Mantén el código dentro del recuadro verde
+                </p>
+              </>
+            )}
           </div>
         </div>
 
