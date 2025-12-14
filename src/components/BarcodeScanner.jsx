@@ -17,6 +17,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
   const [isScanning, setIsScanning] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [enfocando, setEnfocando] = useState(false);
+  const [permisosOtorgados, setPermisosOtorgados] = useState(false);
   const scannerRef = useRef(null);
   const html5QrcodeRef = useRef(null);
 
@@ -120,6 +121,32 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
         setError('Tu navegador no soporta acceso a la cámara. Intenta con Chrome o Safari.');
         setIsScanning(false);
         return;
+      }
+
+      // 🔐 VERIFICAR PERMISOS ANTES DE SOLICITAR CÁMARA
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+          console.log('📷 Estado de permisos de cámara:', permissionStatus.state);
+          
+          if (permissionStatus.state === 'denied') {
+            setError('❌ Permiso de cámara denegado.\n\nPor favor, habilita el acceso a la cámara en la configuración de tu navegador para este sitio.');
+            setIsScanning(false);
+            return;
+          }
+          
+          if (permissionStatus.state === 'granted') {
+            console.log('✅ Permiso de cámara ya otorgado previamente - conectando automáticamente');
+            setPermisosOtorgados(true);
+          } else {
+            console.log('⏳ Se solicitará permiso de cámara al usuario');
+            setPermisosOtorgados(false);
+          }
+        }
+      } catch (permErr) {
+        // Algunos navegadores no soportan permissions.query para camera
+        console.log('⚠️ No se pudo verificar permisos (continuando normalmente):', permErr);
+        setPermisosOtorgados(false);
       }
 
       // Crear instancia del escáner
@@ -387,11 +414,18 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-400 mx-auto mb-3"></div>
                   <p className="text-gray-300 text-sm">
-                    {enfocando ? '🎯 Ajustando enfoque...' : 'Iniciando cámara...'}
+                    {enfocando ? '🎯 Ajustando enfoque...' : 
+                     permisosOtorgados ? '🔓 Conectando automáticamente...' : 
+                     'Iniciando cámara...'}
                   </p>
                   {enfocando && (
                     <p className="text-gray-400 text-xs mt-2">
                       Optimizando nitidez para escaneo
+                    </p>
+                  )}
+                  {permisosOtorgados && !enfocando && (
+                    <p className="text-green-400 text-xs mt-2">
+                      ✅ Permisos guardados, no es necesario volver a autorizar
                     </p>
                   )}
                 </div>
@@ -433,6 +467,11 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
                 <p className="text-gray-300 text-xs mt-1">
                   Apunta hacia el código de barras y mantén firme
                 </p>
+                {permisosOtorgados && (
+                  <p className="text-green-300 text-xs mt-2 opacity-75">
+                    🔓 Conectado automáticamente (permisos guardados)
+                  </p>
+                )}
               </>
             ) : enfocando ? (
               <>
@@ -446,10 +485,10 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
             ) : (
               <>
                 <p className="text-gray-300 text-sm">
-                  📌 Apunta la cámara hacia el código de barras
+                  📌 {permisosOtorgados ? 'Conectando a la cámara...' : 'Apunta la cámara hacia el código de barras'}
                 </p>
                 <p className="text-gray-400 text-xs mt-1">
-                  Mantén el código dentro del recuadro verde
+                  {permisosOtorgados ? 'Usando permisos guardados' : 'Mantén el código dentro del recuadro verde'}
                 </p>
               </>
             )}
@@ -464,6 +503,18 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
           >
             Cancelar
           </button>
+          
+          {/* Información sobre permisos persistentes */}
+          {!permisosOtorgados && !error && (
+            <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <p className="text-blue-300 text-xs">
+                💡 <strong>Tip:</strong> Si autorizas la cámara, el permiso se guardará y no tendrás que volver a darlo.
+              </p>
+              <p className="text-blue-200/70 text-xs mt-1">
+                Nota: Requiere HTTPS o localhost, y no funciona en modo incógnito.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
