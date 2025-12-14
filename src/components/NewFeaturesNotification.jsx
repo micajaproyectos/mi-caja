@@ -58,28 +58,28 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
           </h3>
           
           <div className="text-left space-y-4">
-            {/* Clave Interna */}
+            {/* Códigos de Barras */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">🔒</span>
+              <span className="text-2xl">⚡</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Clave Interna</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Generador de Códigos de Barras</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Nueva funcionalidad de seguridad para proteger tus datos sensibles. Configura una clave interna 
-                  desde el menú de usuario (🔒 Clave Interna) y úsala para acceder a secciones protegidas como 
-                  Seguimiento y Gastos. Solo tú podrás acceder a esta información con tu clave personal.
+                  Ahora puedes generar códigos de barras EAN-13 únicos para tus productos sin código. 
+                  Ve a Registro de Inventario, haz clic en "⚡ Generar Código" y obtendrás un código 
+                  único que puedes imprimir y escanear. Todos los códigos generados comienzan con "299".
                 </p>
               </div>
             </div>
 
-            {/* Auditoría */}
+            {/* PDFs de Códigos */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">🔍</span>
+              <span className="text-2xl">📄</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Auditoría</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Descargar PDFs para Imprimir</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Nueva sección de Auditoría disponible en el menú principal. Revisa todos los cambios y actividades 
-                  realizadas en tu sistema: quién editó, eliminó o creó registros en Inventario, Ventas y más. 
-                  Incluye filtros por tabla, acción, mes y año para un control completo de las operaciones.
+                  Genera PDFs profesionales con códigos de barras listos para imprimir. Haz clic en 
+                  "📄 Descargar PDF" al generar un código o usa el botón "📄 PDF" en la tabla de inventario. 
+                  Imprime, recorta y pega los códigos en tus productos. Compatible con cualquier lector de códigos.
                 </p>
               </div>
             </div>
