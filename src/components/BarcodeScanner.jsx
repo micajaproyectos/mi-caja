@@ -31,76 +31,159 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
     };
   }, [isOpen]);
 
+  // Configuración del escáner
+  const getScannerConfig = () => ({
+    fps: 10,
+    qrbox: { width: 250, height: 100 },
+    formatsToSupport: [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    ]
+  });
+
   const startScanner = async () => {
     try {
       setError(null);
       setIsScanning(true);
       setCameraReady(false);
 
+      // Verificar si estamos en HTTPS o localhost
+      const isSecure = window.location.protocol === 'https:' || 
+                       window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1';
+      
+      if (!isSecure) {
+        setError('La cámara requiere conexión segura (HTTPS). Por favor, accede mediante HTTPS.');
+        setIsScanning(false);
+        return;
+      }
+
+      // Verificar si el navegador soporta getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Tu navegador no soporta acceso a la cámara. Intenta con Chrome o Safari.');
+        setIsScanning(false);
+        return;
+      }
+
       // Crear instancia del escáner
       const html5Qrcode = new Html5Qrcode('barcode-scanner-region');
       html5QrcodeRef.current = html5Qrcode;
 
-      // Configuración optimizada para alta precisión
-      const config = {
-        fps: 15, // 15 fps para detección rápida
-        qrbox: { width: 250, height: 100 }, // Área optimizada para códigos de barras
-        aspectRatio: 1.777778, // 16:9
-        formatsToSupport: [
-          0,  // QR_CODE
-          1,  // AZTEC
-          2,  // CODABAR
-          3,  // CODE_39
-          4,  // CODE_93
-          5,  // CODE_128
-          6,  // DATA_MATRIX
-          7,  // MAXICODE
-          8,  // ITF
-          9,  // EAN_13
-          10, // EAN_8
-          11, // PDF_417
-          12, // RSS_14
-          13, // RSS_EXPANDED
-          14, // UPC_A
-          15, // UPC_E
-          16, // UPC_EAN_EXTENSION
-        ],
-        // Usar API nativa del navegador si está disponible (más rápida)
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
+      const config = getScannerConfig();
+
+      // Callback de éxito
+      const onScanSuccess = (decodedText) => {
+        console.log('📷 Código escaneado:', decodedText);
+        handleScanSuccess(decodedText);
       };
 
-      // Iniciar con cámara trasera
-      await html5Qrcode.start(
-        { facingMode: 'environment' },
-        config,
-        (decodedText, decodedResult) => {
-          // Código detectado exitosamente
-          console.log('📷 Código escaneado:', decodedText);
-          handleScanSuccess(decodedText);
-        },
-        (errorMessage) => {
-          // Errores de escaneo (ignorar, son normales mientras busca)
-        }
-      );
+      // Callback de error (ignorar, son normales)
+      const onScanError = () => {};
 
-      setCameraReady(true);
+      // Intentar primero obtener las cámaras disponibles
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        console.log('📷 Cámaras disponibles:', cameras);
+
+        if (cameras && cameras.length > 0) {
+          // Buscar cámara trasera (environment) o usar la primera disponible
+          const backCamera = cameras.find(cam => 
+            cam.label.toLowerCase().includes('back') || 
+            cam.label.toLowerCase().includes('trasera') ||
+            cam.label.toLowerCase().includes('rear') ||
+            cam.label.toLowerCase().includes('environment')
+          );
+
+          const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+          console.log('📷 Usando cámara:', cameraId);
+
+          await html5Qrcode.start(
+            cameraId,
+            config,
+            onScanSuccess,
+            onScanError
+          );
+        } else {
+          // Si no se pueden enumerar, intentar con facingMode ideal
+          console.log('📷 Intentando con facingMode ideal: environment...');
+          await html5Qrcode.start(
+            { facingMode: { ideal: 'environment' } },
+            config,
+            onScanSuccess,
+            onScanError
+          );
+        }
+
+        setCameraReady(true);
+
+      } catch (cameraErr) {
+        console.error('📷 Error al obtener cámaras, intentando fallback...', cameraErr);
+        
+        // Fallback 1: intentar con facingMode ideal (más permisivo)
+        try {
+          console.log('📷 Fallback 1: facingMode ideal environment...');
+          await html5Qrcode.start(
+            { facingMode: { ideal: 'environment' } },
+            config,
+            onScanSuccess,
+            onScanError
+          );
+          setCameraReady(true);
+        } catch (fallbackErr1) {
+          console.error('📷 Fallback 1 falló, intentando fallback 2...', fallbackErr1);
+          
+          // Fallback 2: intentar con cámara frontal (user)
+          try {
+            console.log('📷 Fallback 2: facingMode ideal user...');
+            await html5Qrcode.start(
+              { facingMode: { ideal: 'user' } },
+              config,
+              onScanSuccess,
+              onScanError
+            );
+            setCameraReady(true);
+          } catch (fallbackErr2) {
+            console.error('📷 Fallback 2 falló, intentando fallback 3...', fallbackErr2);
+            
+            // Fallback 3: intentar sin especificar facingMode (usar default)
+            try {
+              console.log('📷 Fallback 3: sin especificar facingMode...');
+              await html5Qrcode.start(
+                { facingMode: 'user' }, // Sintaxis más simple como último recurso
+                config,
+                onScanSuccess,
+                onScanError
+              );
+              setCameraReady(true);
+            } catch (lastErr) {
+              console.error('📷 Todos los fallbacks fallaron', lastErr);
+              throw lastErr;
+            }
+          }
+        }
+      }
 
     } catch (err) {
-      console.error('Error al iniciar escáner:', err);
+      console.error('📷 Error final al iniciar escáner:', err);
       
-      // Manejar errores específicos
-      if (err.name === 'NotAllowedError') {
-        setError('Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.');
-      } else if (err.name === 'NotFoundError') {
-        setError('No se encontró ninguna cámara en este dispositivo.');
-      } else if (err.name === 'NotReadableError') {
-        setError('La cámara está siendo usada por otra aplicación.');
+      // Manejar errores específicos con mensajes más claros
+      let errorMsg = '';
+      
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        errorMsg = '🔒 Permiso de cámara denegado.\n\n' +
+                   '1. Abre Configuración de Chrome\n' +
+                   '2. Ve a Configuración del sitio > Cámara\n' +
+                   '3. Permite el acceso a este sitio';
+      } else if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
+        errorMsg = '📷 No se encontró ninguna cámara en este dispositivo.';
+      } else if (err.name === 'NotReadableError' || err.message?.includes('in use')) {
+        errorMsg = '⚠️ La cámara está siendo usada por otra aplicación. Cierra otras apps que usen la cámara.';
+      } else if (err.message?.includes('HTTPS')) {
+        errorMsg = '🔐 Se requiere conexión segura (HTTPS) para usar la cámara.';
       } else {
-        setError(`Error al acceder a la cámara: ${err.message || 'Error desconocido'}`);
+        errorMsg = `Error: ${err.message || err.toString() || 'No se pudo acceder a la cámara'}`;
       }
       
+      setError(errorMsg);
       setIsScanning(false);
     }
   };
