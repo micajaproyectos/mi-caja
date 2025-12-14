@@ -11,6 +11,8 @@ import {
 } from '../lib/dateUtils.js';
 import Footer from './Footer';
 import BarcodeScanner from './BarcodeScanner';
+import JsBarcode from 'jsbarcode';
+import { jsPDF } from 'jspdf';
 
 const RegistroInventario = () => {
   const [inventario, setInventario] = useState({
@@ -191,7 +193,7 @@ const RegistroInventario = () => {
 
       const { data, error } = await supabase
         .from('inventario')
-        .select('id, fecha_ingreso, fecha_cl, producto, cantidad, unidad, costo_total, precio_unitario, precio_venta, imagen, usuario_id, created_at')
+        .select('id, fecha_ingreso, fecha_cl, producto, cantidad, unidad, costo_total, precio_unitario, precio_venta, imagen, codigo_interno, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .order('fecha_ingreso', { ascending: false })
         .order('created_at', { ascending: false });
@@ -209,6 +211,200 @@ const RegistroInventario = () => {
       alert('Error inesperado al cargar el inventario');
       setInventarioRegistrado([]);
     }
+  };
+
+  /**
+   * Calcular dígito verificador para código EAN-13
+   * @param {string} code - Los primeros 12 dígitos del código
+   * @returns {number} - Dígito verificador (0-9)
+   */
+  const calcularDigitoVerificadorEAN13 = (code) => {
+    let suma = 0;
+    for (let i = 0; i < 12; i++) {
+      const digito = parseInt(code[i]);
+      // Multiplicar por 1 o 3 según la posición (impar o par)
+      suma += digito * (i % 2 === 0 ? 1 : 3);
+    }
+    const modulo = suma % 10;
+    return modulo === 0 ? 0 : 10 - modulo;
+  };
+
+  /**
+   * Generar un código de barras EAN-13 único
+   * Formato: 299 (prefijo interno) + 9 dígitos aleatorios + 1 dígito verificador
+   */
+  const generarCodigoBarras = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return null;
+      }
+
+      let codigoGenerado = null;
+      let intentos = 0;
+      const maxIntentos = 10;
+
+      while (intentos < maxIntentos) {
+        // Prefijo 299 para códigos internos (no conflictúa con códigos EAN comerciales)
+        const prefijo = '299';
+        
+        // Generar 9 dígitos aleatorios
+        const digitosAleatorios = Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');
+        
+        // Combinar prefijo + dígitos aleatorios (total 12 dígitos)
+        const codigo12Digitos = prefijo + digitosAleatorios;
+        
+        // Calcular dígito verificador
+        const digitoVerificador = calcularDigitoVerificadorEAN13(codigo12Digitos);
+        
+        // Código completo EAN-13
+        const codigoCompleto = codigo12Digitos + digitoVerificador;
+
+        // Verificar si el código ya existe en la base de datos (para este usuario)
+        const { data, error } = await supabase
+          .from('inventario')
+          .select('codigo_interno')
+          .eq('usuario_id', usuarioId)
+          .eq('codigo_interno', parseInt(codigoCompleto))
+          .single();
+
+        if (error && error.code === 'PGRST116') {
+          // Error PGRST116 significa que no se encontró ninguna coincidencia (código único)
+          codigoGenerado = codigoCompleto;
+          break;
+        } else if (error) {
+          console.error('❌ Error al verificar código:', error);
+          intentos++;
+          continue;
+        }
+
+        // Si llegamos aquí, el código ya existe, generar otro
+        intentos++;
+      }
+
+      if (!codigoGenerado) {
+        alert('❌ No se pudo generar un código único. Por favor, intenta nuevamente.');
+        return null;
+      }
+
+      console.log('✅ Código de barras generado:', codigoGenerado);
+      return codigoGenerado;
+
+    } catch (error) {
+      console.error('❌ Error al generar código de barras:', error);
+      alert('Error al generar código de barras');
+      return null;
+    }
+  };
+
+  /**
+   * Manejar el botón de generar código
+   */
+  const handleGenerarCodigo = async () => {
+    const codigo = await generarCodigoBarras();
+    if (codigo) {
+      setCodigoInterno(codigo);
+    }
+  };
+
+  /**
+   * Generar PDF con el código de barras para imprimir
+   * @param {string} codigo - El código de barras a generar (13 dígitos)
+   * @param {string} nombreProducto - Nombre del producto (opcional)
+   */
+  const generarPDFCodigoBarras = (codigo, nombreProducto = '') => {
+    try {
+      if (!codigo || codigo.length !== 13) {
+        alert('❌ Código de barras inválido. Debe tener 13 dígitos.');
+        return;
+      }
+
+      // Crear un canvas temporal para generar el código de barras
+      const canvas = document.createElement('canvas');
+      
+      // Generar el código de barras en el canvas usando JsBarcode
+      JsBarcode(canvas, codigo, {
+        format: 'EAN13',
+        width: 2,
+        height: 100,
+        displayValue: true,
+        fontSize: 20,
+        margin: 10
+      });
+
+      // Crear el PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Título del documento
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Código de Barras - Mi Caja', 105, 20, { align: 'center' });
+
+      // Nombre del producto (si existe)
+      if (nombreProducto) {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Producto: ${nombreProducto}`, 105, 30, { align: 'center' });
+      }
+
+      // Convertir canvas a imagen
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calcular dimensiones para centrar la imagen
+      const imgWidth = 80; // mm
+      const imgHeight = 40; // mm
+      const x = (210 - imgWidth) / 2; // Centrar en A4 (210mm de ancho)
+      const y = nombreProducto ? 40 : 30;
+
+      // Agregar la imagen del código de barras al PDF
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+
+      // Información adicional
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Código EAN-13: ${codigo}`, 105, y + imgHeight + 10, { align: 'center' });
+      
+      // Fecha de generación
+      const fechaActual = new Date().toLocaleDateString('es-CL');
+      pdf.text(`Fecha de generación: ${fechaActual}`, 105, y + imgHeight + 17, { align: 'center' });
+
+      // Mensaje informativo
+      pdf.setFontSize(9);
+      pdf.setTextColor(100);
+      pdf.text('Este código puede ser impreso y escaneado con cualquier lector de códigos de barras.', 105, y + imgHeight + 27, { align: 'center' });
+
+      // Generar nombre de archivo
+      const nombreArchivo = nombreProducto 
+        ? `codigo_barras_${nombreProducto.replace(/[^a-z0-9]/gi, '_')}_${codigo}.pdf`
+        : `codigo_barras_${codigo}.pdf`;
+
+      // Descargar el PDF
+      pdf.save(nombreArchivo);
+
+      console.log('✅ PDF generado exitosamente:', nombreArchivo);
+
+    } catch (error) {
+      console.error('❌ Error al generar PDF:', error);
+      alert('Error al generar el PDF del código de barras');
+    }
+  };
+
+  /**
+   * Manejar el botón de descargar PDF del código generado
+   */
+  const handleDescargarPDF = () => {
+    if (!codigoInterno) {
+      alert('⚠️ Primero debes generar o ingresar un código de barras');
+      return;
+    }
+
+    const nombreProducto = inventario.producto || '';
+    generarPDFCodigoBarras(codigoInterno, nombreProducto);
   };
 
   const handleChange = (e) => {
@@ -606,43 +802,79 @@ const RegistroInventario = () => {
                     Código de Barras (Opcional)
                   </h3>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col gap-3">
                   {/* Campo para mostrar/editar el código */}
                   <div className="flex-1">
                     <input
                       type="text"
                       value={codigoInterno}
                       onChange={(e) => setCodigoInterno(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Escanea o ingresa el código de barras"
+                      placeholder="Escanea, genera o ingresa el código de barras"
                       className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base font-mono"
                       maxLength={13}
                     />
                   </div>
-                  {/* Botón para escanear */}
-                  <button
-                    type="button"
-                    onClick={() => setMostrarScanner(true)}
-                    className="flex items-center justify-center gap-2 px-6 py-3 md:py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    <span className="text-lg">📷</span>
-                    <span>Escanear</span>
-                  </button>
-                  {/* Botón para limpiar código */}
-                  {codigoInterno && (
+                  {/* Botones de acción */}
+                  <div className="flex flex-wrap gap-2">
+                    {/* Botón para generar código automático */}
                     <button
                       type="button"
-                      onClick={() => setCodigoInterno('')}
-                      className="flex items-center justify-center px-4 py-3 md:py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all duration-200"
-                      title="Limpiar código"
+                      onClick={handleGenerarCodigo}
+                      className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
+                      title="Generar código EAN-13 único"
                     >
-                      ✕
+                      <span className="text-lg">⚡</span>
+                      <span>Generar Código</span>
                     </button>
-                  )}
+                    {/* Botón para escanear */}
+                    <button
+                      type="button"
+                      onClick={() => setMostrarScanner(true)}
+                      className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
+                    >
+                      <span className="text-lg">📷</span>
+                      <span>Escanear</span>
+                    </button>
+                    {/* Botón para descargar PDF del código */}
+                    {codigoInterno && (
+                      <button
+                        type="button"
+                        onClick={handleDescargarPDF}
+                        className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
+                        title="Descargar PDF para imprimir"
+                      >
+                        <span className="text-lg">📄</span>
+                        <span>Descargar PDF</span>
+                      </button>
+                    )}
+                    {/* Botón para limpiar código */}
+                    {codigoInterno && (
+                      <button
+                        type="button"
+                        onClick={() => setCodigoInterno('')}
+                        className="flex items-center justify-center px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all duration-200 text-sm md:text-base"
+                        title="Limpiar código"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {/* Información del código */}
                 {codigoInterno && (
-                  <p className="mt-2 text-sm text-green-400">
-                    ✓ Código registrado: <span className="font-mono font-bold">{codigoInterno}</span>
-                  </p>
+                  <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg space-y-2">
+                    <p className="text-sm text-green-400">
+                      ✓ Código registrado: <span className="font-mono font-bold text-base">{codigoInterno}</span>
+                    </p>
+                    {codigoInterno.startsWith('299') && (
+                      <p className="text-xs text-green-300">
+                        🔹 Código interno generado automáticamente (EAN-13)
+                      </p>
+                    )}
+                    <p className="text-xs text-blue-300">
+                      💡 Puedes descargar un PDF con el código de barras para imprimir y pegar en tus productos
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -869,6 +1101,7 @@ const RegistroInventario = () => {
                     <tr className="bg-white/10 backdrop-blur-sm">
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha de Ingreso</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Código de Barras</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Cantidad</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Unidad</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Costo Total</th>
@@ -923,6 +1156,33 @@ const RegistroInventario = () => {
                                   </div>
                                 )}
                               </div>
+                            )}
+                          </td>
+                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                            {item.codigo_interno ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <span className="font-mono text-blue-300 font-semibold">{item.codigo_interno}</span>
+                                  {item.codigo_interno.toString().startsWith('299') ? (
+                                    <span className="text-xs text-purple-400">⚡ Generado</span>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">📷 Escaneado</span>
+                                  )}
+                                </div>
+                                {/* Botón PDF solo para códigos generados automáticamente */}
+                                {item.codigo_interno.toString().startsWith('299') && (
+                                  <button
+                                    onClick={() => generarPDFCodigoBarras(item.codigo_interno.toString(), item.producto)}
+                                    className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                                    title="Descargar PDF del código de barras generado"
+                                  >
+                                    <span>📄</span>
+                                    <span>PDF</span>
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 italic">Sin código</span>
                             )}
                           </td>
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">

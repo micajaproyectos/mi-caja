@@ -16,6 +16,7 @@ import {
 } from '../lib/dateUtils.js';
 import { scaleService } from '../lib/ScaleService.js';
 import Footer from './Footer';
+import BarcodeScanner from './BarcodeScanner';
 
 export default function RegistroVenta() {
   const navigate = useNavigate();
@@ -152,6 +153,10 @@ export default function RegistroVenta() {
   // Estado para navegación por teclado
   const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
 
+  // Estados para código de barras
+  const [codigoInternoVenta, setCodigoInternoVenta] = useState('');
+  const [mostrarScannerVenta, setMostrarScannerVenta] = useState(false);
+
   // Función para cargar productos del inventario filtrados por usuario
   const cargarProductosInventario = async () => {
     try {
@@ -206,6 +211,60 @@ export default function RegistroVenta() {
     });
     setBusquedaProducto(producto.producto);
     setMostrarDropdown(false);
+    
+    // Si el producto tiene código interno, guardarlo
+    if (producto.codigo_interno) {
+      setCodigoInternoVenta(producto.codigo_interno.toString());
+    }
+  };
+
+  // 📷 Función para buscar producto por código de barras
+  const buscarProductoPorCodigo = async (codigo) => {
+    try {
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        mostrarNotificacion('❌ Error: Usuario no autenticado', 'error');
+        return;
+      }
+
+      // Buscar producto en el inventario por código_interno
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .eq('codigo_interno', parseInt(codigo))
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          mostrarNotificacion(`❌ No se encontró ningún producto con el código ${codigo}`, 'error');
+        } else {
+          console.error('Error al buscar producto por código:', error);
+          mostrarNotificacion('❌ Error al buscar el producto', 'error');
+        }
+        return;
+      }
+
+      if (data) {
+        // Completar el formulario con los datos del producto encontrado
+        setProductoActual({
+          ...productoActual,
+          producto: data.producto,
+          precio_unitario: data.precio_venta.toString(),
+          unidad: data.unidad,
+          subtotal: 0
+        });
+        setCodigoInternoVenta(codigo);
+        setBusquedaProducto(data.producto);
+        
+        // Cerrar dropdown si está abierto
+        setMostrarDropdown(false);
+      }
+    } catch (error) {
+      console.error('Error inesperado al buscar producto por código:', error);
+      mostrarNotificacion('❌ Error inesperado al buscar el producto', 'error');
+    }
   };
 
   // Función para obtener la imagen de un producto del inventario
@@ -301,6 +360,9 @@ export default function RegistroVenta() {
       precio_unitario: '',
       subtotal: 0,
     });
+    
+    // Limpiar código de barras escaneado para evitar confusión
+    setCodigoInternoVenta('');
     
     // Limpiar también el campo de búsqueda y el dropdown
     setBusquedaProducto('');
@@ -1285,6 +1347,8 @@ export default function RegistroVenta() {
           total_final: i === 0 ? totalFinal : null,
           // Agregar el usuario_id del usuario autenticado
           usuario_id: usuarioId,
+          // 📷 Agregar código interno si existe (opcional)
+          codigo_interno: codigoInternoVenta ? parseFloat(codigoInternoVenta) : null,
         };
 
         const { error } = await supabase
@@ -1318,6 +1382,7 @@ export default function RegistroVenta() {
         subtotal: 0,
       });
       setProductosVenta([]);
+      setCodigoInternoVenta(''); // Limpiar código de barras
       
       // Limpiar campos de vuelto
       setMontoPagado('');
@@ -1699,14 +1764,40 @@ export default function RegistroVenta() {
                 <span className="text-blue-400 text-lg md:text-xl mr-2">🔍</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Buscar Producto</h3>
               </div>
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={busquedaProducto}
-                onChange={handleBusquedaProducto}
-                className="w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base transition-all duration-200 mb-2"
-                placeholder="🔍 Escribe el nombre del producto..."
-              />
+              <div className="flex gap-2 mb-2">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={busquedaProducto}
+                  onChange={handleBusquedaProducto}
+                  className="flex-1 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base transition-all duration-200"
+                  placeholder="🔍 Escribe el nombre del producto..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarScannerVenta(true)}
+                  className="flex items-center justify-center gap-1 px-3 md:px-4 py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs md:text-sm"
+                  title="Escanear código de barras"
+                >
+                  <span className="text-sm md:text-base">📷</span>
+                  <span className="hidden sm:inline">Escanear</span>
+                </button>
+              </div>
+              
+              {/* Mostrar código escaneado si existe */}
+              {codigoInternoVenta && (
+                <div className="mb-2 p-2 bg-blue-500/20 border border-blue-500/50 rounded-lg">
+                  <p className="text-blue-300 text-xs">
+                    📷 <strong>Código escaneado:</strong> <span className="font-mono">{codigoInternoVenta}</span>
+                    <button
+                      onClick={() => setCodigoInternoVenta('')}
+                      className="ml-2 text-blue-400 hover:text-white underline"
+                    >
+                      Limpiar
+                    </button>
+                  </p>
+                </div>
+              )}
               
               {/* Campos del producto - Responsive y adaptativo */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
@@ -2745,6 +2836,17 @@ export default function RegistroVenta() {
       
       {/* Footer */}
       {!pantallaCompleta && <Footer />}
+
+      {/* Modal del Escáner de Código de Barras */}
+      <BarcodeScanner
+        isOpen={mostrarScannerVenta}
+        onScan={(code) => {
+          buscarProductoPorCodigo(code);
+          setMostrarScannerVenta(false);
+        }}
+        onClose={() => setMostrarScannerVenta(false)}
+        title="Escanear Código de Producto"
+      />
     </div>
   );
 } 
