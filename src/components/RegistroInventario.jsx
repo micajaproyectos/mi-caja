@@ -310,6 +310,7 @@ const RegistroInventario = () => {
 
   /**
    * Generar PDF con el código de barras para imprimir
+   * Tamaño: 4x2 cm (40x20 mm) - perfecto para etiquetas adhesivas
    * @param {string} codigo - El código de barras a generar (13 dígitos)
    * @param {string} nombreProducto - Nombre del producto (opcional)
    */
@@ -324,69 +325,50 @@ const RegistroInventario = () => {
       const canvas = document.createElement('canvas');
       
       // Generar el código de barras en el canvas usando JsBarcode
+      // Configuración de ALTA RESOLUCIÓN para mejor calidad de impresión
       JsBarcode(canvas, codigo, {
         format: 'EAN13',
-        width: 2,
-        height: 100,
-        displayValue: true,
-        fontSize: 20,
-        margin: 10
+        width: 2,          // Ancho de cada barra (buena calidad)
+        height: 50,        // Altura de las barras
+        displayValue: true, // Mostrar números debajo
+        fontSize: 14,      // Tamaño de fuente legible
+        margin: 5,         // Margen para respiración
+        textMargin: 2,     // Espacio entre barras y texto
+        background: '#ffffff', // Fondo blanco
+        lineColor: '#000000'   // Barras negras para máximo contraste
       });
 
-      // Crear el PDF
+      // Crear el PDF con tamaño personalizado de 4x2 cm (40x20 mm)
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape', // Horizontal para 4x2
         unit: 'mm',
-        format: 'a4'
+        format: [20, 40] // Alto x Ancho en mm (4cm x 2cm)
       });
 
-      // Título del documento
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Código de Barras - Mi Caja', 105, 20, { align: 'center' });
-
-      // Nombre del producto (si existe)
-      if (nombreProducto) {
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Producto: ${nombreProducto}`, 105, 30, { align: 'center' });
-      }
-
-      // Convertir canvas a imagen
-      const imgData = canvas.toDataURL('image/png');
+      // Convertir canvas a imagen PNG con máxima calidad
+      const imgData = canvas.toDataURL('image/png', 1.0); // Calidad 100%
       
-      // Calcular dimensiones para centrar la imagen
-      const imgWidth = 80; // mm
-      const imgHeight = 40; // mm
-      const x = (210 - imgWidth) / 2; // Centrar en A4 (210mm de ancho)
-      const y = nombreProducto ? 40 : 30;
-
-      // Agregar la imagen del código de barras al PDF
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-
-      // Información adicional
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Código EAN-13: ${codigo}`, 105, y + imgHeight + 10, { align: 'center' });
+      // Dimensiones del PDF: 40mm ancho x 20mm alto
+      // Ocupar todo el espacio para máxima nitidez
+      const imgWidth = 40;   // Ocupa todo el ancho
+      const imgHeight = 20;  // Ocupa todo el alto
       
-      // Fecha de generación
-      const fechaActual = new Date().toLocaleDateString('es-CL');
-      pdf.text(`Fecha de generación: ${fechaActual}`, 105, y + imgHeight + 17, { align: 'center' });
+      // Posición (0,0) para ocupar toda la página
+      const x = 0;
+      const y = 0;
 
-      // Mensaje informativo
-      pdf.setFontSize(9);
-      pdf.setTextColor(100);
-      pdf.text('Este código puede ser impreso y escaneado con cualquier lector de códigos de barras.', 105, y + imgHeight + 27, { align: 'center' });
+      // Agregar la imagen del código de barras al PDF con compresión NONE para máxima calidad
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight, '', 'NONE');
 
       // Generar nombre de archivo
       const nombreArchivo = nombreProducto 
-        ? `codigo_barras_${nombreProducto.replace(/[^a-z0-9]/gi, '_')}_${codigo}.pdf`
-        : `codigo_barras_${codigo}.pdf`;
+        ? `etiqueta_${nombreProducto.replace(/[^a-z0-9]/gi, '_')}_${codigo}.pdf`
+        : `etiqueta_${codigo}.pdf`;
 
       // Descargar el PDF
       pdf.save(nombreArchivo);
 
-      console.log('✅ PDF generado exitosamente:', nombreArchivo);
+      console.log('✅ Etiqueta 4x2cm generada exitosamente:', nombreArchivo);
 
     } catch (error) {
       console.error('❌ Error al generar PDF:', error);
