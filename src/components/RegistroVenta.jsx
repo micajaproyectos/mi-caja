@@ -15,8 +15,17 @@ import {
   generarClaveCacheFecha
 } from '../lib/dateUtils.js';
 import { scaleService } from '../lib/ScaleService.js';
+import thermalPrinter from '../lib/thermalPrinter.js';
 import Footer from './Footer';
 import BarcodeScanner from './BarcodeScanner';
+
+// ========================================
+// 🖨️ CONFIGURACIÓN DE IMPRESIÓN TÉRMICA
+// ========================================
+// Cambiar a true para activar la impresión térmica
+// Requiere: Impresora compatible con Web Serial API o drivers específicos
+const IMPRESION_TERMICA_HABILITADA = false;
+// ========================================
 
 export default function RegistroVenta() {
   const navigate = useNavigate();
@@ -80,6 +89,9 @@ export default function RegistroVenta() {
   const [ventasRegistradas, setVentasRegistradas] = useState([]);
   const [loadingVentas, setLoadingVentas] = useState(false); // Para cargar tabla de ventas
   const [loadingProcesar, setLoadingProcesar] = useState(false); // Para botón "Procesar Venta"
+  
+  // Estados para impresora térmica
+  const [impresoraConectada, setImpresoraConectada] = useState(false);
   
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
@@ -1293,30 +1305,63 @@ export default function RegistroVenta() {
       return;
     }
     
-    // ⚡ IMPORTANTE: Activar loading INMEDIATAMENTE para bloquear clics rápidos
+    // Validar fecha primero
+    if (!validarFecha(venta.fecha)) {
+      mostrarNotificacion('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD', 'error');
+      return;
+    }
+    
+    // Validar que todos los campos requeridos estén llenos
+    if (!venta.fecha || !venta.tipo_pago) {
+      mostrarNotificacion('❌ Por favor completa la fecha y tipo de pago', 'error');
+      return;
+    }
+
+    // Validar que haya al menos un producto
+    if (productosVenta.length === 0) {
+      mostrarNotificacion('❌ Por favor agrega al menos un producto a la venta', 'error');
+      return;
+    }
+    
+    // 🖨️ PREGUNTAR SI DESEA IMPRIMIR **ANTES** DE REGISTRAR (mientras aún es un "user gesture")
+    // ⚠️ DESACTIVADO TEMPORALMENTE - Cambiar IMPRESION_TERMICA_HABILITADA a true para activar
+    let deseaImprimir = false;
+    let impresoraLista = false;
+    
+    if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported()) {
+      deseaImprimir = await mostrarConfirmacion('¿Desea imprimir el recibo de esta venta?');
+      
+      if (deseaImprimir) {
+        try {
+          // Conectar AHORA, mientras aún es un user gesture válido
+          if (!impresoraConectada) {
+            mostrarNotificacion('🖨️ Selecciona tu impresora...', 'info');
+            await thermalPrinter.connect();
+            setImpresoraConectada(true);
+            mostrarNotificacion('✅ Impresora conectada', 'success');
+          }
+          impresoraLista = true;
+        } catch (error) {
+          console.error('❌ Error al conectar impresora:', error);
+          
+          if (error.message?.includes('No se seleccionó')) {
+            mostrarNotificacion('⚠️ No se seleccionó ninguna impresora. Continuando sin imprimir.', 'warning');
+          } else if (error.message?.includes('Permiso denegado')) {
+            mostrarNotificacion('❌ Permiso de impresora denegado. Continuando sin imprimir.', 'error');
+          } else {
+            mostrarNotificacion(`⚠️ Error al conectar impresora. Continuando sin imprimir.`, 'warning');
+          }
+          
+          setImpresoraConectada(false);
+          deseaImprimir = false; // No intentar imprimir si falló la conexión
+        }
+      }
+    }
+    
+    // ⚡ AHORA SÍ activar loading para registrar la venta
     setLoadingProcesar(true);
     
     try {
-      // Validar fecha primero
-      if (!validarFecha(venta.fecha)) {
-        mostrarNotificacion('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD', 'error');
-        setLoadingProcesar(false);
-        return;
-      }
-      
-      // Validar que todos los campos requeridos estén llenos
-      if (!venta.fecha || !venta.tipo_pago) {
-        mostrarNotificacion('❌ Por favor completa la fecha y tipo de pago', 'error');
-        setLoadingProcesar(false);
-        return;
-      }
-
-      // Validar que haya al menos un producto
-      if (productosVenta.length === 0) {
-        mostrarNotificacion('❌ Por favor agrega al menos un producto a la venta', 'error');
-        setLoadingProcesar(false);
-        return;
-      }
 
       // Calcular el total de la venta
       const totalVenta = calcularTotalVenta();
@@ -1368,6 +1413,43 @@ export default function RegistroVenta() {
       // No necesitamos actualizar manualmente el estado de cajaAcumulada
 
       mostrarNotificacion(`✅ Venta registrada correctamente con ${productosVenta.length} productos. Total: $${totalVenta.toLocaleString()}`, 'success');
+      
+      // 🖨️ IMPRIMIR SI SE SOLICITÓ AL INICIO
+      if (deseaImprimir && impresoraLista) {
+        try {
+          // Preparar datos del recibo
+          const datosRecibo = {
+            fecha: venta.fecha,
+            tipo_pago: venta.tipo_pago,
+            productos: productosVenta.map(p => ({
+              producto: p.producto,
+              cantidad: p.cantidad,
+              unidad: p.unidad,
+              precio_unitario: p.precio_unitario,
+              subtotal: p.subtotal
+            })),
+            total: totalVenta
+          };
+          
+          // Imprimir recibo
+          mostrarNotificacion('🖨️ Imprimiendo recibo...', 'info');
+          await thermalPrinter.printReceipt(datosRecibo);
+          mostrarNotificacion('✅ Recibo impreso correctamente', 'success');
+          
+          // Preguntar si desea abrir el cajón (solo si es efectivo)
+          if (venta.tipo_pago === 'efectivo') {
+            const abrirCajon = await mostrarConfirmacion('¿Desea abrir el cajón de efectivo?');
+            if (abrirCajon) {
+              await thermalPrinter.openDrawer();
+              mostrarNotificacion('✅ Cajón abierto', 'success');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error al imprimir:', error);
+          mostrarNotificacion(`❌ Error al imprimir: ${error.message}`, 'error');
+          setImpresoraConectada(false);
+        }
+      }
       
       // Limpiar el formulario
       setVenta({
@@ -2179,6 +2261,42 @@ export default function RegistroVenta() {
                   )}
                 </button>
               </div>
+              
+              {/* Indicador de estado de impresora y diagnóstico */}
+              {/* ⚠️ DESACTIVADO - Cambiar IMPRESION_TERMICA_HABILITADA a true para activar */}
+              {IMPRESION_TERMICA_HABILITADA && (
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  {impresoraConectada && (
+                    <div className="flex items-center gap-2 text-xs text-green-400">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span>🖨️ Impresora conectada</span>
+                    </div>
+                  )}
+                  
+                  {/* Botón de diagnóstico */}
+                  {thermalPrinter.isSupported() && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        console.clear();
+                        const resultado = await thermalPrinter.diagnostic();
+                        
+                        if (!resultado.supported) {
+                          mostrarNotificacion('❌ Tu navegador no soporta Web Serial API. Usa Chrome o Edge.', 'error');
+                        } else if (resultado.portsWithPermission === 0) {
+                          mostrarNotificacion('⚠️ No hay impresoras conectadas con permiso. Revisa la consola (F12) para más detalles.', 'warning');
+                        } else {
+                          mostrarNotificacion(`✅ ${resultado.portsWithPermission} puerto(s) detectado(s). Revisa la consola (F12).`, 'success');
+                        }
+                      }}
+                      className="text-xs text-blue-400 hover:text-blue-300 underline"
+                      title="Diagnosticar impresora"
+                    >
+                      🔍 Diagnosticar impresora
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Calculadora de Vuelto (solo para Efectivo) */}
@@ -2411,7 +2529,7 @@ export default function RegistroVenta() {
                 {ventasSeleccionadas.length > 0 && (
                   <button
                     onClick={eliminarVentasSeleccionadas}
-                    disabled={loading}
+                    disabled={loadingVentas}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
                     style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                   >
@@ -2451,7 +2569,7 @@ export default function RegistroVenta() {
 
             
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
-              {loading ? (
+              {loadingVentas ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-white"></div>
                   <p className="text-gray-200 mt-2 text-sm md:text-base">Cargando ventas...</p>
@@ -2639,7 +2757,7 @@ export default function RegistroVenta() {
                                       <div className="flex items-center justify-center gap-2">
                                         <button
                                           onClick={() => guardarEdicion(venta.id)}
-                                          disabled={loading}
+                                          disabled={loadingVentas}
                                           className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
                                           title="Guardar cambios"
                                         >
@@ -2647,7 +2765,7 @@ export default function RegistroVenta() {
                                         </button>
                                         <button
                                           onClick={cancelarEdicion}
-                                          disabled={loading}
+                                          disabled={loadingVentas}
                                           className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
                                           title="Cancelar edición"
                                         >
@@ -2658,7 +2776,7 @@ export default function RegistroVenta() {
                                       <div className="flex items-center justify-center gap-2">
                                         <button
                                           onClick={() => iniciarEdicion(venta)}
-                                          disabled={loading}
+                                          disabled={loadingVentas}
                                           className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
                                           title="Editar venta"
                                         >
@@ -2666,7 +2784,7 @@ export default function RegistroVenta() {
                                         </button>
                                         <button
                                           onClick={() => eliminarVenta(venta.id)}
-                                          disabled={loading}
+                                          disabled={loadingVentas}
                                           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
                                           title="Eliminar venta"
                                         >

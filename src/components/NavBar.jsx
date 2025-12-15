@@ -21,7 +21,7 @@ const NavBar = () => {
   const [showNewFeaturesNotification, setShowNewFeaturesNotification] = useState(false);
   const [showNewFeaturesVisualNotification, setShowNewFeaturesVisualNotification] = useState(false);
   const [showRatingNotification, setShowRatingNotification] = useState(false);
-  const [showRatingVisualNotification, setShowRatingVisualNotification] = useState(false);
+  const [showRatingVisualNotification, setShowRatingVisualNotification] = useState(false); // Ya no se usa automáticamente
   const [showClaveInternaNotification, setShowClaveInternaNotification] = useState(false);
   const menuRef = useRef(null);
 
@@ -141,54 +141,54 @@ const NavBar = () => {
     }
   };
 
-  // Función para verificar si debe mostrar la notificación de calificación
-  const shouldShowRatingNotification = async () => {
-    try {
-      // Verificar si el usuario está autenticado
-      const currentUser = await authService.getCurrentUser();
-      if (!currentUser) {
-        if (import.meta.env.DEV) {
-          console.log('❌ Usuario no autenticado');
-        }
-        return false;
-      }
-
-      // PRIMERO: Verificar si ya calificó en la base de datos (fuente de verdad)
-      const { data: hasRated } = await supabase.rpc('usuario_ya_califico', {
-        p_usuario_id: currentUser.id
-      });
-
-      if (hasRated) {
-        if (import.meta.env.DEV) {
-          console.log('Usuario ya calificó en la base de datos, no mostrar notificación');
-        }
-        // Marcar como mostrada para no volver a verificar
-        const storageKey = `ratingNotificationShown_${currentUser.id}`;
-        localStorage.setItem(storageKey, 'true');
-        return false;
-      }
-
-      // SEGUNDO: Si no calificó, verificar localStorage solo como referencia
-      const storageKey = `ratingNotificationShown_${currentUser.id}`;
-      const hasShown = localStorage.getItem(storageKey);
-      if (hasShown) {
-        if (import.meta.env.DEV) {
-          console.log('Notificación marcada como mostrada en localStorage, pero usuario no calificó');
-          console.log('Limpiando localStorage y permitiendo mostrar notificación');
-        }
-        // Limpiar localStorage si el usuario no calificó realmente
-        localStorage.removeItem(storageKey);
-      }
-
-      if (import.meta.env.DEV) {
-        console.log('Usuario puede calificar:', currentUser.nombre);
-      }
-      return true;
-    } catch (error) {
-      console.error('Error al verificar notificación de calificación:', error);
-      return false;
-    }
-  };
+  // ⚠️ DESACTIVADO - Lógica de calificación removida
+  // const shouldShowRatingNotification = async () => {
+  //   try {
+  //     // Verificar si el usuario está autenticado
+  //     const currentUser = await authService.getCurrentUser();
+  //     if (!currentUser) {
+  //       if (import.meta.env.DEV) {
+  //         console.log('❌ Usuario no autenticado');
+  //       }
+  //       return false;
+  //     }
+  //
+  //     // PRIMERO: Verificar si ya calificó en la base de datos (fuente de verdad)
+  //     const { data: hasRated } = await supabase.rpc('usuario_ya_califico', {
+  //       p_usuario_id: currentUser.id
+  //     });
+  //
+  //     if (hasRated) {
+  //       if (import.meta.env.DEV) {
+  //         console.log('Usuario ya calificó en la base de datos, no mostrar notificación');
+  //       }
+  //       // Marcar como mostrada para no volver a verificar
+  //       const storageKey = `ratingNotificationShown_${currentUser.id}`;
+  //       localStorage.setItem(storageKey, 'true');
+  //       return false;
+  //     }
+  //
+  //     // SEGUNDO: Si no calificó, verificar localStorage solo como referencia
+  //     const storageKey = `ratingNotificationShown_${currentUser.id}`;
+  //     const hasShown = localStorage.getItem(storageKey);
+  //     if (hasShown) {
+  //       if (import.meta.env.DEV) {
+  //         console.log('Notificación marcada como mostrada en localStorage, pero usuario no calificó');
+  //         console.log('Limpiando localStorage y permitiendo mostrar notificación');
+  //       }
+  //       // Limpiar localStorage si el usuario no calificó realmente
+  //       localStorage.removeItem(storageKey);
+  //     }
+  //
+  //     if (import.meta.env.DEV) {
+  //       console.log('Usuario puede calificar:', currentUser.nombre);
+  //     }
+  //     return true;
+  //   } catch (error) {
+  //     console.error('Error al verificar notificación de calificación:', error);
+  //     return false;
+  //   }
+  // };
 
   // Función para verificar si debe mostrar la notificación de suscripción
   const shouldShowSubscriptionNotification = () => {
@@ -347,14 +347,14 @@ const NavBar = () => {
       setShowVisualNotification(true);
     }
 
-    // Verificar notificación de calificación al inicio de sesión
-    const checkRatingNotification = async () => {
-      if (await shouldShowRatingNotification()) {
-        // Solo mostrar notificación visual en el menú, no popup automático
-        setShowRatingVisualNotification(true);
-      }
-    };
-    checkRatingNotification();
+    // ⚠️ DESACTIVADO - Lógica de calificación removida
+    // const checkRatingNotification = async () => {
+    //   if (await shouldShowRatingNotification()) {
+    //     // Solo mostrar notificación visual en el menú, no popup automático
+    //     setShowRatingVisualNotification(true);
+    //   }
+    // };
+    // checkRatingNotification();
   }, []);
 
   // Escuchar cambios de autenticación para mostrar notificación
@@ -380,15 +380,15 @@ const NavBar = () => {
       if (event === 'SIGNED_IN' && session?.user && !hasShownNotification) {
         hasShownNotification = true; // Evitar múltiples ejecuciones
         
-        // Esperar un poco para que se complete el login
-        setTimeout(async () => {
-          if (await shouldShowRatingNotification()) {
-            if (import.meta.env.DEV) {
-              console.log('Usuario inició sesión, mostrando notificación visual de calificación');
-            }
-            setShowRatingVisualNotification(true);
-          }
-        }, 1000);
+        // ⚠️ DESACTIVADO - Lógica de calificación removida
+        // setTimeout(async () => {
+        //   if (await shouldShowRatingNotification()) {
+        //     if (import.meta.env.DEV) {
+        //       console.log('Usuario inició sesión, mostrando notificación visual de calificación');
+        //     }
+        //     setShowRatingVisualNotification(true);
+        //   }
+        // }, 1000);
       }
     });
 
@@ -475,7 +475,7 @@ const NavBar = () => {
               </div>
               
               {/* Indicador de notificación */}
-              {(showVisualNotification || showNewFeaturesVisualNotification || showRatingVisualNotification) && (
+              {(showVisualNotification || showNewFeaturesVisualNotification) && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"
                      style={{ boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)' }}>
                 </div>
@@ -532,26 +532,24 @@ const NavBar = () => {
                     </div>
                   )}
 
-                  {/* Notificación de calificación en el menú */}
-                  {showRatingVisualNotification && (
-                    <div className="mb-4 p-3 rounded-lg border-l-4 cursor-pointer hover:bg-white/5 transition-colors"
-                         style={{ 
-                           backgroundColor: 'rgba(255, 193, 7, 0.1)', 
-                           borderLeftColor: '#ffc107',
-                           border: '1px solid rgba(255, 193, 7, 0.2)'
-                         }}
-                         onClick={openRatingNotification}>
-                      <div className="flex items-center">
-                        <span className="text-lg mr-2">⭐</span>
-                        <div>
-                          <p className="text-white text-xs font-medium">¡Tu opinión es importante!</p>
-                          <p className="text-gray-300 text-xs mt-1">
-                            ¿Mi Caja te ha sido útil? Cuéntanos tu experiencia. ¡Haz clic para calificar!
-                          </p>
-                        </div>
+                  {/* Notificación de calificación en el menú - SIEMPRE VISIBLE */}
+                  <div className="mb-4 p-3 rounded-lg border-l-4 cursor-pointer hover:bg-white/5 transition-colors"
+                       style={{ 
+                         backgroundColor: 'rgba(255, 193, 7, 0.1)', 
+                         borderLeftColor: '#ffc107',
+                         border: '1px solid rgba(255, 193, 7, 0.2)'
+                       }}
+                       onClick={openRatingNotification}>
+                    <div className="flex items-center">
+                      <span className="text-lg mr-2">⭐</span>
+                      <div>
+                        <p className="text-white text-xs font-medium">¡Tu opinión es importante!</p>
+                        <p className="text-gray-300 text-xs mt-1">
+                          ¿Mi Caja te ha sido útil? Cuéntanos tu experiencia. ¡Haz clic para calificar!
+                        </p>
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   <div className="mb-3">
                     <p className="text-white text-sm font-semibold">{userInfo.nombre || 'Usuario'}</p>
