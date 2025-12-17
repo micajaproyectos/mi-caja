@@ -1,8 +1,11 @@
 -- Vista para mostrar sumatoria diaria de ventas rápidas del mes actual
 -- Esta vista agrupa las ventas rápidas por usuario_id, mostrando el total diario
 -- Solo muestra datos del mes actual (se actualiza automáticamente cada mes)
+-- SECURITY INVOKER: La vista ejecuta con permisos del usuario que la consulta (más seguro)
 
-CREATE OR REPLACE VIEW public.venta_rapida_diarias AS
+CREATE OR REPLACE VIEW public.venta_rapida_diarias
+WITH (security_invoker = true)
+AS
 SELECT 
   vr.usuario_id,
   DATE(vr.fecha_cl) AS fecha,

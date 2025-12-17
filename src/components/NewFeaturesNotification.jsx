@@ -58,28 +58,27 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
           </h3>
           
           <div className="text-left space-y-4">
-            {/* Códigos de Barras */}
+            {/* Gráficos Diarios */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">⚡</span>
+              <span className="text-2xl">📊</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Generador de Códigos de Barras</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-1">Gráficos de Ventas Diarias</h4>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  Ahora puedes generar códigos de barras EAN-13 únicos para tus productos sin código. 
-                  Ve a Registro de Inventario, haz clic en "⚡ Generar Código" y obtendrás un código 
-                  único que puedes imprimir y escanear. Todos los códigos generados comienzan con "299".
+                  Ahora puedes visualizar tus ventas día a día del mes actual. Ve a la sección de 
+                  <strong className="text-green-300"> Seguimiento</strong> y encontrarás nuevos gráficos de barras que muestran:
                 </p>
-              </div>
-            </div>
-
-            {/* PDFs de Códigos */}
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">📄</span>
-              <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Descargar PDFs para Imprimir</h4>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  Genera PDFs profesionales con códigos de barras listos para imprimir. Haz clic en 
-                  "📄 Descargar PDF" al generar un código o usa el botón "📄 PDF" en la tabla de inventario. 
-                  Imprime, recorta y pega los códigos en tus productos. Compatible con cualquier lector de códigos.
+                <ul className="mt-2 space-y-1 text-gray-300 text-sm">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">•</span>
+                    <span><strong>Ventas Diarias:</strong> Total de ventas normales por cada día del mes</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">•</span>
+                    <span><strong>Ventas Rápidas Diarias:</strong> Total de ventas rápidas por cada día del mes</span>
+                  </li>
+                </ul>
+                <p className="text-gray-300 text-sm leading-relaxed mt-2">
+                  Identifica tendencias, compara días y optimiza tu estrategia de ventas con esta nueva herramienta de análisis.
                 </p>
               </div>
             </div>

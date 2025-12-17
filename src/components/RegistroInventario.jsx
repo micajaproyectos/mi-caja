@@ -340,14 +340,13 @@ const RegistroInventario = () => {
       
       // Generar el código de barras en el canvas usando JsBarcode
       // Configuración de ALTA RESOLUCIÓN para mejor calidad de impresión
+      // displayValue: false para agregar números manualmente con mejor calidad
       JsBarcode(canvas, codigo, {
         format: 'EAN13',
         width: 2,          // Ancho de cada barra (buena calidad)
-        height: 50,        // Altura de las barras
-        displayValue: true, // Mostrar números debajo
-        fontSize: 14,      // Tamaño de fuente legible
-        margin: 5,         // Margen para respiración
-        textMargin: 2,     // Espacio entre barras y texto
+        height: 45,        // Altura de las barras (solo barras, sin números)
+        displayValue: false, // NO mostrar números (los agregaremos manualmente)
+        margin: 2,         // Margen mínimo
         background: '#ffffff', // Fondo blanco
         lineColor: '#000000'   // Barras negras para máximo contraste
       });
@@ -362,17 +361,41 @@ const RegistroInventario = () => {
       // Convertir canvas a imagen PNG con máxima calidad
       const imgData = canvas.toDataURL('image/png', 1.0); // Calidad 100%
       
-      // Dimensiones del PDF: 40mm ancho x 20mm alto
-      // Ocupar todo el espacio para máxima nitidez
-      const imgWidth = 40;   // Ocupa todo el ancho
-      const imgHeight = 20;  // Ocupa todo el alto
-      
-      // Posición (0,0) para ocupar toda la página
-      const x = 0;
-      const y = 0;
+      // Dimensiones y posición del código de barras (solo barras, sin números)
+      const imgWidth = 38;
+      const imgHeight = 11;  // Solo las barras
+      const x = 1;
+      const y = 3.5; // Posición desde arriba
 
-      // Agregar la imagen del código de barras al PDF con compresión NONE para máxima calidad
+      // Agregar la imagen del código de barras al PDF
       pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight, '', 'NONE');
+
+      // Agregar el nombre del producto en la parte superior (si existe)
+      if (nombreProducto) {
+        pdf.setFontSize(6); // Tamaño de fuente muy pequeño
+        pdf.setTextColor(0, 0, 0); // Color negro
+        pdf.setFont('helvetica', 'bold'); // Negrita para mejor legibilidad
+        
+        // Truncar el nombre si es muy largo (máximo 30 caracteres)
+        const nombreTruncado = nombreProducto.length > 30 
+          ? nombreProducto.substring(0, 30) + '...'
+          : nombreProducto;
+        
+        // Centrar el texto en la parte superior
+        const textWidth = pdf.getTextWidth(nombreTruncado);
+        const textX = (40 - textWidth) / 2; // Centrar en el ancho de 40mm
+        pdf.text(nombreTruncado, textX, 2); // Posición Y: 2mm desde arriba
+      }
+
+      // Agregar los números del código de barras manualmente con alta calidad
+      pdf.setFontSize(7); // Tamaño de fuente para los números
+      pdf.setTextColor(0, 0, 0); // Color negro
+      pdf.setFont('helvetica', 'normal'); // Fuente normal
+      
+      // Centrar los números debajo del código de barras
+      const numerosWidth = pdf.getTextWidth(codigo);
+      const numerosX = (40 - numerosWidth) / 2;
+      pdf.text(codigo, numerosX, 17); // Posición debajo de las barras
 
       // Generar nombre de archivo
       const nombreArchivo = nombreProducto 

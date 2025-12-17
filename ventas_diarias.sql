@@ -1,8 +1,11 @@
 -- Vista para mostrar sumatoria diaria de ventas del mes actual
 -- Esta vista agrupa las ventas por usuario_id, mostrando el total diario
 -- Solo muestra datos del mes actual (se actualiza automáticamente cada mes)
+-- SECURITY INVOKER: La vista ejecuta con permisos del usuario que la consulta (más seguro)
 
-CREATE OR REPLACE VIEW public.ventas_diarias AS
+CREATE OR REPLACE VIEW public.ventas_diarias
+WITH (security_invoker = true)
+AS
 SELECT 
   v.usuario_id,
   DATE(v.fecha_cl) AS fecha,
