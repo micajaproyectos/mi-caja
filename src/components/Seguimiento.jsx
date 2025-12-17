@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { obtenerFechaHoyChile } from '../lib/dateUtils.js';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Label, ReferenceArea, PieChart, Pie, Cell } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Label, ReferenceArea, PieChart, Pie, Cell } from 'recharts';
 import Footer from './Footer';
 import SeguimientoBloqueado from './SeguimientoBloqueado';
 
@@ -37,6 +37,11 @@ export default function Seguimiento() {
   
 
 
+  // Estados para el gráfico de ventas diarias del mes actual
+  const [datosVentasDiarias, setDatosVentasDiarias] = useState([]);
+  const [loadingVentasDiarias, setLoadingVentasDiarias] = useState(false);
+  const [errorVentasDiarias, setErrorVentasDiarias] = useState(null);
+
   // Estados para el gráfico de ventas acumuladas mensuales
   const [clienteId, setClienteId] = useState(null);
   const [datosVentasAcumuladas, setDatosVentasAcumuladas] = useState([]);
@@ -59,6 +64,11 @@ export default function Seguimiento() {
   const [datosPedidosAcumulados, setDatosPedidosAcumulados] = useState([]);
   const [loadingPedidosAcumulados, setLoadingPedidosAcumulados] = useState(false);
   const [errorPedidosAcumulados, setErrorPedidosAcumulados] = useState(null);
+
+  // Estados para el gráfico de ventas rápidas diarias del mes actual
+  const [datosVentasRapidasDiarias, setDatosVentasRapidasDiarias] = useState([]);
+  const [loadingVentasRapidasDiarias, setLoadingVentasRapidasDiarias] = useState(false);
+  const [errorVentasRapidasDiarias, setErrorVentasRapidasDiarias] = useState(null);
 
   // Estados para el gráfico de ventas rápidas acumuladas mensuales
   const [datosVentasRapidasAcumuladas, setDatosVentasRapidasAcumuladas] = useState([]);
@@ -337,6 +347,65 @@ export default function Seguimiento() {
       console.error('[chart] Error inesperado al obtener cliente_id:', error);
       setErrorVentasAcumuladas('Error inesperado al obtener datos del cliente');
       return null;
+    }
+  };
+
+  // Función para cargar datos de ventas diarias del mes actual
+  const cargarVentasDiarias = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        return;
+      }
+
+      setLoadingVentasDiarias(true);
+      setErrorVentasDiarias(null);
+      
+      // Obtener fecha actual y días del mes
+      const ahora = new Date();
+      const anioActual = ahora.getFullYear();
+      const mesActual = ahora.getMonth() + 1;
+      const diasEnMes = new Date(anioActual, mesActual, 0).getDate();
+      
+      // Crear array base con todos los días del mes inicializados en 0
+      const diasBase = [];
+      for (let dia = 1; dia <= diasEnMes; dia++) {
+        diasBase.push({
+          dia: dia,
+          totalDia: 0,
+          fecha: `${anioActual}-${String(mesActual).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+        });
+      }
+
+      // Consultar la vista ventas_diarias
+      const { data: ventasData, error: ventasError } = await supabase
+        .from('ventas_diarias')
+        .select('dia, total_dia, fecha')
+        .eq('usuario_id', usuarioId)
+        .order('dia', { ascending: true });
+
+      if (ventasError) {
+        console.error('[chart] Error al consultar ventas_diarias:', ventasError);
+        setErrorVentasDiarias('Error al cargar datos de ventas diarias');
+        return;
+      }
+
+      // Mapear los datos recibidos a los días base
+      const datosMapeados = diasBase.map(diaBase => {
+        const datoEncontrado = ventasData?.find(d => d.dia === diaBase.dia);
+        return {
+          ...diaBase,
+          totalDia: datoEncontrado ? parseFloat(datoEncontrado.total_dia) || 0 : 0
+        };
+      });
+
+      setDatosVentasDiarias(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar ventas diarias:', error);
+      setErrorVentasDiarias('Error inesperado al cargar datos');
+    } finally {
+      setLoadingVentasDiarias(false);
     }
   };
 
@@ -720,6 +789,65 @@ export default function Seguimiento() {
     }
   };
 
+  // Función para cargar datos de ventas rápidas diarias del mes actual
+  const cargarVentasRapidasDiarias = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        return;
+      }
+
+      setLoadingVentasRapidasDiarias(true);
+      setErrorVentasRapidasDiarias(null);
+      
+      // Obtener fecha actual y días del mes
+      const ahora = new Date();
+      const anioActual = ahora.getFullYear();
+      const mesActual = ahora.getMonth() + 1;
+      const diasEnMes = new Date(anioActual, mesActual, 0).getDate();
+      
+      // Crear array base con todos los días del mes inicializados en 0
+      const diasBase = [];
+      for (let dia = 1; dia <= diasEnMes; dia++) {
+        diasBase.push({
+          dia: dia,
+          totalDia: 0,
+          fecha: `${anioActual}-${String(mesActual).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+        });
+      }
+
+      // Consultar la vista venta_rapida_diarias
+      const { data: ventasRapidasData, error: ventasRapidasError } = await supabase
+        .from('venta_rapida_diarias')
+        .select('dia, total_dia, fecha')
+        .eq('usuario_id', usuarioId)
+        .order('dia', { ascending: true });
+
+      if (ventasRapidasError) {
+        console.error('[chart] Error al consultar venta_rapida_diarias:', ventasRapidasError);
+        setErrorVentasRapidasDiarias('Error al cargar datos de ventas rápidas diarias');
+        return;
+      }
+
+      // Mapear los datos recibidos a los días base
+      const datosMapeados = diasBase.map(diaBase => {
+        const datoEncontrado = ventasRapidasData?.find(d => d.dia === diaBase.dia);
+        return {
+          ...diaBase,
+          totalDia: datoEncontrado ? parseFloat(datoEncontrado.total_dia) || 0 : 0
+        };
+      });
+
+      setDatosVentasRapidasDiarias(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar ventas rápidas diarias:', error);
+      setErrorVentasRapidasDiarias('Error inesperado al cargar datos');
+    } finally {
+      setLoadingVentasRapidasDiarias(false);
+    }
+  };
+
   // Función para cargar datos de ventas rápidas acumuladas mensuales
   const cargarVentasRapidasAcumuladas = async () => {
     try {
@@ -831,6 +959,7 @@ export default function Seguimiento() {
     const inicializarVentasAcumuladas = async () => {
       const clienteId = await obtenerClienteId();
       if (clienteId) {
+        await cargarVentasDiarias(); // Cargar ventas diarias del mes actual
         await cargarVentasAcumuladas();
       }
     };
@@ -850,8 +979,10 @@ export default function Seguimiento() {
   // Cargar ventas acumuladas cuando se obtenga el cliente_id
   useEffect(() => {
     if (clienteId) {
+      cargarVentasDiarias(); // Cargar ventas diarias del mes actual
       cargarVentasAcumuladas();
       cargarPedidosAcumulados(); // Cargar pedidos acumulados también
+      cargarVentasRapidasDiarias(); // Cargar ventas rápidas diarias del mes actual
       cargarVentasRapidasAcumuladas(); // Cargar ventas rápidas acumuladas también
       cargarAniosGraficoDisponibles(); // Cargar años disponibles para el gráfico
     }
@@ -862,6 +993,7 @@ export default function Seguimiento() {
     if (clienteId) {
       cargarVentasAcumuladas();
       cargarPedidosAcumulados(); // Cargar pedidos acumulados también
+      cargarVentasRapidasDiarias(); // Cargar ventas rápidas diarias del mes actual
       cargarVentasRapidasAcumuladas(); // Cargar ventas rápidas acumuladas también
     }
   }, [anioGrafico, clienteId]);
@@ -1154,6 +1286,86 @@ export default function Seguimiento() {
             <p className="text-green-200 text-center text-sm md:text-base">
               Análisis detallado del rendimiento de ventas
             </p>
+          </div>
+
+          {/* Gráfico de Ventas Diarias del Mes Actual */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+            <div className="text-center mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
+                Ventas Diarias - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+              </h3>
+              <p className="text-green-200 text-sm md:text-base">
+                Total de ventas por día del mes actual
+              </p>
+            </div>
+
+            {loadingVentasDiarias ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                <span className="ml-3 text-green-200">Cargando...</span>
+              </div>
+            ) : errorVentasDiarias ? (
+              <div className="text-center py-8">
+                <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-red-300 text-sm">{errorVentasDiarias}</p>
+                </div>
+              </div>
+            ) : datosVentasDiarias.length > 0 ? (
+              <div className="h-64 md:h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={datosVentasDiarias}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis 
+                      dataKey="dia" 
+                      stroke="#ffffff"
+                      tick={{ fill: '#ffffff', fontSize: 12 }}
+                      label={{ 
+                        value: 'Día del Mes', 
+                        position: 'insideBottom', 
+                        offset: -10, 
+                        fill: '#ffffff',
+                        style: { fontSize: '14px' }
+                      }}
+                    />
+                    <YAxis 
+                      stroke="#ffffff"
+                      tick={{ fill: '#ffffff', fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toLocaleString('es-CL')}`}
+                      label={{ 
+                        value: 'Total Ventas ($)', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        fill: '#ffffff',
+                        style: { fontSize: '14px' }
+                      }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(26, 61, 26, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                        color: '#ffffff'
+                      }}
+                      formatter={(value) => [`$${parseFloat(value).toLocaleString('es-CL')}`, 'Total']}
+                      labelFormatter={(label) => `Día ${label}`}
+                    />
+                    <Bar 
+                      dataKey="totalDia" 
+                      fill="#22c55e"
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📊</div>
+                <p className="text-gray-300 text-lg">No hay datos de ventas para este mes</p>
+              </div>
+            )}
           </div>
 
           {/* Gráficos de Ventas - Separados pero en la misma línea */}
@@ -1809,6 +2021,86 @@ export default function Seguimiento() {
             <p className="text-green-200 text-center text-sm md:text-base">
               Análisis detallado del rendimiento de ventas rápidas
             </p>
+          </div>
+
+          {/* Gráfico de Ventas Rápidas Diarias del Mes Actual */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+            <div className="text-center mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
+                ⚡ Ventas Rápidas Diarias - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+              </h3>
+              <p className="text-green-200 text-sm md:text-base">
+                Total de ventas rápidas por día del mes actual
+              </p>
+            </div>
+
+            {loadingVentasRapidasDiarias ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+                <span className="ml-3 text-green-200">Cargando...</span>
+              </div>
+            ) : errorVentasRapidasDiarias ? (
+              <div className="text-center py-8">
+                <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-red-300 text-sm">{errorVentasRapidasDiarias}</p>
+                </div>
+              </div>
+            ) : datosVentasRapidasDiarias.length > 0 ? (
+              <div className="h-64 md:h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={datosVentasRapidasDiarias}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis 
+                      dataKey="dia" 
+                      stroke="#ffffff"
+                      tick={{ fill: '#ffffff', fontSize: 12 }}
+                      label={{ 
+                        value: 'Día del Mes', 
+                        position: 'insideBottom', 
+                        offset: -10, 
+                        fill: '#ffffff',
+                        style: { fontSize: '14px' }
+                      }}
+                    />
+                    <YAxis 
+                      stroke="#ffffff"
+                      tick={{ fill: '#ffffff', fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toLocaleString('es-CL')}`}
+                      label={{ 
+                        value: 'Total Ventas Rápidas ($)', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        fill: '#ffffff',
+                        style: { fontSize: '14px' }
+                      }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(26, 61, 26, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                        color: '#ffffff'
+                      }}
+                      formatter={(value) => [`$${parseFloat(value).toLocaleString('es-CL')}`, 'Total']}
+                      labelFormatter={(label) => `Día ${label}`}
+                    />
+                    <Bar 
+                      dataKey="totalDia" 
+                      fill="#f59e0b"
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">⚡</div>
+                <p className="text-gray-300 text-lg">No hay datos de ventas rápidas para este mes</p>
+              </div>
+            )}
           </div>
 
           {/* Gráficos de Ventas Rápidas - Separados pero en la misma línea */}

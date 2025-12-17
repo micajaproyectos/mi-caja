@@ -1051,7 +1051,7 @@ export default function Clientes() {
         return;
       }
 
-      alert('✅ Registro eliminado exitosamente');
+      // Registro eliminado exitosamente - sin popup redundante
       
       // Recargar la lista de registros y recalcular resumen
       await cargarRegistrosPedidos(); // Esto también recalcula el resumen

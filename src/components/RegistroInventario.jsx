@@ -527,7 +527,7 @@ const RegistroInventario = () => {
         return;
       }
 
-      alert('Producto eliminado del inventario');
+      // Producto eliminado exitosamente - sin popup redundante
       await cargarInventario();
 
     } catch (error) {

@@ -7,6 +7,7 @@ import SubscriptionNotification from './SubscriptionNotification.jsx';
 import NewFeaturesNotification from './NewFeaturesNotification.jsx';
 import RatingNotification from './RatingNotification.jsx';
 import ClaveInternaNotification from './ClaveInternaNotification.jsx';
+import QRCode from 'qrcode';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -23,6 +24,9 @@ const NavBar = () => {
   const [showRatingNotification, setShowRatingNotification] = useState(false);
   const [showRatingVisualNotification, setShowRatingVisualNotification] = useState(false); // Ya no se usa automáticamente
   const [showClaveInternaNotification, setShowClaveInternaNotification] = useState(false);
+  const [instagramLink, setInstagramLink] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [isSavingInstagram, setIsSavingInstagram] = useState(false);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -51,13 +55,264 @@ const NavBar = () => {
           nombre: profile?.nombre || '',
           email: profile?.email || ''
         });
+        
+        // Cargar link de Instagram
+        await cargarInstagramLink();
       } catch (e) {
         console.error('Error cargando perfil:', e);
         setUserInfo({ nombre: 'Error', email: 'Error' });
       } finally {
         setIsLoadingProfile(false);
       }
+    } else {
+      // Si ya tenemos los datos básicos, solo cargar Instagram
+      await cargarInstagramLink();
     }
+  };
+
+  // Función para cargar el link de Instagram desde la base de datos
+  const cargarInstagramLink = async () => {
+    try {
+      const userId = await authService.getCurrentUserId();
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('link_instagram')
+        .eq('usuario_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error al cargar link de Instagram:', error);
+        return;
+      }
+
+      const link = data?.link_instagram || '';
+      setInstagramLink(link);
+      
+      // Generar QR si existe el link
+      if (link) {
+        await generarQR(link);
+      }
+    } catch (error) {
+      console.error('Error inesperado al cargar Instagram:', error);
+    }
+  };
+
+  // Función para guardar el link de Instagram
+  const guardarInstagramLink = async () => {
+    if (!instagramLink.trim()) {
+      alert('Por favor ingresa un link de Instagram válido');
+      return;
+    }
+
+    setIsSavingInstagram(true);
+    try {
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        alert('Error: Usuario no autenticado');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ link_instagram: instagramLink.trim() })
+        .eq('usuario_id', userId);
+
+      if (error) {
+        console.error('Error al guardar link de Instagram:', error);
+        alert('Error al guardar el link de Instagram');
+        return;
+      }
+
+      // Generar el QR
+      await generarQR(instagramLink.trim());
+      alert('✅ Link de Instagram guardado exitosamente');
+    } catch (error) {
+      console.error('Error inesperado al guardar Instagram:', error);
+      alert('Error inesperado al guardar el link');
+    } finally {
+      setIsSavingInstagram(false);
+    }
+  };
+
+  // Función para generar el código QR estilo Instagram con branding Mi Caja
+  const generarQR = async (link) => {
+    try {
+      // 1. Generar el QR básico en BLANCO sobre fondo morado de Instagram
+      const qrDataUrl = await QRCode.toDataURL(link, {
+        width: 400,
+        margin: 2,
+        color: {
+          dark: '#FFFFFF', // QR en blanco
+          light: '#833AB4' // Morado de Instagram
+        }
+      });
+
+      // 2. Crear un canvas para el diseño completo (estilo Instagram)
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Dimensiones: formato cuadrado estilo Instagram
+      canvas.width = 500;
+      canvas.height = 650;
+
+      // 3. Fondo con degradado de Instagram (naranja → rosa → morado)
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#f09433');    // Naranja Instagram
+      gradient.addColorStop(0.25, '#e6683c'); // Naranja-rosa
+      gradient.addColorStop(0.5, '#dc2743');  // Rosa Instagram
+      gradient.addColorStop(0.75, '#cc2366'); // Rosa-morado
+      gradient.addColorStop(1, '#bc1888');    // Morado Instagram
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Función para dibujar el contenido (con o sin logo)
+      const dibujarContenido = (logoImg = null) => {
+        // Logo pequeño en esquina superior izquierda (discreto)
+        if (logoImg) {
+          // Logo pequeño: máximo 40px
+          const maxLogoSize = 40;
+          let logoWidth = logoImg.width;
+          let logoHeight = logoImg.height;
+          
+          // Escalar manteniendo proporciones
+          const aspectRatio = logoWidth / logoHeight;
+          if (aspectRatio > 1) {
+            logoWidth = maxLogoSize;
+            logoHeight = maxLogoSize / aspectRatio;
+          } else {
+            logoHeight = maxLogoSize;
+            logoWidth = maxLogoSize * aspectRatio;
+          }
+          
+          // Posicionar en esquina superior izquierda
+          const logoX = 20;
+          const logoY = 20;
+          
+          // Añadir opacidad sutil para que no predomine
+          ctx.globalAlpha = 0.7;
+          ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+          ctx.globalAlpha = 1.0; // Restaurar opacidad
+        } else {
+          // Si no hay logo, solo emoji discreto en esquina
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+          ctx.font = '24px Inter, Arial, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('🏪', 20, 45);
+        }
+
+        // INFORMACIÓN DEL USUARIO - PROTAGONISTA
+        // Nombre del usuario en grande y destacado
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 32px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(userInfo.nombre || 'Usuario', canvas.width / 2, 100);
+
+        // Separador sutil en blanco
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(80, 130);
+        ctx.lineTo(canvas.width - 80, 130);
+        ctx.stroke();
+
+        // 5. Cargar y dibujar el QR
+        const qrImage = new Image();
+        qrImage.onload = () => {
+          // Dibujar el QR centrado (ajustado para nueva posición)
+          const qrSize = 350;
+          const qrX = (canvas.width - qrSize) / 2;
+          const qrY = 150;
+          
+          // Fondo morado oscuro de Instagram detrás del QR para el contraste
+          ctx.fillStyle = '#833AB4';
+          ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
+          
+          // Sombra suave para el QR
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          ctx.shadowBlur = 15;
+          ctx.shadowOffsetY = 5;
+          
+          ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+          
+          // Resetear sombra
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetY = 0;
+
+          // Footer: Instrucciones en blanco (estilo Instagram)
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 18px Inter, Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('📷 Síguenos en Instagram', canvas.width / 2, qrY + qrSize + 35);
+          
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.font = '13px Inter, Arial, sans-serif';
+          ctx.fillText('Escanea con tu cámara', canvas.width / 2, qrY + qrSize + 58);
+
+          // Marca de agua Mi Caja (sutil en blanco)
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          ctx.font = '11px Inter, Arial, sans-serif';
+          ctx.fillText('Powered by Mi Caja', canvas.width / 2, canvas.height - 15);
+
+          // Convertir el canvas a URL y guardar
+          const finalImageUrl = canvas.toDataURL('image/png', 1.0);
+          setQrCodeUrl(finalImageUrl);
+        };
+        
+        qrImage.onerror = () => {
+          console.error('Error al cargar QR image');
+          // Intentar continuar sin imagen
+          const finalImageUrl = canvas.toDataURL('image/png', 1.0);
+          setQrCodeUrl(finalImageUrl);
+        };
+        
+        qrImage.src = qrDataUrl;
+      };
+
+      // 4. Intentar cargar el logo de Mi Caja
+      const logoImage = new Image();
+      logoImage.onload = () => {
+        console.log('✅ Logo cargado correctamente');
+        dibujarContenido(logoImage);
+      };
+      
+      logoImage.onerror = () => {
+        console.warn('⚠️ No se pudo cargar el logo, usando texto alternativo');
+        dibujarContenido(null);
+      };
+      
+      // Cargar el logo desde la carpeta public
+      logoImage.src = '/favicon.png';
+      
+      // Timeout de seguridad: si no carga en 2 segundos, usar texto
+      setTimeout(() => {
+        if (!logoImage.complete) {
+          console.warn('⏱️ Timeout al cargar logo, usando texto alternativo');
+          dibujarContenido(null);
+        }
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error al generar QR:', error);
+    }
+  };
+
+  // Función para descargar el QR
+  const descargarQR = () => {
+    if (!qrCodeUrl) return;
+
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    // Nombre de archivo descriptivo con el nombre del usuario
+    const nombreArchivo = userInfo.nombre 
+      ? `micaja-instagram-${userInfo.nombre.replace(/\s+/g, '-').toLowerCase()}.png`
+      : 'micaja-instagram-qr.png';
+    link.download = nombreArchivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const closeProfile = () => setIsProfileOpen(false);
@@ -584,10 +839,10 @@ const NavBar = () => {
       </div>
 
       {isProfileOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeProfile} />
           <div
-            className="relative z-10 w-11/12 max-w-md p-6 rounded-2xl shadow-lg"
+            className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-lg"
             style={{
               backgroundColor: 'rgba(31, 74, 31, 0.95)',
               border: '1px solid rgba(255, 255, 255, 0.1)'
@@ -597,25 +852,91 @@ const NavBar = () => {
               <h3 className="text-2xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Perfil</h3>
               <p className="text-gray-300 text-sm">Información de tu cuenta</p>
             </div>
-                         <div className="space-y-3 text-white">
-               {isLoadingProfile ? (
-                 <div className="flex items-center justify-center py-4">
-                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
-                   <span className="ml-2 text-gray-300">Cargando...</span>
-                 </div>
-               ) : (
-                                   <>
-                    <div>
-                      <p className="text-xs text-gray-300">Nombre</p>
-                      <p className="font-medium">{userInfo.nombre || '—'}</p>
+            
+            <div className="space-y-4 text-white">
+              {isLoadingProfile ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
+                  <span className="ml-2 text-gray-300">Cargando...</span>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xs text-gray-300">Nombre</p>
+                    <p className="font-medium">{userInfo.nombre || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-300">Correo electrónico</p>
+                    <p className="font-medium break-all">{userInfo.email || '—'}</p>
+                  </div>
+
+                  {/* Sección de Instagram QR */}
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xl">📱</span>
+                      <h4 className="text-lg font-semibold text-white">QR de Instagram</h4>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-300">Correo electrónico</p>
-                      <p className="font-medium break-all">{userInfo.email || '—'}</p>
+                    <p className="text-xs text-gray-300 mb-3">
+                      Genera un código QR para compartir tu Instagram con tus clientes
+                    </p>
+                    
+                    {/* Input para link de Instagram */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-300">
+                        Link de Instagram
+                      </label>
+                      <input
+                        type="url"
+                        value={instagramLink}
+                        onChange={(e) => setInstagramLink(e.target.value)}
+                        placeholder="https://instagram.com/tu_usuario"
+                        className="w-full p-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm"
+                      />
+                      
+                      {/* Botón para guardar y generar QR */}
+                      <button
+                        onClick={guardarInstagramLink}
+                        disabled={isSavingInstagram || !instagramLink.trim()}
+                        className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm"
+                      >
+                        {isSavingInstagram ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Guardando...
+                          </span>
+                        ) : (
+                          '💾 Guardar y Generar QR'
+                        )}
+                      </button>
                     </div>
-                  </>
-               )}
-             </div>
+
+                    {/* Mostrar QR si existe */}
+                    {qrCodeUrl && (
+                      <div className="mt-4 p-4 bg-white rounded-lg">
+                        <div className="flex flex-col items-center gap-3">
+                          <img 
+                            src={qrCodeUrl} 
+                            alt="QR Code Instagram" 
+                            className="w-48 h-48 object-contain"
+                          />
+                          <button
+                            onClick={descargarQR}
+                            className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm flex items-center justify-center gap-2"
+                          >
+                            <span>📥</span>
+                            <span>Descargar QR</span>
+                          </button>
+                          <p className="text-xs text-gray-500 text-center">
+                            Comparte este QR para que tus clientes puedan seguirte en Instagram
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={closeProfile}

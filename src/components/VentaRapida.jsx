@@ -558,7 +558,7 @@ const VentaRapida = () => {
         return;
       }
 
-      alert('✅ Venta rápida eliminada exitosamente');
+      // Venta rápida eliminada exitosamente - sin popup redundante
       await cargarVentasRapidas();
 
     } catch (error) {

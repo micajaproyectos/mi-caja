@@ -279,7 +279,7 @@ const FormularioProveedores = () => {
       }
       
       console.log('✅ Registro de proveedor eliminado exitosamente');
-      alert('✅ Registro de proveedor eliminado exitosamente');
+      // Registro eliminado exitosamente - sin popup redundante
       await cargarProveedores(); // Recargar la lista
     } catch (error) {
       console.error('❌ Error inesperado al eliminar proveedor:', error);

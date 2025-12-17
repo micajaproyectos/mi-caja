@@ -1229,7 +1229,7 @@ export default function RegistroAsistencia() {
         return;
       }
       
-      alert('✅ Registro de asistencia eliminado exitosamente');
+      // Registro de asistencia eliminado exitosamente - sin popup redundante
       await cargarAsistencias(); // Recargar la lista
     } catch (error) {
       console.error('❌ Error inesperado al eliminar asistencia:', error);

@@ -1564,7 +1564,7 @@ export default function Pedidos() {
         return;
       }
 
-      alert('✅ Pedido eliminado exitosamente');
+      // Pedido eliminado exitosamente - sin popup redundante
       
       // Recargar la lista de pedidos
       await cargarPedidosRegistrados();

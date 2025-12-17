@@ -1217,15 +1217,10 @@ export default function RegistroVenta() {
 
   // Función para mostrar notificaciones (inteligente según modo pantalla completa)
   const mostrarNotificacion = (mensaje, tipo = 'info') => {
-    if (pantallaCompleta) {
-      // Mostrar notificación personalizada en pantalla completa
-      setNotificacionPersonalizada({ mensaje, tipo });
-      // Auto-ocultar después de 4 segundos
-      setTimeout(() => setNotificacionPersonalizada(null), 4000);
-    } else {
-      // Usar alert nativo fuera de pantalla completa
-      alert(mensaje);
-    }
+    // Siempre usar notificación personalizada que se cierra automáticamente
+    setNotificacionPersonalizada({ mensaje, tipo });
+    // Auto-ocultar después de 3 segundos (más rápido para no interrumpir el flujo)
+    setTimeout(() => setNotificacionPersonalizada(null), 3000);
   };
 
   // Función para mostrar confirmaciones (inteligente según modo pantalla completa)
@@ -1512,7 +1507,7 @@ export default function RegistroVenta() {
         return;
       }
 
-      mostrarNotificacion('✅ Venta eliminada exitosamente', 'success');
+      // Venta eliminada exitosamente - sin notificación redundante
       
       // Recargar la lista de ventas
       await cargarVentas();
@@ -1559,7 +1554,7 @@ export default function RegistroVenta() {
         return;
       }
 
-      mostrarNotificacion(`✅ ${ventasSeleccionadas.length} venta(s) eliminada(s) exitosamente`, 'success');
+      // Ventas eliminadas exitosamente - sin notificación redundante
       
       // Limpiar selección
       setVentasSeleccionadas([]);
