@@ -44,7 +44,8 @@ const RegistroInventario = () => {
     costo_total: '',
     precio_unitario: '',
     precio_venta: '',
-    imagen: ''
+    imagen: '',
+    codigo_interno: ''
   });
 
   // Opciones para el selector de unidad
@@ -309,6 +310,19 @@ const RegistroInventario = () => {
   };
 
   /**
+   * Manejar el botón de generar código durante la edición
+   */
+  const handleGenerarCodigoEdicion = async () => {
+    const codigo = await generarCodigoBarras();
+    if (codigo) {
+      setValoresEdicion(prev => ({
+        ...prev,
+        codigo_interno: codigo
+      }));
+    }
+  };
+
+  /**
    * Generar PDF con el código de barras para imprimir
    * Tamaño: 4x2 cm (40x20 mm) - perfecto para etiquetas adhesivas
    * @param {string} codigo - El código de barras a generar (13 dígitos)
@@ -532,7 +546,8 @@ const RegistroInventario = () => {
       costo_total: item.costo_total,
       precio_unitario: item.precio_unitario,
       precio_venta: item.precio_venta,
-      imagen: item.imagen || ''
+      imagen: item.imagen || '',
+      codigo_interno: item.codigo_interno ? item.codigo_interno.toString() : ''
     });
   };
 
@@ -546,7 +561,8 @@ const RegistroInventario = () => {
       costo_total: '',
       precio_unitario: '',
       precio_venta: '',
-      imagen: ''
+      imagen: '',
+      codigo_interno: ''
     });
   };
 
@@ -593,7 +609,8 @@ const RegistroInventario = () => {
           costo_total: parseFloat(valoresEdicion.costo_total),
           precio_unitario: parseFloat(valoresEdicion.precio_unitario),
           precio_venta: parseFloat(valoresEdicion.precio_venta),
-          imagen: valoresEdicion.imagen.trim() || null
+          imagen: valoresEdicion.imagen.trim() || null,
+          codigo_interno: valoresEdicion.codigo_interno ? parseFloat(valoresEdicion.codigo_interno) : null
         })
         .eq('id', id);
 
@@ -1141,30 +1158,86 @@ const RegistroInventario = () => {
                             )}
                           </td>
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
-                            {item.codigo_interno ? (
-                              <div className="flex flex-col gap-2">
-                                <div className="flex flex-col gap-1">
-                                  <span className="font-mono text-blue-300 font-semibold">{item.codigo_interno}</span>
-                                  {item.codigo_interno.toString().startsWith('299') ? (
-                                    <span className="text-xs text-purple-400">⚡ Generado</span>
-                                  ) : (
-                                    <span className="text-xs text-gray-400">📷 Escaneado</span>
+                            {estaEditando ? (
+                              <div className="flex flex-col gap-2 min-w-[150px]">
+                                {/* Input para el código */}
+                                <input
+                                  type="text"
+                                  value={valoresEdicion.codigo_interno}
+                                  onChange={(e) => handleEdicionChange('codigo_interno', e.target.value.replace(/\D/g, ''))}
+                                  placeholder="Código de barras"
+                                  className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm font-mono"
+                                  maxLength={13}
+                                />
+                                {/* Botones de acción */}
+                                <div className="flex flex-wrap gap-1">
+                                  {/* Botón para generar código */}
+                                  <button
+                                    type="button"
+                                    onClick={handleGenerarCodigoEdicion}
+                                    className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                                    title="Generar código EAN-13 único"
+                                  >
+                                    <span>⚡</span>
+                                    <span>Generar</span>
+                                  </button>
+                                  {/* Botón para escanear */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setMostrarScanner(true)}
+                                    className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                                    title="Escanear código de barras"
+                                  >
+                                    <span>📷</span>
+                                    <span>Escanear</span>
+                                  </button>
+                                  {/* Botón para limpiar código */}
+                                  {valoresEdicion.codigo_interno && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEdicionChange('codigo_interno', '')}
+                                      className="flex items-center justify-center px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-lg transition-all duration-200"
+                                      title="Limpiar código"
+                                    >
+                                      ✕
+                                    </button>
                                   )}
                                 </div>
-                                {/* Botón PDF solo para códigos generados automáticamente */}
-                                {item.codigo_interno.toString().startsWith('299') && (
-                                  <button
-                                    onClick={() => generarPDFCodigoBarras(item.codigo_interno.toString(), item.producto)}
-                                    className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-                                    title="Descargar PDF del código de barras generado"
-                                  >
-                                    <span>📄</span>
-                                    <span>PDF</span>
-                                  </button>
+                                {/* Información del código durante edición */}
+                                {valoresEdicion.codigo_interno && (
+                                  <div className="p-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+                                    <p className="text-xs text-green-400">
+                                      ✓ {valoresEdicion.codigo_interno}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-500 italic">Sin código</span>
+                              item.codigo_interno ? (
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="font-mono text-blue-300 font-semibold">{item.codigo_interno}</span>
+                                    {item.codigo_interno.toString().startsWith('299') ? (
+                                      <span className="text-xs text-purple-400">⚡ Generado</span>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">📷 Escaneado</span>
+                                    )}
+                                  </div>
+                                  {/* Botón PDF solo para códigos generados automáticamente */}
+                                  {item.codigo_interno.toString().startsWith('299') && (
+                                    <button
+                                      onClick={() => generarPDFCodigoBarras(item.codigo_interno.toString(), item.producto)}
+                                      className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                                      title="Descargar PDF del código de barras generado"
+                                    >
+                                      <span>📄</span>
+                                      <span>PDF</span>
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 italic">Sin código</span>
+                              )
                             )}
                           </td>
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
@@ -1318,7 +1391,15 @@ const RegistroInventario = () => {
       <BarcodeScanner
         isOpen={mostrarScanner}
         onScan={(code) => {
-          setCodigoInterno(code);
+          // Si estamos editando, actualizar valoresEdicion; si no, actualizar codigoInterno
+          if (editandoId) {
+            setValoresEdicion(prev => ({
+              ...prev,
+              codigo_interno: code
+            }));
+          } else {
+            setCodigoInterno(code);
+          }
           setMostrarScanner(false);
         }}
         onClose={() => setMostrarScanner(false)}
