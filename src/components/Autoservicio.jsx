@@ -175,6 +175,61 @@ function Autoservicio() {
     setProductosFiltrados([]);
   };
 
+  // 📷 Función para buscar producto por código de barras
+  const buscarProductoPorCodigo = async (codigo) => {
+    try {
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Buscar producto en el inventario por código_interno
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .eq('codigo_interno', parseInt(codigo))
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          alert(`❌ No se encontró ningún producto con el código ${codigo}`);
+        } else {
+          console.error('Error al buscar producto por código:', error);
+          alert('❌ Error al buscar el producto');
+        }
+        return;
+      }
+
+      if (data) {
+        // Verificar que el producto no sea de unidad "kg" (excluido en autoservicio)
+        if (data.unidad && data.unidad.toLowerCase() === 'kg') {
+          alert('❌ Los productos con unidad "kg" no están disponibles en autoservicio');
+          return;
+        }
+
+        // Completar el formulario con los datos del producto encontrado
+        setProductoActual({
+          ...productoActual,
+          producto: data.producto,
+          precio_unitario: data.precio_venta.toString(),
+          unidad: data.unidad,
+          subtotal: 0
+        });
+        setBusquedaProducto(data.producto);
+        
+        // Cerrar dropdown si está abierto
+        setDropdownAbierto(false);
+        setProductosFiltrados([]);
+      }
+    } catch (error) {
+      console.error('Error inesperado al buscar producto por código:', error);
+      alert('❌ Error inesperado al buscar el producto');
+    }
+  };
+
   // Función para manejar el cambio en la búsqueda de productos
   const manejarBusquedaProducto = (valor) => {
     setBusquedaProducto(valor);
@@ -192,17 +247,31 @@ function Autoservicio() {
         subtotal: 0
       });
     } else {
-      // Resetear índice al cambiar búsqueda
-      setIndiceSeleccionado(-1);
+      // 📷 Detectar si es un código de barras (8 dígitos para EAN-8, 13 para EAN-13)
+      const esCodigoBarras = /^\d{8}$|^\d{13}$/.test(valor.trim());
       
-      // Calcular posición del dropdown SOLO si no está visible
-      if (!dropdownAbierto && searchInputRef.current) {
-        const rect = searchInputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width
-        });
+      if (esCodigoBarras) {
+        // Si es un código de barras, buscar por código
+        buscarProductoPorCodigo(valor.trim());
+        setDropdownAbierto(false);
+        setIndiceSeleccionado(-1);
+      } else {
+        // Si no es código de barras, buscar por nombre (comportamiento normal)
+        // Resetear índice al cambiar búsqueda
+        setIndiceSeleccionado(-1);
+        
+        // Calcular posición del dropdown SOLO si no está visible
+        if (!dropdownAbierto && searchInputRef.current) {
+          const rect = searchInputRef.current.getBoundingClientRect();
+          setDropdownPosition({
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width
+          });
+        }
+        
+        // Filtrar productos por nombre
+        filtrarProductos(valor);
       }
     }
   };
@@ -1061,7 +1130,7 @@ function Autoservicio() {
                     value={busquedaProducto}
                     onChange={(e) => manejarBusquedaProducto(e.target.value)}
                     className="w-full px-3 md:px-4 py-3 md:py-4 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base transition-all duration-200"
-                    placeholder="🔍 Escribe el nombre del producto..."
+                    placeholder="🔍 Nombre o código de barras..."
                   />
                 </div>
                 
