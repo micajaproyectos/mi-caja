@@ -296,20 +296,31 @@ export default function RegistroVenta() {
     });
     
     if (valor.trim()) {
-      filtrarProductos(valor);
-      setIndiceSeleccionado(-1); // Resetear índice al cambiar búsqueda
+      // 📷 Detectar si es un código de barras (8 dígitos para EAN-8, 13 para EAN-13)
+      const esCodigoBarras = /^\d{8}$|^\d{13}$/.test(valor.trim());
       
-      // Calcular posición del dropdown SOLO si no está visible
-      if (!mostrarDropdown && searchInputRef.current) {
-        const rect = searchInputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width
-        });
+      if (esCodigoBarras) {
+        // Si es un código de barras, buscar por código
+        buscarProductoPorCodigo(valor.trim());
+        setMostrarDropdown(false);
+        setIndiceSeleccionado(-1);
+      } else {
+        // Si no es código de barras, buscar por nombre (comportamiento normal)
+        filtrarProductos(valor);
+        setIndiceSeleccionado(-1); // Resetear índice al cambiar búsqueda
+        
+        // Calcular posición del dropdown SOLO si no está visible
+        if (!mostrarDropdown && searchInputRef.current) {
+          const rect = searchInputRef.current.getBoundingClientRect();
+          setDropdownPosition({
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width
+          });
+        }
+        
+        setMostrarDropdown(true);
       }
-      
-      setMostrarDropdown(true);
     } else {
       setProductosFiltrados([]);
       setMostrarDropdown(false);
@@ -1849,7 +1860,7 @@ export default function RegistroVenta() {
                   value={busquedaProducto}
                   onChange={handleBusquedaProducto}
                   className="flex-1 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base transition-all duration-200"
-                  placeholder="🔍 Escribe el nombre del producto..."
+                  placeholder="🔍 Nombre o código de barras..."
                 />
                 <button
                   type="button"
