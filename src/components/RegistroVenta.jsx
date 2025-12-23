@@ -169,6 +169,9 @@ export default function RegistroVenta() {
   // Estados para código de barras
   const [codigoInternoVenta, setCodigoInternoVenta] = useState('');
   const [mostrarScannerVenta, setMostrarScannerVenta] = useState(false);
+  
+  // Ref para debounce de búsqueda por código
+  const busquedaCodigoTimeoutRef = useRef(null);
 
   // Función para cargar productos del inventario filtrados por usuario
   const cargarProductosInventario = async () => {
@@ -295,15 +298,22 @@ export default function RegistroVenta() {
       producto: valor
     });
     
+    // Limpiar timeout anterior si existe
+    if (busquedaCodigoTimeoutRef.current) {
+      clearTimeout(busquedaCodigoTimeoutRef.current);
+    }
+    
     if (valor.trim()) {
       // 📷 Detectar si es un código de barras (8 dígitos para EAN-8, 13 para EAN-13)
       const esCodigoBarras = /^\d{8}$|^\d{13}$/.test(valor.trim());
       
       if (esCodigoBarras) {
-        // Si es un código de barras, buscar por código
-        buscarProductoPorCodigo(valor.trim());
-        setMostrarDropdown(false);
-        setIndiceSeleccionado(-1);
+        // Usar debounce para evitar búsquedas mientras el lector pistola envía dígitos
+        busquedaCodigoTimeoutRef.current = setTimeout(() => {
+          buscarProductoPorCodigo(valor.trim());
+          setMostrarDropdown(false);
+          setIndiceSeleccionado(-1);
+        }, 300); // Esperar 300ms después del último dígito
       } else {
         // Si no es código de barras, buscar por nombre (comportamiento normal)
         filtrarProductos(valor);
@@ -1157,11 +1167,15 @@ export default function RegistroVenta() {
 
 
 
-  // Cleanup: cerrar puerto al salir del componente
+  // Cleanup: cerrar puerto al salir del componente y limpiar timeouts
   useEffect(() => {
     return () => {
       if (scaleService.isConnected()) {
         scaleService.disconnect();
+      }
+      // Limpiar timeout de búsqueda por código si existe
+      if (busquedaCodigoTimeoutRef.current) {
+        clearTimeout(busquedaCodigoTimeoutRef.current);
       }
     };
   }, []);
