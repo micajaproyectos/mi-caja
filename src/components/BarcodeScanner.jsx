@@ -164,26 +164,32 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
       // Callback de error (ignorar, son normales)
       const onScanError = () => {};
 
-      // Función auxiliar optimizada para enfoque más rápido
+      // Función optimizada para inicialización rápida de cámara
       const esperarEnfoque = async () => {
-        setEnfocando(true);
-        console.log('📷 Iniciando proceso de enfoque optimizado...');
+        console.log('📷 Inicializando cámara con enfoque continuo...');
         
         try {
-          // Esperar un momento inicial reducido para que el stream se estabilice
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // Mínima espera para estabilización del stream
+          await new Promise(resolve => setTimeout(resolve, 100));
           
-          // Aplicar configuraciones avanzadas de enfoque
-          await aplicarConfiguracionesEnfoque();
+          // Marcar como lista inmediatamente - el enfoque continuo trabajará en segundo plano
+          setCameraReady(true);
+          setEnfocando(false);
           
-          // Tiempo de estabilización reducido
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Aplicar configuraciones de enfoque en segundo plano (no bloqueante)
+          setTimeout(async () => {
+            try {
+              await aplicarConfiguracionesEnfoque();
+              console.log('✅ Configuraciones de enfoque aplicadas en segundo plano');
+            } catch (error) {
+              console.warn('⚠️ Error al aplicar configuraciones de enfoque:', error);
+            }
+          }, 50);
           
-          console.log('✅ Enfoque completado y optimizado');
+          console.log('✅ Cámara lista - enfoque continuo activo');
         } catch (error) {
-          console.warn('⚠️ Error en proceso de enfoque:', error);
-          // Continuar aunque haya error
-        } finally {
+          console.warn('⚠️ Error en inicialización:', error);
+          setCameraReady(true);
           setEnfocando(false);
         }
       };
@@ -220,7 +226,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
             onScanError
           );
           
-          // Esperar a que la cámara enfoque antes de marcar como lista
+          // Inicialización rápida - enfoque continuo trabajará automáticamente
           await esperarEnfoque();
         } else {
           // Si no se pueden enumerar, intentar con facingMode ideal
