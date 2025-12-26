@@ -35,6 +35,10 @@ const RegistroInventario = () => {
   const [codigoInterno, setCodigoInterno] = useState('');
   const [mostrarScanner, setMostrarScanner] = useState(false);
   
+  // Estados para búsqueda por código de barras escaneado
+  const [filtroCodigo, setFiltroCodigo] = useState('');
+  const [mostrarScannerBusqueda, setMostrarScannerBusqueda] = useState(false);
+  
   // Estados para edición inline
   const [editandoId, setEditandoId] = useState(null);
   const [valoresEdicion, setValoresEdicion] = useState({
@@ -134,7 +138,7 @@ const RegistroInventario = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Filtrar productos por nombre, fecha y mes usando fecha_cl
+  // Filtrar productos por nombre, fecha, mes y código de barras
   const productosFiltrados = inventarioRegistrado.filter(item => {
     const coincideNombre = item.producto.toLowerCase().includes(busquedaProducto.toLowerCase());
     
@@ -148,9 +152,10 @@ const RegistroInventario = () => {
     const anioMesItem = fechaFiltro ? fechaFiltro.substring(0, 7) : obtenerAnioMes(item.fecha_ingreso);
     const coincideMes = !filtroMes || anioMesItem === filtroMes;
     
-
+    // Filtro por código de barras
+    const coincideCodigo = !filtroCodigo || (item.codigo_interno && item.codigo_interno.toString() === filtroCodigo);
     
-    return coincideNombre && coincideFecha && coincideMes;
+    return coincideNombre && coincideFecha && coincideMes && coincideCodigo;
   });
 
   // Limitar productos mostrados a 30 si no se ha activado "Ver todo"
@@ -176,10 +181,10 @@ const RegistroInventario = () => {
 
   // Resetear mostrarTodos cuando se apliquen filtros
   useEffect(() => {
-    if (busquedaProducto || filtroFecha || filtroMes) {
+    if (busquedaProducto || filtroFecha || filtroMes || filtroCodigo) {
       setMostrarTodos(false);
     }
-  }, [busquedaProducto, filtroFecha, filtroMes]);
+  }, [busquedaProducto, filtroFecha, filtroMes, filtroCodigo]);
 
   const cargarInventario = async () => {
     try {
@@ -1075,6 +1080,18 @@ const RegistroInventario = () => {
             {/* Barra de búsqueda */}
             {inventarioRegistrado.length > 0 && (
               <div className="mb-6">
+                {/* Botón de escanear código de barras */}
+                <div className="mb-4 flex justify-center">
+                  <button
+                    onClick={() => setMostrarScannerBusqueda(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                    title="Escanear código de barras para buscar producto"
+                  >
+                    <span className="text-lg">📷</span>
+                    <span>Escaner Productos</span>
+                  </button>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Filtro por nombre */}
                   <div className="relative">
@@ -1143,7 +1160,7 @@ const RegistroInventario = () => {
                 </div>
                 
                 {/* Información de filtros activos */}
-                {(busquedaProducto || filtroFecha || filtroMes) && (
+                {(busquedaProducto || filtroFecha || filtroMes || filtroCodigo) && (
                   <div className="mt-3 flex flex-wrap gap-2 items-center">
                     <span className="text-sm text-gray-300">Filtros activos:</span>
                     {busquedaProducto && (
@@ -1152,6 +1169,17 @@ const RegistroInventario = () => {
                         <button
                           onClick={() => setBusquedaProducto('')}
                           className="text-green-400 hover:text-white"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    )}
+                    {filtroCodigo && (
+                      <span className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full text-xs">
+                        <span>📷 Código: {filtroCodigo}</span>
+                        <button
+                          onClick={() => setFiltroCodigo('')}
+                          className="text-blue-400 hover:text-white"
                         >
                           ✕
                         </button>
@@ -1197,6 +1225,7 @@ const RegistroInventario = () => {
                         setBusquedaProducto('');
                         setFiltroFecha('');
                         setFiltroMes('');
+                        setFiltroCodigo('');
                         setMostrarTodos(false);
                       }}
                       className="text-gray-400 hover:text-white text-xs underline"
@@ -1207,14 +1236,14 @@ const RegistroInventario = () => {
                 )}
                 
                 {/* Contador de resultados */}
-                {(busquedaProducto || filtroFecha || filtroMes) && (
+                {(busquedaProducto || filtroFecha || filtroMes || filtroCodigo) && (
                   <div className="mt-2 text-sm text-gray-300">
                     Mostrando {productosFiltrados.length} de {inventarioRegistrado.length} productos
                   </div>
                 )}
                 
                 {/* Contador cuando no hay filtros activos */}
-                {!busquedaProducto && !filtroFecha && !filtroMes && (
+                {!busquedaProducto && !filtroFecha && !filtroMes && !filtroCodigo && (
                   <div className="mt-2 text-sm text-gray-300">
                     Mostrando {productosAMostrar.length} de {inventarioRegistrado.length} productos
                     {!mostrarTodos && productosFiltrados.length > 30 && (
@@ -1543,7 +1572,7 @@ const RegistroInventario = () => {
       {/* Footer */}
       <Footer />
 
-      {/* Modal del Escáner de Código de Barras */}
+      {/* Modal del Escáner de Código de Barras (para agregar/editar) */}
       <BarcodeScanner
         isOpen={mostrarScanner}
         onScan={(code) => {
@@ -1560,6 +1589,18 @@ const RegistroInventario = () => {
         }}
         onClose={() => setMostrarScanner(false)}
         title="Escanear Código de Barras"
+      />
+
+      {/* Modal del Escáner de Código de Barras (para buscar/filtrar) */}
+      <BarcodeScanner
+        isOpen={mostrarScannerBusqueda}
+        onScan={(code) => {
+          // Aplicar filtro por código de barras
+          setFiltroCodigo(code);
+          setMostrarScannerBusqueda(false);
+        }}
+        onClose={() => setMostrarScannerBusqueda(false)}
+        title="Escanear Código para Buscar Producto"
       />
     </div>
   );
