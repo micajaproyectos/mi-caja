@@ -35,8 +35,8 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
 
   // Configuración del escáner optimizada para rápida detección
   const getScannerConfig = () => ({
-    fps: 15, // Aumentado de 10 a 15 para detección más rápida
-    qrbox: { width: 280, height: 120 }, // Área de escaneo más grande
+    fps: 20, // Aumentado de 15 a 20 para detección más rápida
+    qrbox: { width: 300, height: 140 }, // Área de escaneo más grande
     formatsToSupport: [
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
     ],
@@ -164,20 +164,20 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
       // Callback de error (ignorar, son normales)
       const onScanError = () => {};
 
-      // Función auxiliar mejorada para enfoque rápido
+      // Función auxiliar optimizada para enfoque más rápido
       const esperarEnfoque = async () => {
         setEnfocando(true);
-        console.log('📷 Iniciando proceso de enfoque...');
+        console.log('📷 Iniciando proceso de enfoque optimizado...');
         
         try {
-          // Esperar un momento inicial para que el stream se estabilice
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // Esperar un momento inicial reducido para que el stream se estabilice
+          await new Promise(resolve => setTimeout(resolve, 200));
           
           // Aplicar configuraciones avanzadas de enfoque
           await aplicarConfiguracionesEnfoque();
           
-          // Dar tiempo adicional para que el enfoque se estabilice
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          // Tiempo de estabilización reducido
+          await new Promise(resolve => setTimeout(resolve, 800));
           
           console.log('✅ Enfoque completado y optimizado');
         } catch (error) {
@@ -205,10 +205,10 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
           const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
           console.log('📷 Usando cámara:', cameraId);
 
-          // Configuración mejorada para la cámara
+          // Configuración optimizada para la cámara con mejor resolución
           const videoConstraints = {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
             focusMode: { ideal: 'continuous' },
             facingMode: 'environment'
           };
