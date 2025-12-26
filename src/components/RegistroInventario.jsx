@@ -426,6 +426,125 @@ const RegistroInventario = () => {
     generarPDFCodigoBarras(codigoInterno, nombreProducto);
   };
 
+  /**
+   * Generar PDF con TODOS los códigos de barras en una sola hoja carta
+   * Tamaño: Carta (8.5 x 11 pulgadas / 215.9 x 279.4 mm)
+   * Organiza múltiples etiquetas 4x2cm en la hoja
+   */
+  const generarPDFTodosLosCodigos = () => {
+    try {
+      // Filtrar solo productos con códigos de barras generados (que empiecen con '299')
+      const productosConCodigo = productosAMostrar.filter(item => 
+        item.codigo_interno && item.codigo_interno.toString().startsWith('299')
+      );
+
+      if (productosConCodigo.length === 0) {
+        alert('⚠️ No hay códigos de barras generados para descargar');
+        return;
+      }
+
+      // Crear el PDF con tamaño carta
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'letter' // 215.9 x 279.4 mm
+      });
+
+      // Configuración de la cuadrícula de etiquetas
+      const etiquetaAncho = 37;  // 3.7cm (ajustado para que quepan 5 por fila)
+      const etiquetaAlto = 18;   // 1.8cm (proporcionalmente ajustado)
+      const margenIzq = 10;      // Margen izquierdo
+      const margenTop = 10;      // Margen superior
+      const espacioH = 2;        // Espacio horizontal entre etiquetas
+      const espacioV = 4;        // Espacio vertical entre etiquetas
+
+      // Configuración fija: 5 etiquetas por fila
+      const etiquetasPorFila = 5;
+      
+      // Calcular cuántas etiquetas caben por columna
+      const altoDisponible = 279.4 - (margenTop * 2);
+      const etiquetasPorColumna = Math.floor(altoDisponible / (etiquetaAlto + espacioV));
+      const etiquetasPorPagina = etiquetasPorFila * etiquetasPorColumna;
+
+      // Iterar sobre cada producto con código
+      productosConCodigo.forEach((item, index) => {
+        // Determinar si necesitamos una nueva página
+        if (index > 0 && index % etiquetasPorPagina === 0) {
+          pdf.addPage();
+        }
+
+        // Calcular posición en la cuadrícula
+        const indicePagina = index % etiquetasPorPagina;
+        const fila = Math.floor(indicePagina / etiquetasPorFila);
+        const columna = indicePagina % etiquetasPorFila;
+
+        // Calcular coordenadas X, Y
+        const x = margenIzq + columna * (etiquetaAncho + espacioH);
+        const y = margenTop + fila * (etiquetaAlto + espacioV);
+
+        // Crear un canvas temporal para este código de barras
+        const canvas = document.createElement('canvas');
+        
+        // Generar el código de barras en el canvas
+        JsBarcode(canvas, item.codigo_interno.toString(), {
+          format: 'EAN13',
+          width: 1.8,    // Reducido para etiqueta más pequeña
+          height: 40,    // Reducido proporcionalmente
+          displayValue: false,
+          margin: 1,     // Margen reducido
+          background: '#ffffff',
+          lineColor: '#000000'
+        });
+
+        // Convertir canvas a imagen
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        
+        // Dimensiones de la imagen del código de barras dentro de la etiqueta (ajustadas)
+        const imgWidth = 35;   // Reducido para caber en etiqueta de 37mm
+        const imgHeight = 10;  // Proporcionalmente ajustado
+        const imgX = x + 1;
+        const imgY = y + 3;
+
+        // Agregar la imagen del código de barras
+        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth, imgHeight, '', 'NONE');
+
+        // Agregar el nombre del producto (truncado si es muy largo)
+        const nombreTruncado = item.producto.length > 28 
+          ? item.producto.substring(0, 28) + '...'
+          : item.producto;
+        
+        pdf.setFontSize(5.5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        
+        const textWidth = pdf.getTextWidth(nombreTruncado);
+        const textX = x + (etiquetaAncho - textWidth) / 2;
+        pdf.text(nombreTruncado, textX, y + 1.8);
+
+        // Agregar los números del código de barras
+        pdf.setFontSize(6.5);
+        pdf.setFont('helvetica', 'normal');
+        
+        const numerosWidth = pdf.getTextWidth(item.codigo_interno.toString());
+        const numerosX = x + (etiquetaAncho - numerosWidth) / 2;
+        pdf.text(item.codigo_interno.toString(), numerosX, y + 15.5);
+      });
+
+      // Generar nombre de archivo con fecha
+      const fecha = new Date().toISOString().split('T')[0];
+      const nombreArchivo = `codigos_barras_inventario_${fecha}.pdf`;
+
+      // Descargar el PDF
+      pdf.save(nombreArchivo);
+
+      console.log(`✅ PDF generado con ${productosConCodigo.length} códigos de barras`);
+
+    } catch (error) {
+      console.error('❌ Error al generar PDF con todos los códigos:', error);
+      alert('Error al generar el PDF con todos los códigos de barras');
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setInventario(prev => ({
@@ -1103,6 +1222,20 @@ const RegistroInventario = () => {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Botón para descargar todos los códigos de barras */}
+            {inventarioRegistrado.length > 0 && (
+              <div className="mb-4 flex justify-center">
+                <button
+                  onClick={generarPDFTodosLosCodigos}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                  title="Descargar todos los códigos de barras generados en un PDF"
+                >
+                  <span className="text-base">📄</span>
+                  <span>Descargar Códigos PDF</span>
+                </button>
               </div>
             )}
             
