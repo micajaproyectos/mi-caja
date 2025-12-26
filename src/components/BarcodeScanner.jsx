@@ -33,19 +33,21 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
     };
   }, [isOpen]);
 
-  // Configuración del escáner optimizada para rápida detección
+  // Configuración del escáner optimizada para máxima compatibilidad y detección
   const getScannerConfig = () => ({
-    fps: 20, // Aumentado de 15 a 20 para detección más rápida
-    qrbox: { width: 300, height: 140 }, // Área de escaneo más grande
+    fps: 20, // Alta frecuencia de escaneo
+    qrbox: { width: 320, height: 160 }, // Área de escaneo más amplia
     formatsToSupport: [
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
     ],
     aspectRatio: 1.0,
     disableFlip: false,
-    // Configuraciones adicionales para mejor rendimiento
+    // Configuraciones adicionales para mejor rendimiento y compatibilidad
     experimentalFeatures: {
       useBarCodeDetectorIfSupported: true // Usar detector nativo si está disponible
-    }
+    },
+    // Aumentar tolerancia de detección
+    supportedScanTypes: ['CODE_128', 'CODE_39', 'EAN_13', 'EAN_8', 'UPC_A', 'UPC_E']
   });
 
   // Aplicar configuraciones avanzadas de enfoque a la cámara
@@ -70,7 +72,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
       const capabilities = videoTrack.getCapabilities();
       console.log('📷 Capacidades de la cámara:', capabilities);
 
-      // Configurar constraints avanzados
+      // Configurar constraints avanzados para mejor detección
       const constraints = {};
       
       // Configurar enfoque si está disponible
@@ -79,10 +81,24 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
         console.log('✅ Enfoque continuo habilitado');
       }
       
-      // Configurar zoom si está disponible (valor 1.0 = sin zoom)
+      // Configurar zoom óptimo si está disponible
       if (capabilities.zoom) {
-        constraints.zoom = Math.max(capabilities.zoom.min, 1.0);
-        console.log('✅ Zoom configurado:', constraints.zoom);
+        // Usar un zoom ligeramente mayor para códigos pequeños
+        const optimalZoom = Math.min(Math.max(capabilities.zoom.min, 1.2), capabilities.zoom.max);
+        constraints.zoom = optimalZoom;
+        console.log('✅ Zoom optimizado configurado:', constraints.zoom);
+      }
+
+      // Configurar brillo/exposición automática si está disponible
+      if (capabilities.exposureMode && capabilities.exposureMode.includes('continuous')) {
+        constraints.exposureMode = 'continuous';
+        console.log('✅ Exposición automática habilitada');
+      }
+
+      // Configurar balance de blancos automático
+      if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('continuous')) {
+        constraints.whiteBalanceMode = 'continuous';
+        console.log('✅ Balance de blancos automático habilitado');
       }
 
       // Aplicar las configuraciones
@@ -211,12 +227,15 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
           const cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
           console.log('📷 Usando cámara:', cameraId);
 
-          // Configuración optimizada para la cámara con mejor resolución
+          // Configuración optimizada para la cámara con mejor resolución y calidad
           const videoConstraints = {
             width: { ideal: 1920, min: 1280 },
             height: { ideal: 1080, min: 720 },
             focusMode: { ideal: 'continuous' },
-            facingMode: 'environment'
+            facingMode: 'environment',
+            // Agregar constraints adicionales para mejor detección
+            aspectRatio: { ideal: 16/9 },
+            frameRate: { ideal: 30, min: 15 }
           };
 
           await html5Qrcode.start(
@@ -446,10 +465,10 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
               style={{ minHeight: '280px' }}
             />
 
-            {/* Guía visual de escaneo */}
+            {/* Guía visual de escaneo más grande */}
             {cameraReady && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-64 h-24 border-2 border-green-400 rounded-lg relative">
+                <div className="w-72 h-28 border-2 border-green-400 rounded-lg relative">
                   {/* Esquinas animadas */}
                   <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-green-400 rounded-tl-lg"></div>
                   <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-green-400 rounded-tr-lg"></div>
