@@ -1266,7 +1266,7 @@ const RegistroInventario = () => {
                   title="Descargar todos los códigos de barras generados en un PDF"
                 >
                   <span className="text-base">📄</span>
-                  <span>Descargar Códigos PDF</span>
+                  <span>Todos los códigos</span>
                 </button>
               </div>
             )}

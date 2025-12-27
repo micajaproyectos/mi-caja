@@ -1921,42 +1921,27 @@ export default function RegistroVenta() {
                   </select>
                 </div>
 
-                                                 <div>
-                   <label className="block text-white font-medium mb-1 text-xs md:text-sm">
-                     Cantidad
-                     {scaleService.isSampling() && productoActual.unidad === 'kg' && (
-                       <span className="ml-2 text-green-400 text-xs">🟢 Escuchando balanza</span>
-                     )}
-                   </label>
+                <div>
+                  <label className="block text-white font-medium mb-1 text-xs md:text-sm">
+                    Cantidad
+                    {scaleService.isSampling() && productoActual.unidad === 'kg' && (
+                      <span className="ml-2 text-green-400 text-xs">🟢 Escuchando balanza</span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     name="cantidad"
                     value={productoActual.cantidad}
                     onChange={handleChange}
-                     readOnly={scaleService.isSampling() && productoActual.unidad === 'kg'}
-                     className={`w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base ${
-                       scaleService.isSampling() && productoActual.unidad === 'kg' 
-                         ? 'bg-gray-800 cursor-not-allowed' 
-                         : 'bg-gray-700'
-                     }`}
+                    readOnly={scaleService.isSampling() && productoActual.unidad === 'kg'}
+                    className={`w-full px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base ${
+                      scaleService.isSampling() && productoActual.unidad === 'kg' 
+                        ? 'bg-gray-800 cursor-not-allowed' 
+                        : 'bg-gray-700'
+                    }`}
                     placeholder="0.00"
                   />
-                                     <button
-                     type="button"
-                     onClick={onClickBalanza}
-                     disabled={productoActual.unidad !== 'kg'}
-                     className={`w-full mt-2 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 text-xs md:text-sm shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                       scaleService.isSampling() ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'
-                     }`}
-                   >
-                     {scaleService.isSampling() ? '🟢 Escuchando...' : '⚖️ Balanza'}
-                   </button>
-                  
-                  {/* Estado simple de la balanza */}
-                  <div className="text-xs text-gray-400 mt-2 text-center">
-                    {scaleService.isConnected() ? '🔌 Balanza conectada' : '❌ Balanza desconectada'}
-                  </div>
                 </div>
 
                 <div>
@@ -1980,6 +1965,29 @@ export default function RegistroVenta() {
                   >
                     ➕ Agregar
                   </button>
+                </div>
+              </div>
+              
+              {/* Controles de balanza - Fila separada debajo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mt-2">
+                <div></div> {/* Espacio vacío para Unidad */}
+                
+                <div>
+                  <button
+                    type="button"
+                    onClick={onClickBalanza}
+                    disabled={productoActual.unidad !== 'kg'}
+                    className={`w-full text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 text-xs md:text-sm shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                      scaleService.isSampling() ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'
+                    }`}
+                  >
+                    {scaleService.isSampling() ? '🟢 Escuchando...' : '⚖️ Balanza'}
+                  </button>
+                  
+                  {/* Estado simple de la balanza */}
+                  <div className="text-xs text-gray-400 mt-1 text-center">
+                    {scaleService.isConnected() ? '🔌 Balanza conectada' : '❌ Balanza desconectada'}
+                  </div>
                 </div>
               </div>
             </div>
