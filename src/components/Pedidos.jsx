@@ -870,10 +870,7 @@ export default function Pedidos() {
       [mesaSeleccionada]: [...(prev[mesaSeleccionada] || []), nuevoProducto]
     }));
     
-    // Guardar en Supabase (sincronización multi-dispositivo)
-    await guardarProductoEnSupabase(mesaSeleccionada, nuevoProducto);
-    
-    // Limpiar el formulario de producto
+    // Limpiar el formulario INMEDIATAMENTE (antes de guardar en Supabase)
     setProductoActual({
       producto: '',
       cantidad: '',
@@ -887,6 +884,11 @@ export default function Pedidos() {
     setBusquedaProducto('');
     setProductosFiltrados([]);
     setMostrarDropdown(false);
+    
+    // Guardar en Supabase en background (NO bloquea la UI)
+    guardarProductoEnSupabase(mesaSeleccionada, nuevoProducto).catch(err => {
+      console.error('Error al guardar producto en Supabase:', err);
+    });
     
     // El guardado en localStorage se hace automáticamente por el useEffect
   };
@@ -2942,7 +2944,7 @@ export default function Pedidos() {
                                   />
                                 ) : (
                                   pedido.mesa ? (
-                                    <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs">
+                                    <span className="text-blue-300 text-xs">
                                       {obtenerNombreMesa(pedido.mesa)}
                                     </span>
                                   ) : (
@@ -2996,7 +2998,7 @@ export default function Pedidos() {
                                   />
                                 ) : (
                                   pedido.comentarios ? (
-                                    <span className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded text-xs">
+                                    <span className="text-blue-300 text-xs">
                                       {pedido.comentarios}
                                     </span>
                                   ) : (
@@ -3068,7 +3070,7 @@ export default function Pedidos() {
                                   />
                                 ) : (
                                   pedido.total_final ? (
-                                    <span className="bg-green-600/20 text-green-300 px-2 py-1 rounded font-bold text-sm">
+                                    <span className="text-green-300 font-bold text-sm">
                                       ${parseFloat(pedido.total_final).toLocaleString()}
                                     </span>
                                   ) : (
@@ -3114,12 +3116,12 @@ export default function Pedidos() {
                                   </select>
                                 ) : (
                                   pedido.tipo_pago ? (
-                                    <span className={`px-2 py-1 rounded text-xs ${
+                                    <span className={`text-xs ${
                                       pedido.tipo_pago === 'efectivo' 
-                                        ? 'bg-green-600/20 text-green-300' 
+                                        ? 'text-green-300' 
                                         : pedido.tipo_pago === 'debito'
-                                        ? 'bg-blue-600/20 text-blue-300'
-                                        : 'bg-purple-600/20 text-purple-300'
+                                        ? 'text-blue-300'
+                                        : 'text-purple-300'
                                     }`}>
                                       {pedido.tipo_pago === 'efectivo' ? '💵 Efectivo' : 
                                        pedido.tipo_pago === 'debito' ? '💳 Débito' : 
@@ -3146,10 +3148,10 @@ export default function Pedidos() {
                                   </select>
                                 ) : (
                                   pedido.estado ? (
-                                    <span className={`px-2 py-1 rounded text-xs ${
+                                    <span className={`text-xs ${
                                       pedido.estado === 'pagado' 
-                                        ? 'bg-green-600/20 text-green-300' 
-                                        : 'bg-gray-600/20 text-gray-300'
+                                        ? 'text-green-300' 
+                                        : 'text-gray-300'
                                     }`}>
                                       {pedido.estado === 'pagado' ? '✅ Pagado' : pedido.estado}
                                     </span>
