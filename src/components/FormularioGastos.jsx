@@ -677,50 +677,53 @@ const FormularioGastos = () => {
                 </div>
               </div>
 
-              {/* Detalle */}
-              <div>
-                <label className="block text-white text-sm font-medium mb-2">
-                  Detalle
-                </label>
-                <input
-                  type="text"
-                  name="detalle"
-                  value={gasto.detalle}
-                  onChange={handleChange}
-                  placeholder="Descripción del gasto..."
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
-                  required
-                />
-              </div>
+              {/* Detalle, Monto y Botón Registrar en la misma línea */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Detalle */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Detalle
+                  </label>
+                  <input
+                    type="text"
+                    name="detalle"
+                    value={gasto.detalle}
+                    onChange={handleChange}
+                    placeholder="Descripción del gasto..."
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    required
+                  />
+                </div>
 
-              {/* Monto */}
-              <div>
-                <label className="block text-white text-sm font-medium mb-2">
-                  Monto
-                </label>
-                <input
-                  type="number"
-                  name="monto"
-                  value={gasto.monto}
-                  onChange={handleChange}
-                  placeholder="0"
-                  min="0"
-                  step="1"
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
-                  required
-                />
-              </div>
+                {/* Monto */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Monto
+                  </label>
+                  <input
+                    type="number"
+                    name="monto"
+                    value={gasto.monto}
+                    onChange={handleChange}
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    required
+                  />
+                </div>
 
-              {/* Botón de registro */}
-              <div className="text-center">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg transition-colors flex items-center mx-auto text-sm md:text-base"
-                >
-                  <span className="mr-2">💰</span>
-                  {loading ? 'Registrando...' : 'Registrar Gasto'}
-                </button>
+                {/* Botón Registrar */}
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center justify-center text-sm md:text-base"
+                  >
+                    <span className="mr-2">💰</span>
+                    {loading ? 'Registrando...' : 'Registrar Gasto'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

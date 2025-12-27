@@ -173,7 +173,7 @@ export default function RegistroVenta() {
   // Ref para debounce de búsqueda por código
   const busquedaCodigoTimeoutRef = useRef(null);
 
-  // Función para cargar productos del inventario filtrados por usuario
+  // Función para cargar productos del inventario filtrados por usuario (CON CACHÉ)
   const cargarProductosInventario = async () => {
     try {
       // Obtener el usuario_id del usuario autenticado
@@ -184,19 +184,44 @@ export default function RegistroVenta() {
         return;
       }
 
+      // 🚀 OPTIMIZACIÓN: Intentar cargar desde caché primero
+      const cacheKey = `productos_inventario:${usuarioId}`;
+      const cacheTimeKey = `productos_inventario_time:${usuarioId}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(cacheTimeKey);
+      
+      // Si hay caché y es reciente (menos de 5 minutos), usarlo inmediatamente
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos en milisegundos
+      if (cachedData && cacheTime) {
+        const age = Date.now() - parseInt(cacheTime);
+        if (age < CACHE_DURATION) {
+          console.log('⚡ Usando productos del inventario desde caché');
+          setProductosInventario(JSON.parse(cachedData));
+          // No hacer return, continuar cargando en segundo plano para actualizar
+        }
+      }
+
+      // Cargar desde la base de datos (en segundo plano si ya se usó caché)
       const { data, error } = await supabase
         .from('inventario')
-        .select('*')
+        .select('id, producto, cantidad, unidad, precio_venta, codigo_interno, imagen') // Solo los campos necesarios
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .order('producto', { ascending: true });
 
       if (error) {
         console.error('Error al cargar productos del inventario:', error);
-        setProductosInventario([]);
+        // Si hay error pero tenemos caché, mantener el caché
+        if (!cachedData) {
+          setProductosInventario([]);
+        }
         return;
       }
 
+      // Actualizar estado y caché
       setProductosInventario(data || []);
+      localStorage.setItem(cacheKey, JSON.stringify(data || []));
+      localStorage.setItem(cacheTimeKey, Date.now().toString());
+      
     } catch (error) {
       console.error('Error inesperado al cargar productos del inventario:', error);
       setProductosInventario([]);
@@ -2055,10 +2080,10 @@ export default function RegistroVenta() {
                               {/* Botón eliminar */}
                               <button
                                 onClick={() => eliminarProducto(producto.id)}
-                                className="text-red-400 hover:text-red-300 text-xs md:text-sm font-bold flex-shrink-0 px-2 py-1 md:px-2.5 md:py-1.5 rounded hover:bg-red-600/20 transition-colors"
+                                className="text-red-500 hover:text-red-400 text-lg md:text-xl font-bold flex-shrink-0 px-2 py-1 md:px-2.5 md:py-1.5 rounded hover:bg-red-600/20 transition-colors"
                                 title="Eliminar producto"
                               >
-                                🗑️
+                                ✕
                               </button>
                             </div>
                           </div>
@@ -2813,10 +2838,10 @@ export default function RegistroVenta() {
                                         <button
                                           onClick={() => eliminarVenta(venta.id)}
                                           disabled={loadingVentas}
-                                          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                                          className="text-red-500 hover:text-red-400 text-lg font-bold transition-colors disabled:text-gray-600"
                                           title="Eliminar venta"
                                         >
-                                          🗑️
+                                          ✕
                                         </button>
                                       </div>
                                     )}

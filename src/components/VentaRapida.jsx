@@ -714,51 +714,9 @@ const VentaRapida = () => {
                 </div>
               </div>
 
-              {/* Segunda fila: Monto a Registrar y Botón de Registro */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Monto a Registrar */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Monto a Registrar
-                  </label>
-                  <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-yellow-400/30 flex items-center justify-center">
-                    <p className="text-lg md:text-xl font-bold text-yellow-300">
-                      {venta.monto && parseFloat(venta.monto) > 0 
-                        ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
-                        : '$0'
-                      }
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Botón de Registro */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white opacity-0">
-                    Acción
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-3 md:p-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Registrando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-xl">⚡</span>
-                        <span>Registrar Venta</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Calculadora de Vuelto (solo para Efectivo) */}
+              {/* Calculadora de Vuelto (solo para Efectivo) - Aparece primero */}
               {venta.tipo_pago === 'efectivo' && venta.monto && parseFloat(venta.monto) > 0 && (
-                <div className="mt-6 bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-blue-400/30">
+                <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-blue-400/30">
                   <h4 className="text-blue-200 font-semibold mb-4 text-sm md:text-base flex items-center gap-2">
                     <span className="text-xl">🧮</span>
                     Calculadora de Vuelto
@@ -822,6 +780,48 @@ const VentaRapida = () => {
                   </div>
                 </div>
               )}
+
+              {/* Segunda fila: Monto a Registrar y Botón de Registro - Aparecen después de la calculadora */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Monto a Registrar */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white">
+                    Monto a Registrar
+                  </label>
+                  <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-yellow-400/30 flex items-center justify-center">
+                    <p className="text-lg md:text-xl font-bold text-yellow-300">
+                      {venta.monto && parseFloat(venta.monto) > 0 
+                        ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
+                        : '$0'
+                      }
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Botón de Registro */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white opacity-0">
+                    Acción
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-3 md:p-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Registrando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xl">⚡</span>
+                        <span>Registrar Venta</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
 
             </form>
           </div>

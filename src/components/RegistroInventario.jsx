@@ -635,6 +635,20 @@ const RegistroInventario = () => {
 
       alert('Inventario registrado exitosamente');
 
+      // 🗑️ Invalidar caché de productos del inventario para otros componentes
+      try {
+        const usuarioId = await authService.getCurrentUserId();
+        if (usuarioId) {
+          const cacheKey = `productos_inventario:${usuarioId}`;
+          const cacheTimeKey = `productos_inventario_time:${usuarioId}`;
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(cacheTimeKey);
+          console.log('🗑️ Caché de productos invalidado');
+        }
+      } catch (e) {
+        console.error('Error al invalidar caché:', e);
+      }
+
       // Limpiar formulario
       setInventario({
         fecha_ingreso: new Date().toISOString().split('T')[0],
@@ -675,6 +689,21 @@ const RegistroInventario = () => {
       }
 
       // Producto eliminado exitosamente - sin popup redundante
+      
+      // 🗑️ Invalidar caché de productos del inventario para otros componentes
+      try {
+        const usuarioId = await authService.getCurrentUserId();
+        if (usuarioId) {
+          const cacheKey = `productos_inventario:${usuarioId}`;
+          const cacheTimeKey = `productos_inventario_time:${usuarioId}`;
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(cacheTimeKey);
+          console.log('🗑️ Caché de productos invalidado (eliminación)');
+        }
+      } catch (e) {
+        console.error('Error al invalidar caché:', e);
+      }
+      
       await cargarInventario();
 
     } catch (error) {
@@ -768,6 +797,21 @@ const RegistroInventario = () => {
       }
 
       alert('Producto actualizado exitosamente');
+      
+      // 🗑️ Invalidar caché de productos del inventario para otros componentes
+      try {
+        const usuarioId = await authService.getCurrentUserId();
+        if (usuarioId) {
+          const cacheKey = `productos_inventario:${usuarioId}`;
+          const cacheTimeKey = `productos_inventario_time:${usuarioId}`;
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(cacheTimeKey);
+          console.log('🗑️ Caché de productos invalidado (edición)');
+        }
+      } catch (e) {
+        console.error('Error al invalidar caché:', e);
+      }
+      
       cancelarEdicion();
       await cargarInventario();
 
