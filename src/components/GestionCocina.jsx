@@ -553,7 +553,7 @@ export default function GestionCocina() {
                           Unidad: {pedido.unidad}
                         </div>
                         {pedido.comentarios && (
-                          <div className="text-sm text-blue-300 mt-2 font-medium bg-blue-900/30 px-2 py-1 rounded border border-blue-500/50">
+                          <div className="text-sm text-blue-300 mt-2 font-medium">
                             💬 {pedido.comentarios}
                           </div>
                         )}
@@ -777,7 +777,7 @@ export default function GestionCocina() {
                           <td className="text-white p-3 text-sm font-medium">
                             <div>{pedido.producto}</div>
                             {pedido.comentarios && (
-                              <div className="text-blue-300 text-xs mt-1 font-medium bg-blue-900/30 px-2 py-1 rounded border border-blue-500/50 inline-block">
+                              <div className="text-blue-300 text-xs mt-1 font-medium">
                                 💬 {pedido.comentarios}
                               </div>
                             )}
@@ -815,9 +815,9 @@ export default function GestionCocina() {
                                   <option value="anulado">❌ Anulado</option>
                                 </select>
                               ) : (
-                                <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
-                                  pedido.estado === 'terminado' ? 'bg-green-600' : 'bg-red-600'
-                                } text-white`}>
+                                <span className={`text-xs font-bold ${
+                                  pedido.estado === 'terminado' ? 'text-green-300' : 'text-red-300'
+                                }`}>
                                   {pedido.estado === 'terminado' ? '✅ Terminado' : '❌ Anulado'}
                                 </span>
                               )

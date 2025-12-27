@@ -948,7 +948,9 @@ const RegistroInventario = () => {
                     Código de Barras (Opcional)
                   </h3>
                 </div>
-                <div className="flex flex-col gap-3">
+                
+                {/* Input y Botones en una sola fila */}
+                <div className="flex flex-col md:flex-row gap-2 mb-3">
                   {/* Campo para mostrar/editar el código */}
                   <div className="flex-1">
                     <input
@@ -960,52 +962,53 @@ const RegistroInventario = () => {
                       maxLength={13}
                     />
                   </div>
-                  {/* Botones de acción */}
-                  <div className="flex flex-wrap gap-2">
-                    {/* Botón para generar código automático */}
-                    <button
-                      type="button"
-                      onClick={handleGenerarCodigo}
-                      className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
-                      title="Generar código EAN-13 único"
-                    >
-                      <span className="text-lg">⚡</span>
-                      <span>Generar Código</span>
-                    </button>
-                    {/* Botón para escanear */}
-                    <button
-                      type="button"
-                      onClick={() => setMostrarScanner(true)}
-                      className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
-                    >
-                      <span className="text-lg">📷</span>
-                      <span>Escanear</span>
-                    </button>
-                    {/* Botón para descargar PDF del código */}
-                    {codigoInterno && (
-                      <button
-                        type="button"
-                        onClick={handleDescargarPDF}
-                        className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
-                        title="Descargar PDF para imprimir"
-                      >
-                        <span className="text-lg">📄</span>
-                        <span>Descargar PDF</span>
-                      </button>
-                    )}
-                    {/* Botón para limpiar código */}
-                    {codigoInterno && (
-                      <button
-                        type="button"
-                        onClick={() => setCodigoInterno('')}
-                        className="flex items-center justify-center px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all duration-200 text-sm md:text-base"
-                        title="Limpiar código"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
+                  
+                  {/* Botón para generar código automático */}
+                  <button
+                    type="button"
+                    onClick={handleGenerarCodigo}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm whitespace-nowrap"
+                    title="Generar código EAN-13 único"
+                  >
+                    <span className="text-lg">⚡</span>
+                    <span>Generar Código</span>
+                  </button>
+                  
+                  {/* Botón para escanear */}
+                  <button
+                    type="button"
+                    onClick={() => setMostrarScanner(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm whitespace-nowrap"
+                  >
+                    <span className="text-lg">📷</span>
+                    <span>Escanear</span>
+                  </button>
                 </div>
+                
+                {/* Botones adicionales (Descargar PDF y Limpiar) */}
+                {codigoInterno && (
+                  <div className="flex flex-wrap gap-2">
+                    {/* Botón para descargar PDF del código */}
+                    <button
+                      type="button"
+                      onClick={handleDescargarPDF}
+                      className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm md:text-base"
+                      title="Descargar PDF para imprimir"
+                    >
+                      <span className="text-lg">📄</span>
+                      <span>Descargar PDF</span>
+                    </button>
+                    {/* Botón para limpiar código */}
+                    <button
+                      type="button"
+                      onClick={() => setCodigoInterno('')}
+                      className="flex items-center justify-center px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all duration-200 text-sm md:text-base"
+                      title="Limpiar código"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
                 {/* Información del código */}
                 {codigoInterno && (
                   <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg space-y-2">
@@ -1024,12 +1027,12 @@ const RegistroInventario = () => {
                 )}
               </div>
 
-              {/* Cálculos Automáticos */}
+              {/* Cálculos Automáticos y Botón de Registro */}
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 mt-4 md:mt-6 border border-white/10">
                 <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-yellow-400 text-center">
                   Cálculos Automáticos
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Precio Unitario (con IVA 19%)
@@ -1046,27 +1049,27 @@ const RegistroInventario = () => {
                       ${preciosCalculados.precio_venta}
                     </p>
                   </div>
+                  
+                  {/* Botón de Registro - Al costado */}
+                  <div className="flex items-center justify-center">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 px-6 md:px-8 rounded-xl transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base w-full h-full"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
+                          <span>Registrando...</span>
+                        </>
+                      ) : (
+                        <> 
+                          <span>Registrar Producto</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              {/* Botón de Registro */}
-              <div className="flex justify-center mt-6 md:mt-8">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 md:py-4 px-8 md:px-12 rounded-xl transition-all duration-200 flex items-center space-x-2 md:space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
-                      <span>Registrando...</span>
-                    </>
-                  ) : (
-                    <> 
-                      <span>Registrar Producto</span>
-                    </>
-                  )}
-                </button>
               </div>
             </form>
           </div>
@@ -1080,19 +1083,7 @@ const RegistroInventario = () => {
             {/* Barra de búsqueda */}
             {inventarioRegistrado.length > 0 && (
               <div className="mb-6">
-                {/* Botón de escanear código de barras */}
-                <div className="mb-4 flex justify-center">
-                  <button
-                    onClick={() => setMostrarScannerBusqueda(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
-                    title="Escanear código de barras para buscar producto"
-                  >
-                    <span className="text-lg">📷</span>
-                    <span>Escaner Productos</span>
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Filtro por nombre */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1156,6 +1147,18 @@ const RegistroInventario = () => {
                         <span className="text-lg">✕</span>
                       </button>
                     )}
+                  </div>
+                  
+                  {/* Botón de escanear código de barras */}
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => setMostrarScannerBusqueda(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                      title="Escanear código de barras para buscar producto"
+                    >
+                      <span className="text-lg">📷</span>
+                      <span>Escaner Productos</span>
+                    </button>
                   </div>
                 </div>
                 

@@ -2571,7 +2571,7 @@ export default function Pedidos() {
                           >
                             {(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
                               ? '❌ Deseleccionar'
-                              : '✅ Seleccionar Todo'}
+                              : '💰 Pagar Todo'}
                           </button>
                         </div>
                       </div>

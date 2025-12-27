@@ -658,7 +658,8 @@ const VentaRapida = () => {
           {/* Formulario de Venta Rápida */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 border border-white/20">
             <form onSubmit={registrarVentaRapida} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Primera fila: Fecha, Monto y Tipo de Pago */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Fecha */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
@@ -693,7 +694,7 @@ const VentaRapida = () => {
                 </div>
 
                 {/* Tipo de Pago */}
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white">
                     Tipo de Pago
                   </label>
@@ -713,6 +714,48 @@ const VentaRapida = () => {
                 </div>
               </div>
 
+              {/* Segunda fila: Monto a Registrar y Botón de Registro */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Monto a Registrar */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white">
+                    Monto a Registrar
+                  </label>
+                  <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-yellow-400/30 flex items-center justify-center">
+                    <p className="text-lg md:text-xl font-bold text-yellow-300">
+                      {venta.monto && parseFloat(venta.monto) > 0 
+                        ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
+                        : '$0'
+                      }
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Botón de Registro */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white opacity-0">
+                    Acción
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-3 md:p-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Registrando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xl">⚡</span>
+                        <span>Registrar Venta</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* Calculadora de Vuelto (solo para Efectivo) */}
               {venta.tipo_pago === 'efectivo' && venta.monto && parseFloat(venta.monto) > 0 && (
                 <div className="mt-6 bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-blue-400/30">
@@ -721,13 +764,14 @@ const VentaRapida = () => {
                     Calculadora de Vuelto
                   </h4>
                   
-                  <div className="space-y-4">
+                  {/* Grid de 3 columnas: Monto de venta, Monto pagado y Vuelto */}
+                  <div className={`grid grid-cols-1 gap-4 ${mostrarVuelto && montoPagado ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
                     {/* Monto de la venta (solo lectura) */}
                     <div>
                       <label className="block text-blue-100 text-xs md:text-sm mb-2">
                         Monto de la venta:
                       </label>
-                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-3 text-center">
+                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-3 md:p-4 text-center h-[58px] flex items-center justify-center">
                         <p className="text-blue-300 text-xl md:text-2xl font-bold">
                           ${parseFloat(venta.monto).toLocaleString('es-CL')}
                         </p>
@@ -753,14 +797,14 @@ const VentaRapida = () => {
                       />
                     </div>
 
-                    {/* Mostrar el vuelto */}
+                    {/* Vuelto a entregar (solo si hay monto pagado) */}
                     {mostrarVuelto && montoPagado && (
-                      <div className="mt-4">
+                      <div>
                         <label className="block text-blue-100 text-xs md:text-sm mb-2">
                           Vuelto a entregar:
                         </label>
-                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-4 text-center`}>
-                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-2xl md:text-3xl font-bold`}>
+                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-3 md:p-4 text-center h-[58px] flex items-center justify-center flex-col`}>
+                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-xl md:text-2xl font-bold`}>
                             {calcularVuelto() >= 0 ? (
                               `$${calcularVuelto().toLocaleString('es-CL')}`
                             ) : (
@@ -768,8 +812,8 @@ const VentaRapida = () => {
                             )}
                           </p>
                           {calcularVuelto() < 0 && (
-                            <p className="text-red-200 text-xs md:text-sm mt-2">
-                              ⚠️ El monto pagado es insuficiente
+                            <p className="text-red-200 text-xs mt-1">
+                              ⚠️ Insuficiente
                             </p>
                           )}
                         </div>
@@ -779,38 +823,6 @@ const VentaRapida = () => {
                 </div>
               )}
 
-              {/* Vista previa del monto */}
-              {venta.monto && parseFloat(venta.monto) > 0 && (
-                <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-4 border border-yellow-400/30">
-                  <div className="text-center">
-                    <p className="text-sm text-yellow-200 mb-1">Monto a registrar:</p>
-                    <p className="text-2xl md:text-3xl font-bold text-yellow-300">
-                      ${parseFloat(venta.monto).toLocaleString('es-CL')}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Botón de Registro */}
-              <div className="flex justify-center mt-8">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 md:py-4 px-8 md:px-12 rounded-xl transition-all duration-200 flex items-center space-x-2 md:space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
-                      <span>Registrando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xl">⚡</span>
-                      <span>Registrar Venta Rápida</span>
-                    </>
-                  )}
-                </button>
-              </div>
             </form>
           </div>
 
