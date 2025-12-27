@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { useSessionData } from '../lib/useSessionData.js';
+import { logger } from '../lib/logger.js';
 import { 
   obtenerFechaHoyChile, 
   formatearFechaChile,
@@ -294,7 +295,7 @@ const RegistroInventario = () => {
         return null;
       }
 
-      console.log('✅ Código de barras generado:', codigoGenerado);
+      logger.debug('✅', 'Código de barras generado:', codigoGenerado);
       return codigoGenerado;
 
     } catch (error) {
@@ -410,7 +411,7 @@ const RegistroInventario = () => {
       // Descargar el PDF
       pdf.save(nombreArchivo);
 
-      console.log('✅ Etiqueta 4x2cm generada exitosamente:', nombreArchivo);
+      logger.debug('✅', 'Etiqueta 4x2cm generada exitosamente:', nombreArchivo);
 
     } catch (error) {
       console.error('❌ Error al generar PDF:', error);
@@ -542,7 +543,7 @@ const RegistroInventario = () => {
       // Descargar el PDF
       pdf.save(nombreArchivo);
 
-      console.log(`✅ PDF generado con ${productosConCodigo.length} códigos de barras`);
+      logger.debug('✅', `PDF generado con ${productosConCodigo.length} códigos de barras`);
 
     } catch (error) {
       console.error('❌ Error al generar PDF con todos los códigos:', error);
@@ -643,10 +644,10 @@ const RegistroInventario = () => {
           const cacheTimeKey = `productos_inventario_time:${usuarioId}`;
           localStorage.removeItem(cacheKey);
           localStorage.removeItem(cacheTimeKey);
-          console.log('🗑️ Caché de productos invalidado');
+          logger.debug('🗑️', 'Caché de productos invalidado');
         }
       } catch (e) {
-        console.error('Error al invalidar caché:', e);
+        logger.error('Error al invalidar caché:', e);
       }
 
       // Limpiar formulario
@@ -701,7 +702,7 @@ const RegistroInventario = () => {
           console.log('🗑️ Caché de productos invalidado (eliminación)');
         }
       } catch (e) {
-        console.error('Error al invalidar caché:', e);
+        logger.error('Error al invalidar caché:', e);
       }
       
       await cargarInventario();
@@ -809,7 +810,7 @@ const RegistroInventario = () => {
           console.log('🗑️ Caché de productos invalidado (edición)');
         }
       } catch (e) {
-        console.error('Error al invalidar caché:', e);
+        logger.error('Error al invalidar caché:', e);
       }
       
       cancelarEdicion();
@@ -1201,7 +1202,7 @@ const RegistroInventario = () => {
                       title="Escanear código de barras para buscar producto"
                     >
                       <span className="text-lg">📷</span>
-                      <span>Escaner Productos</span>
+                      <span>Buscar por código</span>
                     </button>
                   </div>
                 </div>

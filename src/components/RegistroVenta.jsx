@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { useSessionData } from '../lib/useSessionData.js';
+import { logger } from '../lib/logger.js';
 import { 
   obtenerFechaHoyChile, 
   obtenerRangoMesActualChile,
@@ -195,7 +196,7 @@ export default function RegistroVenta() {
       if (cachedData && cacheTime) {
         const age = Date.now() - parseInt(cacheTime);
         if (age < CACHE_DURATION) {
-          console.log('⚡ Usando productos del inventario desde caché');
+          logger.debug('⚡', 'Usando productos del inventario desde caché');
           setProductosInventario(JSON.parse(cachedData));
           // No hacer return, continuar cargando en segundo plano para actualizar
         }

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { generarClaveCacheFecha } from './dateUtils.js';
+import { logger } from './logger.js';
 
 /**
  * Gestor de sesión optimizado para evitar mezcla de datos entre usuarios
@@ -47,7 +48,7 @@ export class SessionManager {
         (this.lastEvent === 'SIGNED_IN' || this.lastEvent === 'INITIAL_SESSION') &&
         (now - this.lastEventTime) < 300) {
       if (!this.isProduction) {
-        console.log(`⏭️ Evento ${event} ignorado (duplicado de ${this.lastEvent})`);
+        logger.debug('⏭️', `Evento ${event} ignorado (duplicado de ${this.lastEvent})`);
       }
       return;
     }
@@ -72,13 +73,13 @@ export class SessionManager {
   processAuthChange(event, session, previousUserId, newUserId) {
     // Solo log en desarrollo y solo para cambios significativos
     if (!this.isProduction && (previousUserId !== newUserId || event === 'SIGNED_OUT')) {
-      console.log('🔐 Auth cambió:', event, newUserId ? `User: ${newUserId.substring(0, 8)}...` : 'No user');
+      logger.debug('🔐', 'Auth cambió:', event, newUserId ? `User: ${newUserId.substring(0, 8)}...` : 'No user');
     }
     
     // Si cambió el usuario o se cerró sesión, limpiar datos
     if (previousUserId && previousUserId !== newUserId) {
       if (!this.isProduction) {
-        console.log('🧹 Usuario cambió, limpiando datos del usuario anterior');
+        logger.debug('🧹', 'Usuario cambió, limpiando datos del usuario anterior');
       }
       this.clearUserData(previousUserId);
     }
@@ -122,7 +123,7 @@ export class SessionManager {
       try {
         listener(event, session, extra);
       } catch (error) {
-        console.error('Error en listener de sesión:', error);
+        logger.error('Error en listener de sesión:', error);
       }
     });
   }
@@ -150,20 +151,16 @@ export class SessionManager {
   setUserData(key, data, userId = null) {
     const targetUserId = userId || this.currentUserId;
     if (!targetUserId) {
-      if (!this.isProduction) {
-        console.warn('⚠️ No se puede guardar datos sin usuario autenticado');
-      }
+      logger.warn('⚠️ No se puede guardar datos sin usuario autenticado');
       return;
     }
     
     const userKey = this.getUserKey(targetUserId, key);
     try {
       localStorage.setItem(userKey, JSON.stringify(data));
-      if (!this.isProduction) {
-        console.log(`💾 Datos guardados para usuario ${targetUserId}:`, userKey);
-      }
+      logger.debug('💾', `Datos guardados para usuario ${targetUserId}:`, userKey);
     } catch (error) {
-      console.error('Error guardando datos del usuario:', error);
+      logger.error('Error guardando datos del usuario:', error);
     }
   }
 
@@ -173,9 +170,7 @@ export class SessionManager {
   getUserData(key, userId = null) {
     const targetUserId = userId || this.currentUserId;
     if (!targetUserId) {
-      if (!this.isProduction) {
-        console.warn('⚠️ No se puede obtener datos sin usuario autenticado');
-      }
+      logger.warn('⚠️ No se puede obtener datos sin usuario autenticado');
       return null;
     }
     
@@ -184,7 +179,7 @@ export class SessionManager {
       const data = localStorage.getItem(userKey);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error obteniendo datos del usuario:', error);
+      logger.error('Error obteniendo datos del usuario:', error);
       return null;
     }
   }
@@ -201,7 +196,7 @@ export class SessionManager {
     const userKey = this.getUserKey(targetUserId, key);
     localStorage.removeItem(userKey);
     if (!this.isProduction) {
-      console.log(`🗑️ Datos eliminados para usuario ${targetUserId}:`, userKey);
+      logger.debug('🗑️', `Datos eliminados para usuario ${targetUserId}:`, userKey);
     }
   }
 
