@@ -613,13 +613,15 @@ const NavBar = () => {
   }, []);
 
   // Escuchar cambios de autenticación para mostrar notificación
+  // OPTIMIZADO: Usar sessionManager en lugar de suscripción directa a Supabase
   useEffect(() => {
     let hasShownNotification = false;
     let isInitialLoad = true;
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Suscribirse al sessionManager (un solo listener centralizado)
+    const unsubscribe = sessionManager.subscribe((event, session) => {
       if (import.meta.env.DEV) {
-        console.log('🔄 Auth event:', event, session?.user?.id);
+        console.log('🔔 NavBar recibió evento de auth:', event, session?.user?.id);
       }
       
       // Ignorar el primer evento (INITIAL_SESSION) y solo procesar SIGNED_IN real
@@ -647,7 +649,8 @@ const NavBar = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Cleanup: desuscribirse al desmontar
+    return () => unsubscribe();
   }, []);
 
   // Función para cerrar el popup de notificación cuando se completa la calificación

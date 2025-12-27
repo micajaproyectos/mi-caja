@@ -41,12 +41,13 @@ export class SessionManager {
     const previousUserId = this.currentUserId;
     const now = Date.now();
     
-    // Coalesce SIGNED_IN/INITIAL_SESSION: procesa uno y omite el otro en ±300ms
+    // Coalesce eventos duplicados: SIGNED_IN/INITIAL_SESSION que llegan en <300ms
+    // Esto evita procesar el mismo evento varias veces
     if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && 
         (this.lastEvent === 'SIGNED_IN' || this.lastEvent === 'INITIAL_SESSION') &&
         (now - this.lastEventTime) < 300) {
       if (!this.isProduction) {
-        console.log('🔄 Auth event coalesced:', event, '→', this.lastEvent);
+        console.log(`⏭️ Evento ${event} ignorado (duplicado de ${this.lastEvent})`);
       }
       return;
     }
@@ -60,7 +61,7 @@ export class SessionManager {
       this.processAuthChange(event, session, previousUserId, newUserId);
     }, 300);
 
-    // Actualizar estado inmediato
+    // Actualizar estado inmediato para el próximo evento
     this.lastEvent = event;
     this.lastEventTime = now;
   }
@@ -69,14 +70,15 @@ export class SessionManager {
    * Procesar cambio de autenticación
    */
   processAuthChange(event, session, previousUserId, newUserId) {
-    if (!this.isProduction) {
-              console.log('Auth state change:', event, newUserId);
+    // Solo log en desarrollo y solo para cambios significativos
+    if (!this.isProduction && (previousUserId !== newUserId || event === 'SIGNED_OUT')) {
+      console.log('🔐 Auth cambió:', event, newUserId ? `User: ${newUserId.substring(0, 8)}...` : 'No user');
     }
     
     // Si cambió el usuario o se cerró sesión, limpiar datos
     if (previousUserId && previousUserId !== newUserId) {
       if (!this.isProduction) {
-        console.log('🧹 Usuario cambió, limpiando datos del usuario anterior:', previousUserId);
+        console.log('🧹 Usuario cambió, limpiando datos del usuario anterior');
       }
       this.clearUserData(previousUserId);
     }

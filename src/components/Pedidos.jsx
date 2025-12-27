@@ -48,6 +48,8 @@ export default function Pedidos() {
   const searchInputRef = useRef(null);
   // Ref para guardar la última búsqueda y re-filtrar cuando se carguen los productos
   const ultimaBusquedaRef = useRef('');
+  // Ref para debounce de búsqueda (optimización de rendimiento)
+  const busquedaTimeoutRef = useRef(null);
   
   // Estados para gestión de mesas
   // Inicializar con cache de localStorage para carga instantánea
@@ -724,7 +726,7 @@ export default function Pedidos() {
       .trim();
   };
 
-  // Función mejorada para filtrar productos según la búsqueda
+  // Función mejorada y OPTIMIZADA para filtrar productos según la búsqueda
   const filtrarProductos = (busqueda) => {
     if (!busqueda.trim()) {
       setProductosFiltrados([]);
@@ -737,67 +739,32 @@ export default function Pedidos() {
     }
 
     const busquedaNormalizada = normalizarTexto(busqueda);
-    const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
-
-    // Filtrar y ordenar productos por relevancia
-    const productosConRelevancia = productosInventario.map(producto => {
-      const nombreNormalizado = normalizarTexto(producto.producto);
-      const palabrasProducto = nombreNormalizado.split(/\s+/);
-      
-      let puntuacion = 0;
-      let coincide = false;
-
-      // Verificar si todas las palabras de búsqueda están en el producto
-      const todasLasPalabrasCoinciden = palabrasBusqueda.every(palabraBusqueda =>
-        palabrasProducto.some(palabraProducto => palabraProducto.includes(palabraBusqueda))
-      );
-
-      if (!todasLasPalabrasCoinciden) {
-        return { producto, puntuacion: -1, coincide: false };
-      }
-
-      coincide = true;
-
-      // Prioridad 1: Coincidencia exacta al inicio del nombre completo
-      if (nombreNormalizado.startsWith(busquedaNormalizada)) {
-        puntuacion += 1000;
-      }
-      // Prioridad 2: Coincidencia al inicio de alguna palabra
-      else if (palabrasProducto.some(palabra => palabra.startsWith(busquedaNormalizada))) {
-        puntuacion += 500;
-      }
-      // Prioridad 3: Coincidencia al inicio de alguna palabra (para cada palabra de búsqueda)
-      else {
-        palabrasBusqueda.forEach(palabraBusqueda => {
-          if (palabrasProducto.some(palabra => palabra.startsWith(palabraBusqueda))) {
-            puntuacion += 100;
-          }
-        });
-      }
-
-      // Prioridad 4: Coincidencia en cualquier parte del nombre
-      if (nombreNormalizado.includes(busquedaNormalizada)) {
-        puntuacion += 50;
-      }
-
-      // Prioridad 5: Coincidencia en palabras individuales
-      palabrasBusqueda.forEach(palabraBusqueda => {
-        if (nombreNormalizado.includes(palabraBusqueda)) {
-          puntuacion += 10;
-        }
-      });
-
-      // Bonus: Productos más cortos tienen prioridad si tienen la misma puntuación
-      puntuacion += (100 - nombreNormalizado.length) / 10;
-
-      return { producto, puntuacion, coincide };
-    });
-
-    // Filtrar solo los que coinciden y ordenar por relevancia
-    const filtrados = productosConRelevancia
-      .filter(item => item.coincide)
-      .sort((a, b) => b.puntuacion - a.puntuacion)
-      .map(item => item.producto);
+    
+    // OPTIMIZACIÓN: Filtrado simple y rápido (sin sistema de puntuación complejo)
+    // Esto reduce el tiempo de procesamiento en cada keystroke
+    const filtrados = productosInventario
+      .filter(producto => {
+        const nombreNormalizado = normalizarTexto(producto.producto);
+        
+        // Coincidencia simple: todas las palabras deben estar en el nombre
+        const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
+        return palabrasBusqueda.every(palabra => nombreNormalizado.includes(palabra));
+      })
+      .sort((a, b) => {
+        // Ordenar por: 1) coincidencias al inicio, 2) longitud del nombre
+        const nombreA = normalizarTexto(a.producto);
+        const nombreB = normalizarTexto(b.producto);
+        
+        const aComienza = nombreA.startsWith(busquedaNormalizada);
+        const bComienza = nombreB.startsWith(busquedaNormalizada);
+        
+        if (aComienza && !bComienza) return -1;
+        if (!aComienza && bComienza) return 1;
+        
+        // Si ambos o ninguno comienzan con la búsqueda, ordenar por longitud
+        return nombreA.length - nombreB.length;
+      })
+      .slice(0, 50); // Limitar a 50 resultados para mejor rendimiento
 
     setProductosFiltrados(filtrados);
   };
@@ -816,7 +783,7 @@ export default function Pedidos() {
     setMostrarDropdown(false);
   };
 
-  // Función para manejar cambios en la búsqueda de productos
+  // Función para manejar cambios en la búsqueda de productos (CON DEBOUNCE)
   const handleBusquedaProducto = (e) => {
     const valor = e.target.value;
     
@@ -825,28 +792,35 @@ export default function Pedidos() {
       return;
     }
 
+    // Actualizar el estado inmediatamente (para que el usuario vea su escritura)
     setBusquedaProducto(valor);
     setProductoActual({
       ...productoActual,
       producto: valor
     });
     
-    // Guardar la última búsqueda en el ref (SIEMPRE, incluso si no hay productos aún)
+    // Guardar la última búsqueda en el ref
     ultimaBusquedaRef.current = valor;
     
+    // OPTIMIZACIÓN: Limpiar timeout anterior
+    if (busquedaTimeoutRef.current) {
+      clearTimeout(busquedaTimeoutRef.current);
+    }
+    
     if (valor.trim()) {
-      // Si hay productos cargados, filtrar inmediatamente
-      if (productosInventario.length > 0) {
-        filtrarProductos(valor);
-        setMostrarDropdown(true);
-      } else {
-        // Si no hay productos aún, guardar la búsqueda y mostrar dropdown vacío
-        // El useEffect se encargará de re-filtrar cuando se carguen los productos
-        setProductosFiltrados([]);
-        setMostrarDropdown(true);
-      }
+      // OPTIMIZACIÓN: Aplicar debounce de 200ms antes de filtrar
+      // Esto evita procesar cada keystroke y mejora significativamente el rendimiento
+      busquedaTimeoutRef.current = setTimeout(() => {
+        if (productosInventario.length > 0) {
+          filtrarProductos(valor);
+          setMostrarDropdown(true);
+        } else {
+          setProductosFiltrados([]);
+          setMostrarDropdown(true);
+        }
+      }, 200); // Esperar 200ms después del último keystroke
     } else {
-      // Búsqueda vacía, limpiar todo
+      // Búsqueda vacía, limpiar todo inmediatamente (sin debounce)
       setProductosFiltrados([]);
       setMostrarDropdown(false);
       ultimaBusquedaRef.current = '';
@@ -1230,7 +1204,7 @@ export default function Pedidos() {
   };
 
   // Función para calcular años disponibles de los pedidos registrados
-  const calcularAniosDisponibles = useCallback(() => {
+  const calcularAniosDisponibles = () => {
     const anios = new Set();
     
     // Solo incluir el año 2025 por defecto
@@ -1250,10 +1224,10 @@ export default function Pedidos() {
     
     const aniosArray = Array.from(anios).sort((a, b) => b - a); // Orden descendente
     setAniosDisponibles(aniosArray);
-  }, [pedidosRegistrados]);
+  };
 
   // Función para aplicar filtros a los pedidos registrados
-  const aplicarFiltros = useCallback(() => {
+  const aplicarFiltros = () => {
     let filtrados = [...pedidosRegistrados];
     const fechaActual = obtenerFechaHoyChile();
 
@@ -1339,7 +1313,7 @@ export default function Pedidos() {
     }
 
     setPedidosFiltrados(filtrados);
-  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
+  };
 
   // Función para limpiar todos los filtros
   const limpiarFiltros = () => {
@@ -1352,7 +1326,7 @@ export default function Pedidos() {
   };
 
   // Función para calcular estadísticas dinámicas según filtros aplicados
-  const calcularEstadisticasPedidos = useCallback(() => {
+  const calcularEstadisticasPedidos = () => {
     let pedidosFiltrados = [...pedidosRegistrados];
     const fechaActual = obtenerFechaHoyChile();
 
@@ -1475,7 +1449,7 @@ export default function Pedidos() {
     });
 
     return estadisticas;
-  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
+  };
 
   // Función para obtener el título dinámico del resumen
   const obtenerTituloResumenPedidos = () => {
@@ -1853,62 +1827,48 @@ export default function Pedidos() {
       // Filtrar solo los productos seleccionados para pago
       const productosAPagar = productosPorMesa[mesa].filter(p => productosSeleccionados.includes(p.id));
       
-      // Registrar cada producto seleccionado como una fila individual en la tabla pedidos
-      for (let i = 0; i < productosAPagar.length; i++) {
-        const producto = productosAPagar[i];
-        
-        // Usar la fecha correcta del pedido (ya configurada con zona horaria de Chile)
-        const fechaCl = pedido.fecha;
-         
-        // Preparar campos que solo van en la primera fila
-          let totalFinalValue = null;
-          let estadoValue = null;
-          let mesaValue = null;
-          let tipoPagoValue = null;
-          let propinaValue = null;
-          
-          if (i === 0) {
-            totalFinalValue = totalFinal; // Solo el valor numérico del total
-            estadoValue = 'pagado'; // Estado solo en la primera fila
-            mesaValue = nombreMesaCompleto; // Mesa solo en la primera fila (nombre completo)
-            tipoPagoValue = pedido.tipo_pago; // Tipo de pago solo en la primera fila
-            propinaValue = calcularPropina(mesa); // Propina solo en la primera fila
-          }
-          
-          const pedidoParaInsertar = {
-            fecha: pedido.fecha,
-            fecha_cl: fechaCl, // Fecha en zona horaria de Chile
-            mesa: mesaValue, // Mesa solo en la primera fila
-            producto: producto.producto,
-            unidad: producto.unidad,
-            cantidad: producto.cantidad.toString(), // Convertir a string como especifica la tabla
-            precio: parseFloat(producto.precio_unitario) || 0,
-            total: parseFloat(producto.subtotal) || 0,
-            // Solo incluir total_final en la primera fila (i === 0) como valor numérico
-            total_final: totalFinalValue,
-            estado: estadoValue, // Estado solo en la primera fila
-            tipo_pago: tipoPagoValue, // Tipo de pago solo en la primera fila
-            propina: propinaValue, // Propina solo en la primera fila
-            // Comentarios del producto (normalizado a mayúsculas)
-            comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null,
-            // Agregar el usuario_id del usuario autenticado
-            usuario_id: usuarioId,
-            // Agregar cliente_id (requerido por RLS)
-            cliente_id: cliente_id,
-            // created_at se genera automáticamente con default: now()
-          };
+      // Calcular propina una sola vez (fuera del bucle)
+      const propinaValue = calcularPropina(mesa);
+      
+      // Usar la fecha correcta del pedido (ya configurada con zona horaria de Chile)
+      const fechaCl = pedido.fecha;
+      
+      // Preparar TODOS los pedidos para insertar en una sola operación (BATCH INSERT)
+      const pedidosParaInsertar = productosAPagar.map((producto, i) => {
+        return {
+          fecha: pedido.fecha,
+          fecha_cl: fechaCl,
+          // Mesa solo en la primera fila
+          mesa: i === 0 ? nombreMesaCompleto : null,
+          producto: producto.producto,
+          unidad: producto.unidad,
+          cantidad: producto.cantidad.toString(),
+          precio: parseFloat(producto.precio_unitario) || 0,
+          total: parseFloat(producto.subtotal) || 0,
+          // total_final solo en la primera fila
+          total_final: i === 0 ? totalFinal : null,
+          // Estado solo en la primera fila
+          estado: i === 0 ? 'pagado' : null,
+          // Tipo de pago solo en la primera fila
+          tipo_pago: i === 0 ? pedido.tipo_pago : null,
+          // Propina solo en la primera fila
+          propina: i === 0 ? propinaValue : null,
+          // Comentarios del producto (normalizado a mayúsculas)
+          comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null,
+          usuario_id: usuarioId,
+          cliente_id: cliente_id
+        };
+      });
 
+      // INSERTAR TODOS LOS PEDIDOS EN UNA SOLA OPERACIÓN (mucho más rápido)
+      const { error } = await supabase
+        .from('pedidos')
+        .insert(pedidosParaInsertar);
 
-
-        const { error } = await supabase
-          .from('pedidos')
-          .insert([pedidoParaInsertar]);
-
-        if (error) {
-          console.error('Error al registrar producto del pedido:', error);
-          alert('Error al registrar pedido: ' + error.message);
-          return;
-        }
+      if (error) {
+        console.error('Error al registrar pedidos:', error);
+        alert('Error al registrar pedido: ' + error.message);
+        return;
       }
 
              alert(`✅ ${productosAPagar.length} producto(s) de ${mesa} registrado(s) correctamente. Total: $${totalFinal.toLocaleString()}`);
@@ -2003,13 +1963,13 @@ export default function Pedidos() {
           table: 'productos_mesas_temp'
         },
         (payload) => {
-          // Debounce: solo recargar después de 500ms sin cambios (evita flash visual)
+          // Debounce de 1 segundo para evitar múltiples recargas rápidas (optimizado)
           if (realtimeTimeoutRef.current) {
             clearTimeout(realtimeTimeoutRef.current);
           }
           realtimeTimeoutRef.current = setTimeout(() => {
             cargarProductosTemporales();
-          }, 500);
+          }, 1000); // Aumentado de 500ms a 1000ms para mejor rendimiento
         }
       )
       .subscribe();
@@ -2066,24 +2026,15 @@ export default function Pedidos() {
   // Las mesas ahora se sincronizan con Supabase, no necesitamos guardar en localStorage
   // El localStorage solo se usa como cache secundario en las funciones individuales
 
-  // Aplicar filtros cuando cambien los valores de filtro
+  // Aplicar filtros cuando cambien los valores de filtro O los pedidos registrados
   useEffect(() => {
-    aplicarFiltros();
-  }, [aplicarFiltros]);
-
-  // Aplicar filtros cuando cambien los pedidos registrados
-  useEffect(() => {
-    // No inicializar directamente con todos los pedidos
-    // Dejar que aplicarFiltros() maneje la lógica
     aplicarFiltros();
     calcularAniosDisponibles(); // Calcular años disponibles cuando cambien los pedidos
-  }, [pedidosRegistrados, calcularAniosDisponibles, aplicarFiltros]);
-
-  // Actualizar estadísticas cuando cambien los filtros o pedidos
-  useEffect(() => {
+    
+    // Calcular estadísticas junto con los filtros (evitar useEffect adicional)
     const nuevasEstadisticas = calcularEstadisticasPedidos();
     setEstadisticasPedidos(nuevasEstadisticas);
-  }, [calcularEstadisticasPedidos]);
+  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
 
   // Escuchar cambios en el estado de pantalla completa
   useEffect(() => {
@@ -2493,7 +2444,7 @@ export default function Pedidos() {
 
                 {/* Contenido de la Mesa Seleccionada */}
                 {mesaSeleccionada && (
-                  <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10">
+                  <div className="bg-green-900/30 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-green-500/30">
                     <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 text-center">
                       🪑 {mesaSeleccionada}
                     </h3>
@@ -2502,46 +2453,6 @@ export default function Pedidos() {
                       <p className="text-gray-400 text-center py-6">No hay productos en esta mesa</p>
                     ) : (
                       <div className="space-y-4">
-                    {/* Controles de selección para cocina */}
-                    <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-orange-400/30 mb-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-orange-300 text-xs sm:text-sm font-medium">🍳 <span className="hidden xs:inline">Seleccionar para </span>Cocina:</span>
-                          <span className="text-orange-200 text-xs">
-                            ({(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => toggleSeleccionarTodosParaCocina(mesaSeleccionada)}
-                          className="text-orange-300 hover:text-orange-200 text-xs font-medium underline whitespace-nowrap"
-                        >
-                          {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
-                            ? '❌ Deseleccionar'
-                            : '✅ Seleccionar'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Controles de selección para pago */}
-                    <div className="bg-green-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-green-400/30 mb-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-green-300 text-xs sm:text-sm font-medium">💰 <span className="hidden xs:inline">Seleccionar para </span>Pago:</span>
-                          <span className="text-green-200 text-xs">
-                            ({(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => toggleSeleccionarTodosParaPago(mesaSeleccionada)}
-                          className="text-green-300 hover:text-green-200 text-xs font-medium underline whitespace-nowrap"
-                        >
-                          {(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
-                            ? '❌ Deseleccionar'
-                            : '✅ Seleccionar'}
-                        </button>
-                      </div>
-                    </div>
-
                     {/* Lista de productos de la mesa */}
                     <div className="space-y-2">
                       {productosPorMesa[mesaSeleccionada].map((producto) => {
@@ -2551,13 +2462,7 @@ export default function Pedidos() {
                         return (
                           <div 
                             key={producto.id} 
-                            className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 sm:py-3 px-2 gap-2 transition-all duration-200 ${
-                              estaSeleccionadoPago 
-                                ? 'bg-green-500/20 border border-green-400/50 rounded-lg shadow-lg' 
-                                : estaSeleccionadoCocina
-                                ? 'bg-orange-500/20 border border-orange-400/50 rounded-lg shadow-lg'
-                                : ''
-                            }`}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 sm:py-3 px-2 gap-2 transition-all duration-200"
                           >
                             {/* Checkbox para Cocina y contenido principal */}
                             <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -2582,7 +2487,7 @@ export default function Pedidos() {
                                       const comentariosUpper = e.target.value.toUpperCase();
                                       guardarComentariosEnSupabase(producto.id, comentariosUpper);
                                     }}
-                                    className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs sm:text-sm"
+                                    className="w-full px-2 py-1 rounded-none bg-transparent text-white placeholder-gray-400 focus:outline-none border-0 border-b border-white/30 focus:border-green-400 text-xs sm:text-sm"
                                     placeholder="Comentarios..."
                                     style={{ textTransform: 'uppercase' }}
                                   />
@@ -2608,10 +2513,10 @@ export default function Pedidos() {
                               </span>
                               <button
                                 onClick={() => eliminarProducto(mesaSeleccionada, producto.id)}
-                                className="text-red-400 hover:text-red-300 text-base sm:text-lg"
+                                className="text-red-400 hover:text-red-300 text-base sm:text-lg font-bold"
                                 title="Eliminar producto"
                               >
-                                🗑️
+                                ✕
                               </button>
                             </div>
                           </div>
@@ -2619,9 +2524,60 @@ export default function Pedidos() {
                       })}
                     </div>
                     
+                    {/* Controles de selección para cocina y pago - Layout horizontal */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      {/* Tarjeta Cocina - Izquierda */}
+                      <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-orange-400/30">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-orange-300 text-xs sm:text-sm font-medium">🍳 <span className="hidden xs:inline">Seleccionar para </span>Cocina:</span>
+                            <span className="text-orange-200 text-xs">
+                              ({(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => enviarACocina(mesaSeleccionada)}
+                            disabled={enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0}
+                            className={`text-xs font-medium px-3 py-1 rounded-lg transition-all duration-200 ${
+                              enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
+                                ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                                : 'bg-orange-600 hover:bg-orange-700 text-white'
+                            }`}
+                          >
+                            {enviandoACocina 
+                              ? '⏳ Enviando...' 
+                              : `🍳 Enviar ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length > 0 
+                                  ? `(${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length})` 
+                                  : ''}`
+                            }
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tarjeta Pago - Derecha */}
+                      <div className="bg-green-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-green-400/30">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-green-300 text-xs sm:text-sm font-medium">💰 Dividir Pago:</span>
+                            <span className="text-green-200 text-xs">
+                              ({(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => toggleSeleccionarTodosParaPago(mesaSeleccionada)}
+                            className="text-green-300 hover:text-green-200 text-xs font-medium underline whitespace-nowrap"
+                          >
+                            {(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === productosPorMesa[mesaSeleccionada].length
+                              ? '❌ Deseleccionar'
+                              : '✅ Seleccionar Todo'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
                     {/* Resumen de la mesa */}
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/20">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+                    <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/30">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-1">
                         <div className="text-white text-xs sm:text-sm">
                           <span className="font-medium">
                             {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
@@ -2635,7 +2591,7 @@ export default function Pedidos() {
                       </div>
                        
                        {/* Campo de Propina */}
-                       <div className="flex items-center justify-between mb-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                       <div className="flex items-center justify-between mb-1 p-1 bg-transparent rounded-lg border-0">
                          <div className="flex items-center gap-3">
                            <input
                              type="checkbox"
@@ -2657,44 +2613,25 @@ export default function Pedidos() {
                                className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-xs"
                              />
                              <span className="text-white text-xs">%</span>
+                             <span className="text-yellow-400 font-medium text-sm">
+                               ${calcularPropina(mesaSeleccionada).toLocaleString()}
+                             </span>
                            </div>
                          )}
                        </div>
                        
-                       {/* Mostrar propina si está activa */}
-                       {propinaActiva && (
-                         <div className="flex justify-between items-center mb-3 text-sm">
-                           <span className="text-gray-300">Propina ({porcentajePropina}%):</span>
-                           <span className="text-yellow-400 font-medium">
-                             ${calcularPropina(mesaSeleccionada).toLocaleString()}
-                           </span>
-                         </div>
-                       )}
-                       
                        {/* Total Final */}
-                       <div className="flex justify-between items-center pt-3 border-t border-white/20">
+                       <div className="flex justify-end items-center gap-2 pt-3 border-t border-white/20">
                          <span className="text-white font-medium">Total Mesa:</span>
                          <div className="text-green-400 font-bold text-lg">
                            ${calcularTotalConPropina(mesaSeleccionada).toLocaleString()}
                          </div>
                        </div>
                       
-                                             {/* Estado del pedido */}
-                       <div className="mt-3 flex items-center gap-3">
-                         <span className="text-white text-sm">Estado:</span>
-                         <select
-                           onChange={(e) => cambiarEstadoPedido(mesaSeleccionada, e.target.value)}
-                           className="px-2 py-1 rounded text-xs bg-white/10 text-white border border-white/20"
-                           defaultValue="pagado"
-                         >
-                           <option value="pagado">✅ Pagado</option>
-                         </select>
-                       </div>
-                      
                       {/* Tipo de Pago - Solo visible cuando hay productos */}
                       <div className="mt-4 pt-3 border-t border-white/20">
                         <h4 className="text-white font-medium mb-3 text-center">💳 Método de Pago</h4>
-                                                 <div className="grid grid-cols-3 gap-2">
+                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -2708,8 +2645,8 @@ export default function Pedidos() {
                             }`}
                           >
                             <div className="text-center">
-                              <div className="text-green-400 text-lg mb-1">💵</div>
-                              <p className="font-medium text-sm">Efectivo</p>
+                              <div className="text-green-400 text-base mb-1">💵</div>
+                              <p className="font-medium text-xs">Efectivo</p>
                             </div>
                           </button>
                           
@@ -2728,8 +2665,8 @@ export default function Pedidos() {
                             }`}
                           >
                             <div className="text-center">
-                              <div className="text-blue-400 text-lg mb-1">💳</div>
-                              <p className="font-medium text-sm">Débito</p>
+                              <div className="text-blue-400 text-base mb-1">💳</div>
+                              <p className="font-medium text-xs">Débito</p>
                             </div>
                           </button>
                           
@@ -2743,15 +2680,35 @@ export default function Pedidos() {
                               setMontoPagado('');
                               setMostrarVuelto(false);
                             }}
-                            className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                            className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                               pedido.tipo_pago === 'transferencia' 
                                 ? 'bg-green-600 border-green-500 text-white' 
                                 : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                             }`}
                           >
                             <div className="text-center">
-                              <div className="text-purple-400 text-lg mb-1">📱</div>
-                              <p className="font-medium text-sm">Transferencia</p>
+                              <div className="text-purple-400 text-base mb-1">📱</div>
+                              <p className="font-medium text-xs">Transferencia</p>
+                            </div>
+                          </button>
+                          
+                          {/* Botón Registrar Pago */}
+                          <button
+                            onClick={() => registrarPedido(mesaSeleccionada)}
+                            disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0}
+                            className={`p-2 rounded-lg border-2 transition-all duration-200 ${
+                              (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0
+                                ? 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 border-green-500 text-white hover:bg-green-700'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <div className="text-base mb-1">💳</div>
+                              <p className="font-medium text-xs">
+                                Registrar Pago {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
+                                  ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length})` 
+                                  : '')}
+                              </p>
                             </div>
                           </button>
                         </div>
@@ -2806,62 +2763,6 @@ export default function Pedidos() {
                 )}
               </>
 
-            {/* Botones de Acción: Enviar a Cocina y Registrar Pedido */}
-            {mesaSeleccionada && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && (
-              <div className="text-center mt-6 space-y-4 px-2">
-                {/* Botón NUEVO: Enviar a Cocina (SOLO PRODUCTOS SELECCIONADOS) */}
-                <div>
-                  <button
-                    onClick={() => enviarACocina(mesaSeleccionada)}
-                    disabled={enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0}
-                    className={`w-full sm:w-auto font-bold py-3 px-4 sm:px-8 rounded-lg transition-all duration-300 transform text-sm sm:text-lg shadow-lg ${
-                      enviandoACocina || (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
-                        ? 'bg-gray-600 cursor-not-allowed scale-100'
-                        : 'bg-orange-600 hover:bg-orange-700 hover:scale-105'
-                    } text-white`}
-                  >
-                    {enviandoACocina 
-                      ? '⏳ Enviando...' 
-                      : `🍳 Enviar ${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length > 0 
-                          ? `(${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}) ` 
-                          : ''}a Cocina`
-                    }
-                  </button>
-                  <p className={`text-xs sm:text-sm mt-2 px-2 ${
-                    (productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0 
-                      ? 'text-orange-400' 
-                      : 'text-gray-400'
-                  }`}>
-                    {(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length === 0
-                      ? '⚠️ Selecciona productos'
-                      : `${(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length} producto(s) a cocina`
-                    }
-                  </p>
-                </div>
-
-                {/* Botón EXISTENTE: Registrar Pedido (para pago) */}
-                <div>
-                  <button
-                    onClick={() => registrarPedido(mesaSeleccionada)}
-                    disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0}
-                    className={`w-full sm:w-auto font-bold py-3 px-4 sm:px-8 rounded-lg transition-all duration-300 transform text-sm sm:text-lg shadow-lg ${
-                      (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0
-                        ? 'bg-gray-600 cursor-not-allowed scale-100'
-                        : 'bg-green-600 hover:bg-green-700 hover:scale-105'
-                    } text-white`}
-                  >
-                    💳 Registrar Pago {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
-                      ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length})` 
-                      : '')}
-                  </button>
-                  <p className="text-gray-400 text-xs sm:text-sm mt-2 px-2">
-                    {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0
-                      ? `${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length} producto(s) seleccionado(s)`
-                      : '⚠️ Selecciona productos para pagar')}
-                  </p>
-                </div>
-              </div>
-            )}
            </div>
           </section>
 
@@ -2993,11 +2894,20 @@ export default function Pedidos() {
                       {pedidosFiltrados.map((pedido, index) => {
                         const estaEditando = editandoId === pedido.id;
                         
+                        // Determinar si esta fila es el inicio de un nuevo pedido
+                        // La primera fila de cada pedido tiene total_final
+                        // Entonces ponemos línea gruesa ANTES de filas con total_final (excepto la primera del todo)
+                        const esInicioDePedido = index > 0 && pedido.total_final !== null;
+                        
                         return (
                           <Fragment key={index}>
                             <tr 
                               className={`hover:bg-white/5 transition-colors ${
-                                index > 0 && pedidosFiltrados[index - 1] && pedidosFiltrados[index - 1].total_final ? 'border-t-2 border-white/20' : ''
+                                esInicioDePedido 
+                                  ? 'border-t border-green-500/40' 
+                                  : index === 0 
+                                    ? '' 
+                                    : 'border-t border-white/5'
                               }`}
                             >
                               {/* Fecha */}
@@ -3283,10 +3193,10 @@ export default function Pedidos() {
                                     <button
                                       onClick={() => eliminarPedido(pedido.id)}
                                       disabled={loadingPedidos}
-                                      className="text-white hover:text-gray-300 text-lg transition-colors"
+                                      className="text-red-500 hover:text-red-400 disabled:text-gray-600 text-lg font-bold transition-colors"
                                       title="Eliminar pedido"
                                     >
-                                      🗑️
+                                      ✕
                                     </button>
                                   </div>
                                 )}
