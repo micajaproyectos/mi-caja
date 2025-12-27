@@ -2000,7 +2000,7 @@ export default function RegistroVenta() {
                     ) : (
                       <div className="space-y-1 md:space-y-1.5">
                         {productosVenta.map((producto, index) => (
-                          <div key={producto.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 backdrop-blur-sm rounded p-2 md:p-2.5 border border-white/10 hover:bg-white/10 transition-colors gap-2 sm:gap-3">
+                          <div key={producto.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-transparent rounded p-2 md:p-2.5 border-b border-white/20 hover:bg-white/5 transition-colors gap-2 sm:gap-3">
                             {/* Información del producto - Responsive */}
                             <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                               {/* Nombre del producto */}
