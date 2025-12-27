@@ -2321,52 +2321,30 @@ export default function RegistroVenta() {
 
             {/* Calculadora de Vuelto (solo para Efectivo) */}
             {venta.tipo_pago === 'efectivo' && productosVenta.length > 0 && calcularTotalVenta() > 0 && (
-              <div className="mb-3 md:mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-3 md:p-4 lg:p-6 border border-blue-400/30">
-                <h4 className="text-blue-200 font-semibold mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2">
+              <div className="mb-3 md:mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
+                <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center gap-2">
                   <span className="text-xl">🧮</span>
                   Calculadora de Vuelto
                 </h4>
                 
-                <div className="space-y-3 md:space-y-4">
-                  {/* Total de la venta y Monto pagado por el cliente en la misma línea */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                <div className="space-y-2 md:space-y-3">
+                  {/* Primera fila: Total de la venta, Caja Inicial y Monto pagado */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
                     {/* Total de la venta (solo lectura) */}
                     <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
                         Total de la venta:
                       </label>
-                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center">
+                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
                         <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
                           ${calcularTotalVenta().toLocaleString('es-CL')}
                         </p>
                       </div>
                     </div>
 
-                    {/* Monto pagado por el cliente */}
-                    <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
-                        Monto pagado por el cliente:
-                      </label>
-                      <input
-                        type="number"
-                        value={montoPagado}
-                        onChange={(e) => {
-                          setMontoPagado(e.target.value);
-                          setMostrarVuelto(e.target.value !== '');
-                        }}
-                        placeholder="Ingresa el monto recibido"
-                        step="100"
-                        min="0"
-                        className="w-full p-2 md:p-3 lg:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Campos para cuadrar caja */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                     {/* Caja Inicial */}
                     <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
                         Caja Inicial:
                       </label>
                       <input
@@ -2383,16 +2361,38 @@ export default function RegistroVenta() {
                         placeholder="Ej: 20000"
                         step="100"
                         min="0"
-                        className="w-full p-2 md:p-3 lg:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                        className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                       />
                     </div>
 
+                    {/* Monto pagado por el cliente */}
+                    <div>
+                      <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                        Monto pagado por el cliente:
+                      </label>
+                      <input
+                        type="number"
+                        value={montoPagado}
+                        onChange={(e) => {
+                          setMontoPagado(e.target.value);
+                          setMostrarVuelto(e.target.value !== '');
+                        }}
+                        placeholder="Ingresa el monto recibido"
+                        step="100"
+                        min="0"
+                        className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Segunda fila: Acumulado, Total en Caja y Vuelto */}
+                  <div className={`grid grid-cols-1 gap-2 md:gap-3 ${mostrarVuelto && montoPagado ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
                     {/* Acumulado del Día */}
                     <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
                         Acumulado del Día:
                       </label>
-                      <div className="bg-white/10 border border-green-400/50 rounded-lg p-2 md:p-3 text-center">
+                      <div className="bg-white/10 border border-green-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
                         <p className="text-green-300 text-lg md:text-xl lg:text-2xl font-bold">
                           ${calcularAcumuladoReal().toLocaleString('es-CL')}
                         </p>
@@ -2401,39 +2401,39 @@ export default function RegistroVenta() {
 
                     {/* Total en Caja */}
                     <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
                         Total en Caja:
                       </label>
-                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center">
+                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
                         <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
                           ${calcularTotalCaja().toLocaleString('es-CL')}
                         </p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Mostrar el vuelto */}
-                  {mostrarVuelto && montoPagado && (
-                    <div className="mt-3 md:mt-4">
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
-                        Vuelto a entregar:
-                      </label>
-                      <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-3 md:p-4 text-center`}>
-                        <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-xl md:text-2xl lg:text-3xl font-bold`}>
-                          {calcularVuelto() >= 0 ? (
-                            `$${calcularVuelto().toLocaleString('es-CL')}`
-                          ) : (
-                            `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
-                          )}
-                        </p>
-                        {calcularVuelto() < 0 && (
-                          <p className="text-red-200 text-xs md:text-sm mt-2">
-                            ⚠️ El monto pagado es insuficiente
+                    {/* Vuelto a entregar (solo si hay monto pagado) */}
+                    {mostrarVuelto && montoPagado && (
+                      <div>
+                        <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                          Vuelto a entregar:
+                        </label>
+                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 md:p-3 text-center flex items-center justify-center flex-col`}>
+                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-lg md:text-xl lg:text-2xl font-bold`}>
+                            {calcularVuelto() >= 0 ? (
+                              `$${calcularVuelto().toLocaleString('es-CL')}`
+                            ) : (
+                              `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                            )}
                           </p>
-                        )}
+                          {calcularVuelto() < 0 && (
+                            <p className="text-red-200 text-xs mt-1">
+                              ⚠️ Insuficiente
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             )}
