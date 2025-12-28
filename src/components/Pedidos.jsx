@@ -2507,7 +2507,7 @@ export default function Pedidos() {
                                 type="checkbox"
                                 checked={estaSeleccionadoPago}
                                 onChange={() => toggleSeleccionProductoPago(mesaSeleccionada, producto.id)}
-                                className="w-4 h-4 text-green-600 bg-white/10 border-green-400 rounded focus:ring-green-500 focus:ring-1 cursor-pointer"
+                                className="w-5 h-5 sm:w-6 sm:h-6 lg:w-4 lg:h-4 text-green-600 bg-white/10 border-green-400 rounded focus:ring-green-500 focus:ring-1 cursor-pointer"
                                 title="Seleccionar para pago"
                               />
                               <span className="text-green-400 font-bold text-sm whitespace-nowrap">
