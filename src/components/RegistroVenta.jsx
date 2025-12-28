@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, Fragment, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { useSessionData } from '../lib/useSessionData.js';
@@ -159,10 +158,9 @@ export default function RegistroVenta() {
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [mostrarListaProductos, setMostrarListaProductos] = useState(false);
   
-  // Refs y estado para el portal del dropdown
+  // Refs para el dropdown
   const searchInputRef = useRef(null);
   const dropdownRef = useRef(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
   // Estado para navegación por teclado
   const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
@@ -344,16 +342,6 @@ export default function RegistroVenta() {
         // Si no es código de barras, buscar por nombre (comportamiento normal)
         filtrarProductos(valor);
         setIndiceSeleccionado(-1); // Resetear índice al cambiar búsqueda
-        
-        // Calcular posición del dropdown SOLO si no está visible
-        if (!mostrarDropdown && searchInputRef.current) {
-          const rect = searchInputRef.current.getBoundingClientRect();
-          setDropdownPosition({
-            top: rect.bottom + window.scrollY,
-            left: rect.left + window.scrollX,
-            width: rect.width
-          });
-        }
         
         setMostrarDropdown(true);
       }
@@ -1038,19 +1026,25 @@ export default function RegistroVenta() {
     };
   }, [venta.fecha]);
 
-  // Cerrar dropdown cuando se haga clic fuera de él
+  // Cerrar dropdown al hacer clic fuera (soporte para móviles y desktop)
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (mostrarDropdown && 
-          !event.target.closest('.producto-search-container') && 
-          !event.target.closest('[data-dropdown-portal]')) {
-        setMostrarDropdown(false);
+      if (mostrarDropdown && searchInputRef.current && !searchInputRef.current.contains(event.target)) {
+        // Verificar si el clic fue en el dropdown
+        const dropdown = document.querySelector('[data-dropdown-productos]');
+        if (dropdown && !dropdown.contains(event.target)) {
+          setMostrarDropdown(false);
+        }
       }
     };
 
+    // Escuchar tanto eventos de mouse como táctiles para mejor compatibilidad móvil
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [mostrarDropdown]);
 
@@ -1121,40 +1115,6 @@ export default function RegistroVenta() {
     };
   }, [mostrarDropdown, productosFiltrados, indiceSeleccionado]);
 
-  // Recalcular posición del dropdown cuando se hace scroll o resize (con throttle)
-  useEffect(() => {
-    let throttleTimeout = null;
-    
-    const handleScrollResize = () => {
-      // Throttle: solo ejecutar cada 100ms
-      if (throttleTimeout) return;
-      
-      throttleTimeout = setTimeout(() => {
-        if (mostrarDropdown && searchInputRef.current) {
-          const rect = searchInputRef.current.getBoundingClientRect();
-          setDropdownPosition({
-            top: rect.bottom + window.scrollY,
-            left: rect.left + window.scrollX,
-            width: rect.width
-          });
-        }
-        throttleTimeout = null;
-      }, 100);
-    };
-
-    if (mostrarDropdown) {
-      window.addEventListener('scroll', handleScrollResize, { passive: true });
-      window.addEventListener('resize', handleScrollResize, { passive: true });
-    }
-    
-    return () => {
-      window.removeEventListener('scroll', handleScrollResize);
-      window.removeEventListener('resize', handleScrollResize);
-      if (throttleTimeout) {
-        clearTimeout(throttleTimeout);
-      }
-    };
-  }, [mostrarDropdown]);
 
   // Escuchar cambios en el estado de pantalla completa
   useEffect(() => {
@@ -1893,24 +1853,105 @@ export default function RegistroVenta() {
                 <span className="text-blue-400 text-lg md:text-xl mr-2">🔍</span>
                 <h3 className="text-green-400 text-lg md:text-xl font-bold">Buscar Producto</h3>
               </div>
-              <div className="flex gap-2 mb-2">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={busquedaProducto}
-                  onChange={handleBusquedaProducto}
-                  className="flex-1 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base transition-all duration-200"
-                  placeholder="🔍 Nombre o código de barras..."
-                />
-                <button
-                  type="button"
-                  onClick={() => setMostrarScannerVenta(true)}
-                  className="flex items-center justify-center gap-1 px-3 md:px-4 py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs md:text-sm"
-                  title="Escanear código de barras"
-                >
-                  <span className="text-sm md:text-base">📷</span>
-                  <span className="hidden sm:inline">Escanear</span>
-                </button>
+              <div className="relative">
+                <div className="flex gap-2 mb-2">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={busquedaProducto}
+                    onChange={handleBusquedaProducto}
+                    className="flex-1 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs md:text-sm lg:text-base transition-all duration-200"
+                    placeholder="🔍 Nombre o código de barras..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarScannerVenta(true)}
+                    className="flex items-center justify-center gap-1 px-3 md:px-4 py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs md:text-sm"
+                    title="Escanear código de barras"
+                  >
+                    <span className="text-sm md:text-base">📷</span>
+                    <span className="hidden sm:inline">Escanear</span>
+                  </button>
+                </div>
+                
+                {/* Dropdown de productos filtrados - FIJO bajo el input */}
+                {mostrarDropdown && productosFiltrados.length > 0 && (
+                  <div
+                    ref={dropdownRef}
+                    data-dropdown-productos
+                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
+                  >
+                    {/* Hint de navegación por teclado */}
+                    <div className="bg-blue-600/20 px-4 py-2 border-b border-blue-400/30">
+                      <p className="text-blue-200 text-xs text-center">
+                        <span className="font-semibold">💡 Tip:</span> Usa ↑↓ para navegar, Enter para seleccionar, Esc para cerrar
+                      </p>
+                    </div>
+                    
+                    {/* Lista de productos */}
+                    {productosFiltrados.map((producto, index) => (
+                      <div
+                        key={producto.id || index}
+                        data-dropdown-item
+                        onClick={() => seleccionarProducto(producto)}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          seleccionarProducto(producto);
+                        }}
+                        className={`px-4 sm:px-6 py-3 sm:py-4 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation ${
+                          index === indiceSeleccionado 
+                            ? 'bg-blue-600/50 border-blue-400' 
+                            : 'hover:bg-blue-600/30 active:bg-blue-600/50'
+                        }`}
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">
+                              {producto.producto}
+                              {index === indiceSeleccionado && <span className="ml-2 text-yellow-300">←</span>}
+                            </div>
+                            <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
+                              <span className="text-green-300 font-medium">
+                                ${parseFloat(producto.precio_venta).toLocaleString()}
+                              </span>
+                              <span className="text-blue-300 font-medium">
+                                {producto.unidad}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Mensaje cuando no hay productos */}
+                {mostrarDropdown && productosFiltrados.length === 0 && busquedaProducto.trim() && (
+                  <div
+                    data-dropdown-productos
+                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 z-50 w-full"
+                  >
+                    <div className="text-center mb-4">
+                      <div className="text-gray-300 text-sm sm:text-lg mb-2">
+                        No se encontraron productos con "<strong>{busquedaProducto}</strong>"
+                      </div>
+                      <div className="text-gray-400 text-xs sm:text-sm">
+                        Intenta con otro nombre o agrega el producto manualmente
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate('/inventario');
+                      }}
+                      className="w-full px-6 py-3 md:py-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg"
+                    >
+                      ➕ Agregar producto al Inventario
+                    </button>
+                  </div>
+                )}
               </div>
               
               {/* Mostrar código escaneado si existe */}
@@ -2118,94 +2159,6 @@ export default function RegistroVenta() {
               </div>
             </div>
               
-                          {/* Dropdown de productos filtrados - Portal */}
-            {mostrarDropdown && productosFiltrados.length > 0 && createPortal(
-              <div 
-                ref={dropdownRef}
-                data-dropdown-portal
-                className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl overflow-hidden"
-                style={{ 
-                  top: dropdownPosition.top + 12,
-                  left: dropdownPosition.left,
-                  width: dropdownPosition.width
-                }}
-              >
-                {/* Hint de navegación por teclado */}
-                <div className="bg-blue-600/20 px-4 py-2 border-b border-blue-400/30">
-                  <p className="text-blue-200 text-xs text-center">
-                    <span className="font-semibold">💡 Tip:</span> Usa ↑↓ para navegar, Enter para seleccionar, Esc para cerrar
-                  </p>
-                </div>
-                
-                {/* Lista de productos */}
-                <div className="max-h-80 overflow-y-auto">
-                  {productosFiltrados.map((producto, index) => (
-                  <div
-                    key={producto.id || index}
-                    data-dropdown-item
-                    onClick={() => seleccionarProducto(producto)}
-                    className={`px-6 py-4 cursor-pointer border-b border-white/10 last:border-b-0 transition-colors duration-150 ${
-                      index === indiceSeleccionado 
-                        ? 'bg-blue-600/50 border-blue-400' 
-                        : 'hover:bg-blue-600/30'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="text-white font-bold text-lg mb-1">
-                          {producto.producto}
-                          {index === indiceSeleccionado && <span className="ml-2 text-yellow-300">←</span>}
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm">
-                          <span className="text-green-300 font-medium">
-                            ${parseFloat(producto.precio_venta).toLocaleString()}
-                          </span>
-                          <span className="text-blue-300 font-medium">
-                            {producto.unidad}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-blue-400 text-xl">→</div>
-                    </div>
-                  </div>
-                  ))}
-                </div>
-              </div>,
-              document.body
-            )}
-            
-            {/* Mensaje cuando no hay productos - Portal */}
-            {mostrarDropdown && productosFiltrados.length === 0 && busquedaProducto.trim() && createPortal(
-              <div 
-                data-dropdown-portal
-                className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl p-6"
-                style={{ 
-                  top: dropdownPosition.top + 12,
-                  left: dropdownPosition.left,
-                  width: dropdownPosition.width
-                }}
-              >
-                <div className="text-center mb-4">
-                  <div className="text-gray-300 text-lg mb-2">
-                    No se encontraron productos con "<strong>{busquedaProducto}</strong>"
-                  </div>
-                  <div className="text-gray-400 text-sm">
-                    Intenta con otro nombre o agrega el producto manualmente
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Redirigir al componente Inventario para agregar el producto
-                    navigate('/inventario');
-                  }}
-                  className="w-full px-6 py-3 md:py-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg"
-                >
-                  ➕ Agregar producto al Inventario
-                </button>
-              </div>,
-              document.body
-            )}
 
 
 

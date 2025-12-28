@@ -2357,7 +2357,7 @@ export default function Pedidos() {
                     {mesas.map(mesa => (
                       <div
                         key={mesa}
-                        className={`relative group flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm ${
+                        className={`relative group flex items-center gap-1.5 sm:gap-2.5 lg:gap-2 px-3 sm:px-5 lg:px-4 py-2 sm:py-2.5 lg:py-2 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base lg:text-sm ${
                           mesaSeleccionada === mesa
                             ? 'bg-green-600 text-white shadow-lg'
                             : 'bg-white/10 text-white hover:bg-white/20'
@@ -2412,7 +2412,7 @@ export default function Pedidos() {
                                 e.stopPropagation();
                                 iniciarEdicionNombreMesa(mesa);
                               }}
-                              className={`text-xs hover:scale-110 transition-all duration-200 ${
+                              className={`text-sm sm:text-base lg:text-xs hover:scale-110 transition-all duration-200 ${
                                 mesaSeleccionada === mesa
                                   ? 'text-blue-200 hover:text-blue-100'
                                   : 'text-blue-400 hover:text-blue-300'
@@ -2428,7 +2428,7 @@ export default function Pedidos() {
                                 e.stopPropagation();
                                 eliminarMesa(mesa);
                               }}
-                              className={`ml-1 text-xs hover:scale-110 transition-all duration-200 ${
+                              className={`ml-1 text-sm sm:text-base lg:text-xs hover:scale-110 transition-all duration-200 ${
                                 mesaSeleccionada === mesa
                                   ? 'text-red-200 hover:text-red-100'
                                   : 'text-red-400 hover:text-red-300'
@@ -2472,7 +2472,7 @@ export default function Pedidos() {
                                 type="checkbox"
                                 checked={estaSeleccionadoCocina}
                                 onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
-                                className="w-4 h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
+                                className="w-5 h-5 sm:w-6 sm:h-6 lg:w-4 lg:h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
                                 title="Enviar a cocina"
                               />
                               
@@ -2515,7 +2515,7 @@ export default function Pedidos() {
                               </span>
                               <button
                                 onClick={() => eliminarProducto(mesaSeleccionada, producto.id)}
-                                className="text-red-400 hover:text-red-300 text-base sm:text-lg font-bold"
+                                className="text-red-400 hover:text-red-300 text-xl sm:text-2xl lg:text-lg font-bold"
                                 title="Eliminar producto"
                               >
                                 ✕
