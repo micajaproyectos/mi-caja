@@ -140,6 +140,7 @@ export default function Pedidos() {
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
   const [mostrarVuelto, setMostrarVuelto] = useState(false);
+  const [calculadoraColapsada, setCalculadoraColapsada] = useState(false);
   
   // Estados para cuadrar caja (solo frontend)
   const [cajaInicial, setCajaInicial] = useState(() => {
@@ -3019,12 +3020,32 @@ export default function Pedidos() {
                       {/* Calculadora de Vuelto (solo para Efectivo) */}
                       {pedido.tipo_pago === 'efectivo' && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && calcularTotalConPropina(mesaSeleccionada) > 0 && (
                         <div className="mt-4 mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
-                          <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center gap-2">
-                            <span className="text-xl">🧮</span>
-                            Calculadora de Vuelto
+                          <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">🧮</span>
+                              <span>Calculadora de Vuelto</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setCalculadoraColapsada(!calculadoraColapsada)}
+                              className="text-blue-300 hover:text-blue-100 transition-colors duration-200 p-1 rounded hover:bg-blue-400/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              title={calculadoraColapsada ? "Expandir calculadora" : "Colapsar calculadora"}
+                            >
+                              {calculadoraColapsada ? (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                              )}
+                            </button>
                           </h4>
                           
-                          <div className="space-y-2 md:space-y-3">
+                          <div className={`space-y-2 md:space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
+                            calculadoraColapsada ? 'max-h-0 opacity-0' : 'max-h-[1000px] opacity-100'
+                          }`}>
                             {/* Primera fila: Total de la venta, Caja Inicial y Monto pagado */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
                               {/* Total de la venta (solo lectura) */}
@@ -3219,49 +3240,6 @@ export default function Pedidos() {
                             </div>
                           </button>
                         </div>
-
-                        {/* Campo de Monto Pagado - Solo visible cuando se selecciona Efectivo */}
-                        {pedido.tipo_pago === 'efectivo' && (
-                          <div className="mt-4 pt-3 border-t border-white/20">
-                            <label className="block text-white text-sm font-medium mb-2 text-center">
-                              💰 Monto Pagado
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={montoPagado}
-                              onChange={(e) => {
-                                setMontoPagado(e.target.value);
-                                setMostrarVuelto(e.target.value !== '');
-                              }}
-                              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-center"
-                              placeholder="Ingresa el monto recibido..."
-                            />
-                          </div>
-                        )}
-
-                        {/* Mostrar el vuelto */}
-                        {mostrarVuelto && montoPagado && pedido.tipo_pago === 'efectivo' && (
-                          <div className="mt-4">
-                            <label className="block text-blue-100 text-xs md:text-sm mb-2 text-center">
-                              Vuelto a entregar:
-                            </label>
-                            <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-4 text-center`}>
-                              <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-2xl md:text-3xl font-bold`}>
-                                {calcularVuelto() >= 0 ? (
-                                  `$${calcularVuelto().toLocaleString('es-CL')}`
-                                ) : (
-                                  `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
-                                )}
-                              </p>
-                              {calcularVuelto() < 0 && (
-                                <p className="text-red-200 text-xs md:text-sm mt-2">
-                                  ⚠️ El monto pagado es insuficiente
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
