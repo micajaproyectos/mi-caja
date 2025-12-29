@@ -7,6 +7,7 @@ import {
   formatearFechaCortaChile
 } from '../lib/dateUtils.js';
 import Footer from './Footer';
+import BarcodeScanner from './BarcodeScanner';
 
 // Modo DEBUG: Solo activo en desarrollo (detecta si es localhost)
 const IS_DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -50,6 +51,9 @@ export default function Pedidos() {
   const ultimaBusquedaRef = useRef('');
   // Ref para debounce de búsqueda (optimización de rendimiento)
   const busquedaTimeoutRef = useRef(null);
+  
+  // Estados para código de barras
+  const [mostrarScannerPedidos, setMostrarScannerPedidos] = useState(false);
   
   // Estados para gestión de mesas
   // Inicializar con cache de localStorage para carga instantánea
@@ -171,6 +175,9 @@ export default function Pedidos() {
   
   // Estado para notificación de dispositivos táctiles
   const [notificacionTactil, setNotificacionTactil] = useState(false);
+  
+  // Estado para notificaciones automáticas
+  const [notificacion, setNotificacion] = useState(null);
   
   // Ref para debounce de Realtime (evita flash visual)
   const realtimeTimeoutRef = useRef(null);
@@ -781,6 +788,55 @@ export default function Pedidos() {
     });
     setBusquedaProducto(producto.producto);
     setMostrarDropdown(false);
+  };
+
+  // Función para buscar producto por código de barras
+  const buscarProductoPorCodigo = async (codigo) => {
+    try {
+      // Obtener el usuario_id del usuario autenticado
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado');
+        return;
+      }
+
+      // Buscar producto en el inventario por código_interno
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .eq('codigo_interno', parseInt(codigo))
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          alert(`❌ No se encontró ningún producto con el código ${codigo}`);
+        } else {
+          console.error('Error al buscar producto por código:', error);
+          alert('❌ Error al buscar el producto');
+        }
+        return;
+      }
+
+      if (data) {
+        // Completar el formulario con los datos del producto encontrado
+        setProductoActual({
+          ...productoActual,
+          producto: data.producto,
+          precio_unitario: data.precio_venta.toString(),
+          unidad: data.unidad,
+          subtotal: 0,
+          comentarios: ''
+        });
+        setBusquedaProducto(data.producto);
+        
+        // Cerrar dropdown si está abierto
+        setMostrarDropdown(false);
+      }
+    } catch (error) {
+      console.error('Error inesperado al buscar producto por código:', error);
+      alert('❌ Error inesperado al buscar el producto');
+    }
   };
 
   // Función para manejar cambios en la búsqueda de productos (CON DEBOUNCE)
@@ -1873,7 +1929,16 @@ export default function Pedidos() {
         return;
       }
 
-             alert(`✅ ${productosAPagar.length} producto(s) de ${mesa} registrado(s) correctamente. Total: $${totalFinal.toLocaleString()}`);
+      // Mostrar notificación automática que desaparece sola
+      setNotificacion({
+        mensaje: `✅ ${productosAPagar.length} producto(s) de ${mesa} registrado(s) correctamente. Total: $${totalFinal.toLocaleString()}`,
+        tipo: 'exito'
+      });
+      
+      // Ocultar la notificación automáticamente después de 3 segundos
+      setTimeout(() => {
+        setNotificacion(null);
+      }, 3000);
        
        // Limpiar solo los productos PAGADOS, dejar los pendientes en la mesa
        const productosPendientes = productosPorMesa[mesa].filter(p => !productosSeleccionados.includes(p.id));
@@ -2121,6 +2186,20 @@ export default function Pedidos() {
           </div>
         </div>
       )}
+      
+      {/* Notificación automática para acciones exitosas */}
+      {notificacion && (
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg max-w-sm text-center animate-fade-in ${
+          notificacion.tipo === 'exito' 
+            ? 'bg-green-600/95 border border-green-400/30' 
+            : 'bg-red-600/95 border border-red-400/30'
+        }`}>
+          <div className="text-sm font-medium">
+            {notificacion.mensaje}
+          </div>
+        </div>
+      )}
+      
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -2205,56 +2284,67 @@ export default function Pedidos() {
                  />
                </div>
 
-               {/* Búsqueda de Producto */}
-               <div className="relative">
-                 <label className="block text-white font-medium mb-2 text-sm">Buscar Producto</label>
-                 <input
-                   ref={searchInputRef}
-                   type="text"
-                   inputMode="search"
-                   autoComplete="off"
-                   value={busquedaProducto}
-                   onChange={handleBusquedaProducto}
-                   className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                   placeholder="🔍 Escribe el nombre del producto..."
-                 />
-                 
-                 {/* Dropdown de productos filtrados - FIJO bajo el input */}
-                 {mostrarDropdown && productosFiltrados.length > 0 && (
-                   <div
-                     data-dropdown-productos
-                     className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
-                   >
-                     {productosFiltrados.map((producto, index) => (
-                       <div
-                         key={producto.id || index}
-                         onClick={() => seleccionarProducto(producto)}
-                         onTouchStart={(e) => {
-                           e.preventDefault();
-                           seleccionarProducto(producto);
-                         }}
-                         className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 active:bg-blue-600/50 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation"
-                         style={{ WebkitTapHighlightColor: 'transparent' }}
-                       >
-                         <div className="flex items-center justify-between">
-                           <div className="flex-1 min-w-0">
-                             <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
-                             <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
-                               <span className="text-green-300 font-medium">
-                                 ${parseFloat(producto.precio_venta).toLocaleString()}
-                               </span>
-                               <span className="text-blue-300 font-medium">
-                                 {producto.unidad}
-                               </span>
-                             </div>
-                           </div>
-                           <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-               </div>
+              {/* Búsqueda de Producto */}
+              <div className="relative">
+                <label className="block text-white font-medium mb-2 text-sm">Buscar Producto</label>
+                <div className="flex gap-2">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    inputMode="search"
+                    autoComplete="off"
+                    value={busquedaProducto}
+                    onChange={handleBusquedaProducto}
+                    className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                    placeholder="🔍 Escribe el nombre del producto..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarScannerPedidos(true)}
+                    className="flex items-center justify-center gap-1 px-3 md:px-4 py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs md:text-sm"
+                    title="Escanear código de barras"
+                  >
+                    <span className="text-sm md:text-base">📷</span>
+                    <span className="hidden sm:inline">Escanear</span>
+                  </button>
+                </div>
+                
+                {/* Dropdown de productos filtrados - FIJO bajo el input */}
+                {mostrarDropdown && productosFiltrados.length > 0 && (
+                  <div
+                    data-dropdown-productos
+                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
+                  >
+                    {productosFiltrados.map((producto, index) => (
+                      <div
+                        key={producto.id || index}
+                        onClick={() => seleccionarProducto(producto)}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          seleccionarProducto(producto);
+                        }}
+                        className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 active:bg-blue-600/50 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation"
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
+                            <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
+                              <span className="text-green-300 font-medium">
+                                ${parseFloat(producto.precio_venta).toLocaleString()}
+                              </span>
+                              <span className="text-blue-300 font-medium">
+                                {producto.unidad}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
              </div>
                
              {/* Campos del producto */}
@@ -3305,8 +3395,19 @@ export default function Pedidos() {
          </div>
        </div>
        
-       {/* Footer */}
-       {!pantallaCompleta && <Footer />}
-     </div>
-   );
- }
+      {/* Footer */}
+      {!pantallaCompleta && <Footer />}
+
+      {/* Modal del Escáner de Código de Barras */}
+      <BarcodeScanner
+        isOpen={mostrarScannerPedidos}
+        onScan={(code) => {
+          buscarProductoPorCodigo(code);
+          setMostrarScannerPedidos(false);
+        }}
+        onClose={() => setMostrarScannerPedidos(false)}
+        title="Escanear Código de Producto"
+      />
+    </div>
+  );
+}
