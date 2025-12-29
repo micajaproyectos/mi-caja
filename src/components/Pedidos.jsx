@@ -2502,7 +2502,7 @@ export default function Pedidos() {
                                 e.stopPropagation();
                                 iniciarEdicionNombreMesa(mesa);
                               }}
-                              className={`text-sm sm:text-base lg:text-xs hover:scale-110 transition-all duration-200 ${
+                              className={`text-lg sm:text-xl lg:text-xs hover:scale-110 transition-all duration-200 ${
                                 mesaSeleccionada === mesa
                                   ? 'text-blue-200 hover:text-blue-100'
                                   : 'text-blue-400 hover:text-blue-300'
@@ -2518,7 +2518,7 @@ export default function Pedidos() {
                                 e.stopPropagation();
                                 eliminarMesa(mesa);
                               }}
-                              className={`ml-1 text-sm sm:text-base lg:text-xs hover:scale-110 transition-all duration-200 ${
+                              className={`ml-1 text-lg sm:text-xl lg:text-xs hover:scale-110 transition-all duration-200 ${
                                 mesaSeleccionada === mesa
                                   ? 'text-red-200 hover:text-red-100'
                                   : 'text-red-400 hover:text-red-300'
