@@ -846,10 +846,10 @@ export default function GestionCocina() {
                                 <button
                                   onClick={() => eliminarPedido(pedido.id)}
                                   disabled={actualizandoPedido === pedido.id}
-                                  className="text-red-400 hover:text-red-300 text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="text-red-400 hover:text-red-300 text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold"
                                   title="Eliminar pedido"
                                 >
-                                  🗑️
+                                  ✕
                                 </button>
                               </div>
                             )}
