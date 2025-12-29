@@ -2485,6 +2485,21 @@ export default function Pedidos() {
                             >
                               ❌
                             </button>
+                            {/* Botón de eliminar mesa - solo visible en modo edición */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                eliminarMesa(mesa);
+                              }}
+                              className={`ml-1 text-lg sm:text-xl lg:text-xs hover:scale-110 transition-all duration-200 ${
+                                mesaSeleccionada === mesa
+                                  ? 'text-red-200 hover:text-red-100'
+                                  : 'text-red-400 hover:text-red-300'
+                              }`}
+                              title="Eliminar mesa"
+                            >
+                              ❌
+                            </button>
                           </div>
                         ) : (
                           // Modo visualización
@@ -2510,22 +2525,6 @@ export default function Pedidos() {
                               title="Editar nombre de mesa"
                             >
                               ✏️
-                            </button>
-                            
-                            {/* Botón de eliminar mesa */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                eliminarMesa(mesa);
-                              }}
-                              className={`ml-1 text-lg sm:text-xl lg:text-xs hover:scale-110 transition-all duration-200 ${
-                                mesaSeleccionada === mesa
-                                  ? 'text-red-200 hover:text-red-100'
-                                  : 'text-red-400 hover:text-red-300'
-                              }`}
-                              title="Eliminar mesa"
-                            >
-                              ❌
                             </button>
                           </>
                         )}
