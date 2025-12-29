@@ -96,6 +96,7 @@ export default function RegistroVenta() {
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
   const [mostrarVuelto, setMostrarVuelto] = useState(false);
+  const [calculadoraColapsada, setCalculadoraColapsada] = useState(false);
   
   // Estados para cuadrar caja (solo frontend)
   const [cajaInicial, setCajaInicial] = useState(() => {
@@ -2309,12 +2310,32 @@ export default function RegistroVenta() {
             {/* Calculadora de Vuelto (solo para Efectivo) */}
             {venta.tipo_pago === 'efectivo' && productosVenta.length > 0 && calcularTotalVenta() > 0 && (
               <div className="mb-3 md:mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
-                <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center gap-2">
-                  <span className="text-xl">🧮</span>
-                  Calculadora de Vuelto
+                <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🧮</span>
+                    <span>Calculadora de Vuelto</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCalculadoraColapsada(!calculadoraColapsada)}
+                    className="text-blue-300 hover:text-blue-100 transition-colors duration-200 p-1 rounded hover:bg-blue-400/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    title={calculadoraColapsada ? "Expandir calculadora" : "Colapsar calculadora"}
+                  >
+                    {calculadoraColapsada ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </button>
                 </h4>
                 
-                <div className="space-y-2 md:space-y-3">
+                <div className={`space-y-2 md:space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
+                  calculadoraColapsada ? 'max-h-0 opacity-0' : 'max-h-[1000px] opacity-100'
+                }`}>
                   {/* Primera fila: Total de la venta, Caja Inicial y Monto pagado */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
                     {/* Total de la venta (solo lectura) */}
