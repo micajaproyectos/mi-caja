@@ -556,17 +556,43 @@ export default function Pedidos() {
       if (data && data.length > 0) {
         const mesasArray = data.map(m => m.nombre_mesa);
         
+        // Verificar si hay un orden guardado en localStorage
+        let mesasOrdenadas = mesasArray;
+        try {
+          const cached = localStorage.getItem('mesasPedidos');
+          if (cached) {
+            const mesasCached = JSON.parse(cached);
+            // Si las mesas en cache tienen el mismo contenido (mismas mesas, posiblemente diferente orden)
+            const mesasCachedSet = new Set(mesasCached);
+            const mesasArraySet = new Set(mesasArray);
+            const tienenMismoContenido = 
+              mesasCachedSet.size === mesasArraySet.size &&
+              [...mesasCachedSet].every(mesa => mesasArraySet.has(mesa));
+            
+            // Si tienen el mismo contenido, usar el orden de localStorage
+            if (tienenMismoContenido && Array.isArray(mesasCached)) {
+              // Filtrar y ordenar según el orden de localStorage
+              mesasOrdenadas = mesasCached.filter(mesa => mesasArraySet.has(mesa));
+              // Agregar cualquier mesa nueva que no esté en cache al final
+              const mesasNuevas = mesasArray.filter(mesa => !mesasCachedSet.has(mesa));
+              mesasOrdenadas = [...mesasOrdenadas, ...mesasNuevas];
+            }
+          }
+        } catch (error) {
+          console.error('Error al leer orden de localStorage:', error);
+        }
+        
         // Actualizar silenciosamente solo si hay cambios
         const mesasActualesStr = JSON.stringify(mesas);
-        const mesasNuevasStr = JSON.stringify(mesasArray);
+        const mesasNuevasStr = JSON.stringify(mesasOrdenadas);
         
         if (mesasActualesStr !== mesasNuevasStr) {
-          setMesas(mesasArray);
-          localStorage.setItem('mesasPedidos', JSON.stringify(mesasArray));
+          setMesas(mesasOrdenadas);
+          localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
           
           // Solo cambiar la mesa seleccionada si ya no existe en el nuevo array
-          if (!mesasArray.includes(mesaSeleccionada)) {
-            setMesaSeleccionada(mesasArray[0]);
+          if (!mesasOrdenadas.includes(mesaSeleccionada)) {
+            setMesaSeleccionada(mesasOrdenadas[0]);
           }
           if (IS_DEBUG) console.log('🔄 Mesas actualizadas');
         }
@@ -709,21 +735,28 @@ export default function Pedidos() {
   const actualizarOrdenMesasEnSupabase = async (mesasOrdenadas) => {
     try {
       const usuarioId = await authService.getCurrentUserId();
-      if (!usuarioId) return;
+      if (!usuarioId) {
+        console.warn('No se puede actualizar orden: usuario no autenticado');
+        return;
+      }
 
       // Actualizar el orden de cada mesa
-      for (let i = 0; i < mesasOrdenadas.length; i++) {
-        await supabase
+      const actualizaciones = mesasOrdenadas.map((nombreMesa, i) => 
+        supabase
           .from('mesas_config')
           .update({ orden: i })
           .eq('usuario_id', usuarioId)
-          .eq('nombre_mesa', mesasOrdenadas[i]);
-      }
+          .eq('nombre_mesa', nombreMesa)
+      );
+
+      // Ejecutar todas las actualizaciones en paralelo
+      await Promise.all(actualizaciones);
 
       debugLog('✅ Orden de mesas actualizado en Supabase');
 
     } catch (error) {
       console.error('Error al actualizar orden de mesas:', error);
+      // No lanzar el error, solo loguearlo para no interrumpir la experiencia del usuario
     }
   };
 
@@ -1364,12 +1397,15 @@ export default function Pedidos() {
         const [mesaMovida] = mesasReordenadas.splice(indiceArrastrando, 1);
         mesasReordenadas.splice(nuevoIndice, 0, mesaMovida);
         
-        // Guardar nuevo orden en localStorage
+        // Guardar nuevo orden en localStorage PRIMERO (prioridad)
         localStorage.setItem('mesasPedidos', JSON.stringify(mesasReordenadas));
         
-        // Actualizar orden en Supabase si existe la función
+        // Actualizar orden en Supabase de forma asíncrona (no bloquea)
         if (typeof actualizarOrdenMesasEnSupabase === 'function') {
-          actualizarOrdenMesasEnSupabase(mesasReordenadas);
+          actualizarOrdenMesasEnSupabase(mesasReordenadas).catch(err => {
+            console.error('Error al actualizar orden en Supabase:', err);
+            // No es crítico, el orden ya está en localStorage
+          });
         }
         
         return mesasReordenadas;
