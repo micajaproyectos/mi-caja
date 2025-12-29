@@ -60,6 +60,11 @@ export default function Seguimiento() {
   const [loadingTiposPagoPedidos, setLoadingTiposPagoPedidos] = useState(false);
   const [errorTiposPagoPedidos, setErrorTiposPagoPedidos] = useState(null);
 
+  // Estados para el gráfico de pedidos diarios del mes actual
+  const [datosPedidosDiarios, setDatosPedidosDiarios] = useState([]);
+  const [loadingPedidosDiarios, setLoadingPedidosDiarios] = useState(false);
+  const [errorPedidosDiarios, setErrorPedidosDiarios] = useState(null);
+
   // Estados para el gráfico de pedidos acumulados mensuales
   const [datosPedidosAcumulados, setDatosPedidosAcumulados] = useState([]);
   const [loadingPedidosAcumulados, setLoadingPedidosAcumulados] = useState(false);
@@ -729,6 +734,47 @@ export default function Seguimiento() {
     }
   };
 
+  // Función para cargar datos de pedidos diarios del mes actual
+  const cargarPedidosDiarios = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        return;
+      }
+
+      setLoadingPedidosDiarios(true);
+      setErrorPedidosDiarios(null);
+      
+      // Consultar la vista pedidos_diarias
+      const { data: pedidosData, error: pedidosError } = await supabase
+        .from('pedidos_diarias')
+        .select('dia, total_dia, fecha')
+        .eq('usuario_id', usuarioId)
+        .order('dia', { ascending: true });
+
+      if (pedidosError) {
+        console.error('[chart] Error al consultar pedidos_diarias:', pedidosError);
+        setErrorPedidosDiarios('Error al cargar datos de pedidos diarios');
+        return;
+      }
+
+      // Mapear los datos recibidos
+      const datosMapeados = pedidosData?.map(d => ({
+        dia: d.dia,
+        totalDia: parseFloat(d.total_dia) || 0,
+        fecha: d.fecha
+      })) || [];
+
+      setDatosPedidosDiarios(datosMapeados);
+
+    } catch (error) {
+      console.error('[chart] Error inesperado al cargar pedidos diarios:', error);
+      setErrorPedidosDiarios('Error inesperado al cargar datos');
+    } finally {
+      setLoadingPedidosDiarios(false);
+    }
+  };
+
   // Función para cargar datos de pedidos acumulados mensuales
   const cargarPedidosAcumulados = async () => {
     try {
@@ -960,6 +1006,7 @@ export default function Seguimiento() {
       const clienteId = await obtenerClienteId();
       if (clienteId) {
         await cargarVentasDiarias(); // Cargar ventas diarias del mes actual
+        await cargarPedidosDiarios(); // Cargar pedidos diarios del mes actual
         await cargarVentasAcumuladas();
       }
     };
@@ -980,6 +1027,7 @@ export default function Seguimiento() {
   useEffect(() => {
     if (clienteId) {
       cargarVentasDiarias(); // Cargar ventas diarias del mes actual
+      cargarPedidosDiarios(); // Cargar pedidos diarios del mes actual
       cargarVentasAcumuladas();
       cargarPedidosAcumulados(); // Cargar pedidos acumulados también
       cargarVentasRapidasDiarias(); // Cargar ventas rápidas diarias del mes actual
@@ -1694,6 +1742,86 @@ export default function Seguimiento() {
             <p className="text-green-200 text-center text-sm md:text-base">
               Análisis detallado del rendimiento de pedidos
             </p>
+          </div>
+
+          {/* Gráfico de Pedidos Diarios del Mes Actual */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+            <div className="text-center mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
+                Pedidos Diarios - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+              </h3>
+              <p className="text-blue-200 text-sm md:text-base">
+                Total de pedidos por día del mes actual
+              </p>
+            </div>
+
+            {loadingPedidosDiarios ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+                <span className="ml-3 text-blue-200">Cargando...</span>
+              </div>
+            ) : errorPedidosDiarios ? (
+              <div className="text-center py-8">
+                <div className="bg-red-600/20 border border-red-400/30 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-red-300 text-sm">{errorPedidosDiarios}</p>
+                </div>
+              </div>
+            ) : datosPedidosDiarios.length > 0 ? (
+              <div className="h-64 md:h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={datosPedidosDiarios}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis 
+                      dataKey="dia" 
+                      stroke="#ffffff"
+                      tick={{ fill: '#ffffff', fontSize: 12 }}
+                      label={{ 
+                        value: 'Día del Mes', 
+                        position: 'insideBottom', 
+                        offset: -10, 
+                        fill: '#ffffff',
+                        style: { fontSize: '14px' }
+                      }}
+                    />
+                    <YAxis 
+                      stroke="#ffffff"
+                      tick={{ fill: '#ffffff', fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toLocaleString('es-CL')}`}
+                      label={{ 
+                        value: 'Total Pedidos ($)', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        fill: '#ffffff',
+                        style: { fontSize: '14px' }
+                      }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(26, 61, 26, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '8px',
+                        color: '#ffffff'
+                      }}
+                      formatter={(value) => [`$${parseFloat(value).toLocaleString('es-CL')}`, 'Total']}
+                      labelFormatter={(label) => `Día ${label}`}
+                    />
+                    <Bar 
+                      dataKey="totalDia" 
+                      fill="#3b82f6"
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📊</div>
+                <p className="text-gray-300 text-lg">No hay datos de pedidos para este mes</p>
+              </div>
+            )}
           </div>
 
           {/* Gráficos de Pedidos - Separados pero en la misma línea */}
