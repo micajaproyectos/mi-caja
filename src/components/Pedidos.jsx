@@ -141,6 +141,24 @@ export default function Pedidos() {
   const [montoPagado, setMontoPagado] = useState('');
   const [mostrarVuelto, setMostrarVuelto] = useState(false);
   
+  // Estados para cuadrar caja (solo frontend)
+  const [cajaInicial, setCajaInicial] = useState(() => {
+    // Cargar caja inicial desde localStorage al inicializar
+    const fechaActual = obtenerFechaHoyChile();
+    const cajaGuardada = localStorage.getItem('cajaInicial');
+    const fechaGuardada = localStorage.getItem('cajaInicialFecha');
+    
+    // Si hay caja guardada y es del mismo día, usarla
+    if (cajaGuardada && fechaGuardada === fechaActual) {
+      return cajaGuardada;
+    }
+    
+    // Si es un día diferente o no hay datos, limpiar
+    localStorage.removeItem('cajaInicial');
+    localStorage.removeItem('cajaInicialFecha');
+    return '';
+  });
+  
   // Estados para filtros
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
@@ -1146,6 +1164,42 @@ export default function Pedidos() {
     const totalMesa = calcularTotalConPropina(mesaSeleccionada);
     const montoPagadoNum = parseFloat(montoPagado) || 0;
     return montoPagadoNum - totalMesa;
+  };
+
+  // Función para calcular el acumulado real desde los pedidos registrados del día
+  // Usa la misma lógica que calcularEstadisticasPedidos para que cuadre con las estadísticas
+  const calcularAcumuladoReal = () => {
+    const fechaActual = obtenerFechaHoyChile();
+    
+    // Filtrar pedidos del día actual
+    const pedidosHoy = pedidosRegistrados.filter(pedido => {
+      const fechaPedido = pedido.fecha_cl || pedido.fecha;
+      return fechaPedido === fechaActual;
+    });
+
+    // Solo considerar pedidos completos (con total_final > 0, con mesa y estado pagado)
+    const pedidosCompletos = pedidosHoy.filter(pedido => 
+      pedido.total_final && parseFloat(pedido.total_final) > 0 &&
+      pedido.mesa && pedido.estado === 'pagado'
+    );
+
+    // Filtrar solo pedidos de efectivo y sumar total_final
+    const acumulado = pedidosCompletos
+      .filter(pedido => pedido.tipo_pago === 'efectivo')
+      .reduce((total, pedido) => {
+        // Solo contar una vez por pedido (usar la primera fila de cada pedido)
+        // Como ya filtramos por mesa y estado, cada pedido se cuenta una vez
+        const monto = parseFloat(pedido.total_final) || 0;
+        return total + monto;
+      }, 0);
+
+    return acumulado;
+  };
+
+  // Función para calcular el total de caja (caja inicial + acumulado real)
+  const calcularTotalCaja = () => {
+    const cajaInicialNum = parseFloat(cajaInicial) || 0;
+    return cajaInicialNum + calcularAcumuladoReal();
   };
 
   // Función para agregar mesas
@@ -2961,6 +3015,125 @@ export default function Pedidos() {
                            ${calcularTotalConPropina(mesaSeleccionada).toLocaleString()}
                          </div>
                        </div>
+                      
+                      {/* Calculadora de Vuelto (solo para Efectivo) */}
+                      {pedido.tipo_pago === 'efectivo' && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && calcularTotalConPropina(mesaSeleccionada) > 0 && (
+                        <div className="mt-4 mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
+                          <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center gap-2">
+                            <span className="text-xl">🧮</span>
+                            Calculadora de Vuelto
+                          </h4>
+                          
+                          <div className="space-y-2 md:space-y-3">
+                            {/* Primera fila: Total de la venta, Caja Inicial y Monto pagado */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                              {/* Total de la venta (solo lectura) */}
+                              <div>
+                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                                  Total de la venta:
+                                </label>
+                                <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
+                                  <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
+                                    ${calcularTotalConPropina(mesaSeleccionada).toLocaleString('es-CL')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Caja Inicial */}
+                              <div>
+                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                                  Caja Inicial:
+                                </label>
+                                <input
+                                  type="number"
+                                  value={cajaInicial}
+                                  onChange={(e) => {
+                                    const valor = e.target.value;
+                                    setCajaInicial(valor);
+                                    // Guardar en localStorage con la fecha actual
+                                    const fechaActual = obtenerFechaHoyChile();
+                                    localStorage.setItem('cajaInicial', valor);
+                                    localStorage.setItem('cajaInicialFecha', fechaActual);
+                                  }}
+                                  placeholder="Ej: 20000"
+                                  step="100"
+                                  min="0"
+                                  className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                                />
+                              </div>
+
+                              {/* Monto pagado por el cliente */}
+                              <div>
+                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                                  Monto pagado por el cliente:
+                                </label>
+                                <input
+                                  type="number"
+                                  value={montoPagado}
+                                  onChange={(e) => {
+                                    setMontoPagado(e.target.value);
+                                    setMostrarVuelto(e.target.value !== '');
+                                  }}
+                                  placeholder="Ingresa el monto recibido"
+                                  step="100"
+                                  min="0"
+                                  className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Segunda fila: Acumulado, Total en Caja y Vuelto */}
+                            <div className={`grid grid-cols-1 gap-2 md:gap-3 ${mostrarVuelto && montoPagado ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                              {/* Acumulado del Día */}
+                              <div>
+                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                                  Acumulado del Día:
+                                </label>
+                                <div className="bg-white/10 border border-green-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
+                                  <p className="text-green-300 text-lg md:text-xl lg:text-2xl font-bold">
+                                    ${calcularAcumuladoReal().toLocaleString('es-CL')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Total en Caja */}
+                              <div>
+                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                                  Total en Caja:
+                                </label>
+                                <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
+                                  <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
+                                    ${calcularTotalCaja().toLocaleString('es-CL')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Vuelto a entregar (solo si hay monto pagado) */}
+                              {mostrarVuelto && montoPagado && (
+                                <div>
+                                  <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
+                                    Vuelto a entregar:
+                                  </label>
+                                  <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 md:p-3 text-center flex items-center justify-center flex-col`}>
+                                    <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-lg md:text-xl lg:text-2xl font-bold`}>
+                                      {calcularVuelto() >= 0 ? (
+                                        `$${calcularVuelto().toLocaleString('es-CL')}`
+                                      ) : (
+                                        `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                                      )}
+                                    </p>
+                                    {calcularVuelto() < 0 && (
+                                      <p className="text-red-200 text-xs mt-1">
+                                        ⚠️ Insuficiente
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Tipo de Pago - Solo visible cuando hay productos */}
                       <div className="mt-4 pt-3 border-t border-white/20">
