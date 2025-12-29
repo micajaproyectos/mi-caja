@@ -109,6 +109,13 @@ export default function Pedidos() {
   const [mesaEditando, setMesaEditando] = useState(null);
   const [nombreMesaTemporal, setNombreMesaTemporal] = useState('');
   
+  // Estados para drag and drop de mesas
+  const [mesaArrastrando, setMesaArrastrando] = useState(null);
+  const [posicionActual, setPosicionActual] = useState({ x: 0, y: 0 });
+  const [indiceArrastrando, setIndiceArrastrando] = useState(null);
+  const [esArrastrando, setEsArrastrando] = useState(false);
+  const posicionInicialRef = useRef({ x: 0, y: 0 });
+  
   // Estados para selección de productos para enviar a cocina
   // Inicializar desde cache para carga instantánea
   const [productosSeleccionadosParaCocina, setProductosSeleccionadosParaCocina] = useState(() => {
@@ -1238,6 +1245,178 @@ export default function Pedidos() {
     setMesaEditando(null);
     setNombreMesaTemporal('');
   };
+
+  // Funciones para drag and drop de mesas
+  const iniciarArrastre = useCallback((e, mesa, indice) => {
+    // No iniciar drag si se está editando
+    if (mesaEditando === mesa) return;
+    
+    // Prevenir comportamiento por defecto
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Obtener posición inicial (soporta tanto mouse como touch)
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    setMesaArrastrando(mesa);
+    setIndiceArrastrando(indice);
+    posicionInicialRef.current = { x: clientX, y: clientY };
+    setPosicionActual({ x: clientX, y: clientY });
+    setEsArrastrando(false); // Se activará después de un threshold de movimiento
+  }, [mesaEditando]);
+
+  const moverArrastre = useCallback((e) => {
+    if (!mesaArrastrando || indiceArrastrando === null) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Obtener posición actual
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // Actualizar posición actual
+    setPosicionActual({ x: clientX, y: clientY });
+    
+    // Activar drag solo si hay movimiento significativo (threshold de 10px)
+    const deltaX = Math.abs(clientX - posicionInicialRef.current.x);
+    const deltaY = Math.abs(clientY - posicionInicialRef.current.y);
+    if ((deltaX > 10 || deltaY > 10)) {
+      // Usar función de actualización para evitar problemas de closure
+      setEsArrastrando(prev => {
+        if (!prev) return true;
+        return prev;
+      });
+    }
+  }, [mesaArrastrando, indiceArrastrando]);
+
+  const finalizarArrastre = useCallback((e) => {
+    if (!mesaArrastrando || indiceArrastrando === null) {
+      // Limpiar estados si no había drag activo
+      setMesaArrastrando(null);
+      setIndiceArrastrando(null);
+      setEsArrastrando(false);
+      return;
+    }
+    
+    // Si no se activó el drag (click normal), no hacer nada
+    if (!esArrastrando) {
+      setMesaArrastrando(null);
+      setIndiceArrastrando(null);
+      setEsArrastrando(false);
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Obtener el elemento sobre el que se soltó
+    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    
+    // Encontrar el índice del elemento sobre el que se soltó
+    // Primero intentar con elementsFromPoint
+    const elementos = document.elementsFromPoint(clientX, clientY);
+    let nuevoIndice = indiceArrastrando;
+    
+    // Buscar el contenedor de otra mesa (excluyendo el que se está arrastrando)
+    for (const elemento of elementos) {
+      const indiceAttr = elemento.getAttribute('data-mesa-indice');
+      if (indiceAttr !== null) {
+        const indiceEncontrado = parseInt(indiceAttr, 10);
+        // Solo usar si es diferente al que se está arrastrando
+        if (indiceEncontrado !== indiceArrastrando) {
+          nuevoIndice = indiceEncontrado;
+          break;
+        }
+      }
+    }
+    
+    // Si no se encontró un elemento diferente, calcular basándose en la posición X
+    if (nuevoIndice === indiceArrastrando) {
+      // Buscar todos los elementos de mesas y calcular cuál está más cerca
+      const todosLosElementos = document.querySelectorAll('[data-mesa-indice]');
+      let indiceMasCercano = indiceArrastrando;
+      let distanciaMinima = Infinity;
+      
+      todosLosElementos.forEach((elemento) => {
+        const indice = parseInt(elemento.getAttribute('data-mesa-indice'), 10);
+        if (indice !== indiceArrastrando) {
+          const rect = elemento.getBoundingClientRect();
+          const centroX = rect.left + rect.width / 2;
+          const distancia = Math.abs(clientX - centroX);
+          
+          if (distancia < distanciaMinima) {
+            distanciaMinima = distancia;
+            indiceMasCercano = indice;
+          }
+        }
+      });
+      
+      nuevoIndice = indiceMasCercano;
+    }
+    
+    // Reordenar mesas si el índice cambió
+    if (nuevoIndice !== indiceArrastrando && nuevoIndice >= 0 && nuevoIndice < mesas.length) {
+      setMesas(prevMesas => {
+        const mesasReordenadas = [...prevMesas];
+        const [mesaMovida] = mesasReordenadas.splice(indiceArrastrando, 1);
+        mesasReordenadas.splice(nuevoIndice, 0, mesaMovida);
+        
+        // Guardar nuevo orden en localStorage
+        localStorage.setItem('mesasPedidos', JSON.stringify(mesasReordenadas));
+        
+        // Actualizar orden en Supabase si existe la función
+        if (typeof actualizarOrdenMesasEnSupabase === 'function') {
+          actualizarOrdenMesasEnSupabase(mesasReordenadas);
+        }
+        
+        return mesasReordenadas;
+      });
+    }
+    
+    // Limpiar estados
+    setMesaArrastrando(null);
+    setIndiceArrastrando(null);
+    setEsArrastrando(false);
+  }, [mesaArrastrando, indiceArrastrando, esArrastrando, mesas]);
+
+  // Effect para manejar event listeners globales durante el drag
+  useEffect(() => {
+    // Activar listeners cuando se inicia el arrastre (mesaArrastrando no es null)
+    if (!mesaArrastrando && indiceArrastrando === null) return;
+    
+    const handleMouseMove = (e) => {
+      moverArrastre(e);
+    };
+    
+    const handleMouseUp = (e) => {
+      finalizarArrastre(e);
+    };
+    
+    const handleTouchMove = (e) => {
+      moverArrastre(e);
+    };
+    
+    const handleTouchEnd = (e) => {
+      finalizarArrastre(e);
+    };
+    
+    // Agregar listeners globales
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+    
+    // Limpiar listeners al desmontar o cuando termine el drag
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [mesaArrastrando, indiceArrastrando, moverArrastre, finalizarArrastre]);
 
   // Función para obtener el nombre de la mesa (ahora la columna mesa guarda texto)
   const obtenerNombreMesa = (valorMesa) => {
@@ -2444,14 +2623,34 @@ export default function Pedidos() {
                 {/* Pestañas de Mesas */}
                 <div className="mb-4 sm:mb-6">
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {mesas.map(mesa => (
+                    {mesas.map((mesa, indice) => (
                       <div
                         key={mesa}
+                        data-mesa-indice={indice}
+                        onMouseDown={(e) => iniciarArrastre(e, mesa, indice)}
+                        onTouchStart={(e) => iniciarArrastre(e, mesa, indice)}
                         className={`relative group flex items-center gap-1.5 sm:gap-2.5 lg:gap-2 px-3 sm:px-5 lg:px-4 py-2 sm:py-2.5 lg:py-2 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base lg:text-sm ${
                           mesaSeleccionada === mesa
                             ? 'bg-green-600 text-white shadow-lg'
                             : 'bg-white/10 text-white hover:bg-white/20'
+                        } ${
+                          mesaArrastrando === mesa
+                            ? esArrastrando
+                              ? 'opacity-50 cursor-grabbing z-50'
+                              : 'cursor-grabbing z-50'
+                            : mesaEditando !== mesa
+                            ? 'cursor-grab active:cursor-grabbing'
+                            : ''
                         }`}
+                        style={
+                          mesaArrastrando === mesa
+                            ? {
+                                transform: `translate(${posicionActual.x - posicionInicialRef.current.x}px, ${posicionActual.y - posicionInicialRef.current.y}px)`,
+                                position: 'relative',
+                                zIndex: 50
+                              }
+                            : {}
+                        }
                       >
                         {mesaEditando === mesa ? (
                           // Modo edición
@@ -2505,7 +2704,15 @@ export default function Pedidos() {
                           // Modo visualización
                           <>
                             <button
-                              onClick={() => setMesaSeleccionada(mesa)}
+                              onClick={(e) => {
+                                // No seleccionar si se está arrastrando
+                                if (esArrastrando && mesaArrastrando === mesa) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                setMesaSeleccionada(mesa);
+                              }}
                               className="flex-1 text-left"
                             >
                               {mesa}
