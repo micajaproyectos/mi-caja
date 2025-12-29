@@ -27,6 +27,7 @@ const NavBar = () => {
   const [instagramLink, setInstagramLink] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isSavingInstagram, setIsSavingInstagram] = useState(false);
+  const [mostrarQRPreview, setMostrarQRPreview] = useState(true);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -915,24 +916,37 @@ const NavBar = () => {
 
                     {/* Mostrar QR si existe */}
                     {qrCodeUrl && (
-                      <div className="mt-4 p-4 bg-white rounded-lg">
-                        <div className="flex flex-col items-center gap-3">
-                          <img 
-                            src={qrCodeUrl} 
-                            alt="QR Code Instagram" 
-                            className="w-48 h-48 object-contain"
-                          />
-                          <button
-                            onClick={descargarQR}
-                            className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm flex items-center justify-center gap-2"
-                          >
-                            <span>📥</span>
-                            <span>Descargar QR</span>
-                          </button>
-                          <p className="text-xs text-gray-500 text-center">
-                            Comparte este QR para que tus clientes puedan seguirte en Instagram
-                          </p>
-                        </div>
+                      <div className="mt-4">
+                        {/* Botón para ocultar/mostrar previsualización */}
+                        <button
+                          onClick={() => setMostrarQRPreview(!mostrarQRPreview)}
+                          className="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-all duration-200 mb-2 flex items-center justify-center gap-2"
+                        >
+                          <span>{mostrarQRPreview ? '👁️ Ocultar' : '👁️‍🗨️ Mostrar'} Previsualización</span>
+                        </button>
+                        
+                        {/* Previsualización del QR (ocultable) */}
+                        {mostrarQRPreview && (
+                          <div className="p-4 bg-white rounded-lg">
+                            <div className="flex flex-col items-center gap-3">
+                              <img 
+                                src={qrCodeUrl} 
+                                alt="QR Code Instagram" 
+                                className="w-48 h-48 object-contain"
+                              />
+                              <button
+                                onClick={descargarQR}
+                                className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm flex items-center justify-center gap-2"
+                              >
+                                <span>📥</span>
+                                <span>Descargar QR</span>
+                              </button>
+                              <p className="text-xs text-gray-500 text-center">
+                                Comparte este QR para que tus clientes puedan seguirte en Instagram
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
