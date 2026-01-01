@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 import { authService } from '../lib/authService.js';
 
@@ -230,6 +230,18 @@ export default function Footer() {
     );
   };
 
+  // Generar partículas para el footer solo una vez
+  const footerParticles = useMemo(() => {
+    return Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: Math.random() * 2,
+      duration: 3 + Math.random() * 2,
+      opacity: 0.3 + Math.random() * 0.4,
+    }));
+  }, []);
+
   return (
     <>
       <footer className="relative bg-gray-900 text-gray-300 py-6 mt-2">
@@ -242,6 +254,32 @@ export default function Footer() {
               radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
               radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%)
             `
+          }}
+        />
+
+        {/* Efecto de partículas de fondo animadas */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {footerParticles.map((particle) => (
+            <div
+              key={particle.id}
+              className="absolute w-1 h-1 rounded-full"
+              style={{
+                backgroundColor: `rgba(34, 197, 94, ${particle.opacity})`,
+                left: particle.left,
+                top: particle.top,
+                animation: `sparkle ${particle.duration}s ease-in-out infinite`,
+                animationDelay: `${particle.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Efecto de brillo animado */}
+        <div 
+          className="absolute inset-0 opacity-25"
+          style={{
+            background: 'radial-gradient(ellipse 150% 200% at 50% -20%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.2) 40%, transparent 70%)',
+            animation: 'footerGlow 4s ease-in-out infinite',
           }}
         />
 
@@ -386,6 +424,28 @@ export default function Footer() {
             </p>
           </div>
         </div>
+
+        {/* Estilos de animación para el footer */}
+        <style>{`
+          @keyframes sparkle {
+            0%, 100% {
+              opacity: 0;
+              transform: scale(0);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.5);
+            }
+          }
+          @keyframes footerGlow {
+            0%, 100% {
+              opacity: 0.15;
+            }
+            50% {
+              opacity: 0.3;
+            }
+          }
+        `}</style>
       </footer>
 
       {/* Modal de Calificación */}

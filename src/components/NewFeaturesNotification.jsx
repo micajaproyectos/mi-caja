@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 const NewFeaturesNotification = ({ onClose, show = false }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -16,6 +16,19 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
     setTimeout(onClose, 200); // Esperar a que termine la animación
   };
 
+  // Generar confeti elements solo una vez usando useMemo
+  const confettiPieces = useMemo(() => {
+    const confettiColors = ['#22c55e', '#fbbf24', '#ef4444', '#3b82f6', '#a855f7', '#ec4899'];
+    return Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+      left: `${Math.random() * 100}%`,
+      delay: Math.random() * 2,
+      duration: 3 + Math.random() * 2,
+      rotationEnd: 360 + Math.random() * 720,
+    }));
+  }, []);
+
   // No renderizar si no debe mostrarse
   if (!show) {
     return null;
@@ -23,6 +36,41 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Animación de confeti */}
+      {isVisible && (
+        <>
+          <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 5 }}>
+            {confettiPieces.map((piece) => (
+              <div
+                key={piece.id}
+                className="absolute w-2 h-2 opacity-80"
+                style={{
+                  left: piece.left,
+                  top: '-10px',
+                  backgroundColor: piece.color,
+                  animation: `confettiFall${piece.id} ${piece.duration}s linear ${piece.delay}s forwards`,
+                  transformOrigin: 'center',
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            ${confettiPieces.map((piece) => `
+              @keyframes confettiFall${piece.id} {
+                0% {
+                  transform: translateY(0) rotate(0deg);
+                  opacity: 1;
+                }
+                100% {
+                  transform: translateY(100vh) rotate(${piece.rotationEnd}deg);
+                  opacity: 0;
+                }
+              }
+            `).join('')}
+          `}</style>
+        </>
+      )}
+
       {/* Fondo con blur */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
       

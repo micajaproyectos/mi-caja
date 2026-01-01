@@ -144,6 +144,30 @@ export default function Home() {
     }
   ], []);
 
+  // Generar partículas para la sección principal solo una vez
+  const mainParticles = useMemo(() => {
+    return Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: Math.random() * 2,
+      duration: 3 + Math.random() * 2,
+      opacity: 0.3 + Math.random() * 0.4,
+    }));
+  }, []);
+
+  // Generar partículas para el panel inferior solo una vez
+  const panelParticles = useMemo(() => {
+    return Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: Math.random() * 2,
+      duration: 3 + Math.random() * 2,
+      opacity: 0.3 + Math.random() * 0.4,
+    }));
+  }, []);
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
@@ -162,27 +186,85 @@ export default function Home() {
       {/* Efecto de vidrio esmerilado adicional */}
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
-      {/* Header con logo - Glassmorphism */}
+      {/* Header con logo - Glassmorphism con animación */}
       <div className="relative z-10 p-6">
-        <div className="flex items-center">
-          {/* Logo con sombra suave */}
-          <div className="w-16 h-16 mr-4 drop-shadow-lg">
+        {/* Efecto de brillo sutil en el fondo - se extiende hacia abajo */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            background: 'radial-gradient(ellipse 150% 200% at 50% -20%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.2) 40%, transparent 70%)',
+            animation: 'headerGlow 4s ease-in-out infinite',
+          }}
+        />
+
+        <div className="flex items-center relative">
+          {/* Logo con animación suave */}
+          <div 
+            className="w-16 h-16 mr-4 drop-shadow-lg relative"
+            style={{
+              animation: 'logoFloat 3s ease-in-out infinite',
+            }}
+          >
+            {/* Halo sutil alrededor del logo */}
+            <div 
+              className="absolute inset-0 rounded-full blur-md -z-10"
+              style={{
+                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%)',
+                animation: 'logoGlow 2.5s ease-in-out infinite',
+              }}
+            />
             <img 
               src={logo} 
               alt="Logo" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain relative z-10"
             />
           </div>
           
-          {/* Título genérico con glassmorphism */}
-          <div className="text-white">
-            <h1 className="text-xl font-bold text-gray-100 drop-shadow-sm">Bienvenido a Mi Caja</h1>
+          {/* Título con animación de entrada */}
+          <div 
+            className="text-white"
+            style={{
+              animation: 'fadeInSlide 0.8s ease-out',
+            }}
+          >
+            <h1 
+              className="text-xl font-bold drop-shadow-sm mb-1"
+              style={{
+                color: '#e5f9e5',
+                textShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                animation: 'textShimmer 3s ease-in-out infinite',
+              }}
+            >
+              Bienvenido a Mi Caja
+            </h1>
             {nombreUsuario ? (
-              <p className="text-sm text-gray-300 italic">Hola, {nombreUsuario} - Tu negocio en un solo lugar</p>
+              <p 
+                className="text-sm italic mb-1"
+                style={{
+                  color: '#c8f5c8',
+                  animation: 'fadeInUp 0.8s ease-out 0.2s both',
+                }}
+              >
+                Hola, <span className="font-semibold text-green-300">{nombreUsuario}</span> - Tu negocio en un solo lugar
+              </p>
             ) : (
-              <p className="text-sm text-gray-300 italic">Cargando...</p>
+              <p 
+                className="text-sm italic mb-1"
+                style={{
+                  color: '#c8f5c8',
+                  animation: 'fadeInUp 0.8s ease-out 0.2s both',
+                }}
+              >
+                Cargando...
+              </p>
             )}
-            <p className="text-sm text-gray-300 italic">
+            <p 
+              className="text-sm italic"
+              style={{
+                color: '#a8d5a8',
+                animation: 'fadeInUp 0.8s ease-out 0.4s both',
+              }}
+            >
               {new Date().toLocaleDateString('es-ES', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -191,35 +273,302 @@ export default function Home() {
               })}
             </p>
           </div>
+
+          {/* Partículas decorativas sutiles */}
+          <div className="absolute -top-2 -right-2 w-2 h-2 rounded-full bg-green-400/60 animate-pulse" style={{ animationDuration: '2s' }} />
+          <div className="absolute top-1/2 -right-4 w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
         </div>
+
+        {/* Estilos de animación para el header */}
+        <style>{`
+          @keyframes headerGlow {
+            0%, 100% {
+              opacity: 0.15;
+            }
+            50% {
+              opacity: 0.3;
+            }
+          }
+          @keyframes logoFloat {
+            0%, 100% {
+              transform: translateY(0px);
+            }
+            50% {
+              transform: translateY(-5px);
+            }
+          }
+          @keyframes logoGlow {
+            0%, 100% {
+              opacity: 0.4;
+              transform: scale(0.9);
+            }
+            50% {
+              opacity: 0.7;
+              transform: scale(1.1);
+            }
+          }
+          @keyframes fadeInSlide {
+            from {
+              opacity: 0;
+              transform: translateX(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+          @keyframes textShimmer {
+            0%, 100% {
+              text-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+            }
+            50% {
+              text-shadow: 0 2px 12px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.2);
+            }
+          }
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
       </div>
 
-      {/* Título principal centrado */}
+      {/* Título principal centrado con animación de nuevo comienzo */}
       <div className="relative z-10 flex items-center justify-center" style={{ height: '25vh' }}>
-        <div className="text-center animate-fade-in">
-          <h1 className="text-6xl font-bold text-white text-center drop-shadow-lg mb-4 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            Inicio
-          </h1>
-          {/* Instagram con texto descriptivo */}
-          <a
-            href="https://instagram.com/micajaempresa" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group flex items-center justify-center text-gray-300 hover:text-pink-300 transition-all duration-300 animate-fade-in-delayed max-w-2xl mx-auto"
-            title="Síguenos en Instagram"
-          >
-            <div className="text-center">
-              <p className="text-lg font-medium group-hover:underline" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                Síguenos en Instagram como <span className="text-pink-400 font-semibold">@micajaempresa</span>
+        {/* Efecto de partículas de fondo animadas */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {mainParticles.map((particle) => (
+            <div
+              key={particle.id}
+              className="absolute w-1 h-1 rounded-full"
+              style={{
+                backgroundColor: `rgba(34, 197, 94, ${particle.opacity})`,
+                left: particle.left,
+                top: particle.top,
+                animation: `sparkle ${particle.duration}s ease-in-out infinite`,
+                animationDelay: `${particle.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Efecto de brillo animado - se extiende hacia arriba para fusionarse */}
+        <div 
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: 'radial-gradient(ellipse 150% 200% at 50% 120%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.25) 35%, rgba(34, 197, 94, 0.15) 50%, transparent 75%)',
+            animation: 'pulseGlow 4s ease-in-out infinite',
+          }}
+        />
+
+        <div className="text-center relative z-10">
+          {/* Título con efecto de gradiente animado */}
+          <div className="relative inline-block mb-6">
+            <h1 
+              className="text-6xl md:text-7xl font-bold text-center drop-shadow-2xl mb-4"
+              style={{ 
+                fontFamily: 'Inter, system-ui, sans-serif',
+                background: 'linear-gradient(135deg, #ffffff 0%, #22c55e 50%, #ffffff 100%)',
+                backgroundSize: '200% 200%',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                animation: 'gradientShift 4s ease infinite',
+              }}
+            >
+              Inicio
+            </h1>
+            {/* Efecto de brillo detrás del título */}
+            <div 
+              className="absolute inset-0 blur-2xl -z-10"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.5) 0%, rgba(34, 197, 94, 0.2) 100%)',
+                animation: 'glowPulse 3s ease-in-out infinite',
+              }}
+            />
+          </div>
+
+          {/* Mensaje motivador año nuevo con efecto especial */}
+          <div className="flex items-center justify-center max-w-xl mx-auto relative px-4">
+            {/* Líneas decorativas laterales */}
+            <div 
+              className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 w-12 h-0.5"
+              style={{
+                background: 'linear-gradient(to right, transparent, rgba(34, 197, 94, 0.6))',
+                animation: 'slideInLeft 1s ease-out 0.5s both',
+              }}
+            />
+            <div 
+              className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-12 h-0.5"
+              style={{
+                background: 'linear-gradient(to left, transparent, rgba(34, 197, 94, 0.6))',
+                animation: 'slideInRight 1s ease-out 0.5s both',
+              }}
+            />
+            
+            <div 
+              className="text-center px-3 py-2 md:px-4 md:py-2.5 rounded-xl w-full relative"
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
+                animation: 'fadeInUp 1s ease-out 0.3s both',
+              }}
+            >
+              {/* Overlay animado para efecto de pulso coherente con el fondo */}
+              <div 
+                className="absolute inset-0 rounded-xl backdrop-blur-sm"
+                style={{
+                  background: 'rgba(34, 197, 94, 0.03)',
+                  animation: 'containerPulse 4s ease-in-out infinite',
+                  pointerEvents: 'none',
+                }}
+              />
+              <p 
+                className="text-sm sm:text-base md:text-lg font-medium whitespace-nowrap overflow-hidden text-ellipsis relative z-10"
+                style={{ 
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  color: '#e5f9e5',
+                  textShadow: '0 2px 10px rgba(34, 197, 94, 0.3)',
+                }}
+              >
+                Un 2026 lleno de éxito y crecimiento para tu negocio. <span className="inline-block animate-bounce" style={{ animationDuration: '2s' }}>🚀</span>
               </p>
             </div>
-          </a>
+          </div>
         </div>
+
+        {/* Estilos de animación */}
+        <style>{`
+          @keyframes sparkle {
+            0%, 100% {
+              opacity: 0;
+              transform: scale(0);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.5);
+            }
+          }
+          @keyframes pulseGlow {
+            0%, 100% {
+              opacity: 0.25;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.4;
+              transform: scale(1.05);
+            }
+          }
+          @keyframes gradientShift {
+            0%, 100% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+          }
+          @keyframes glowPulse {
+            0%, 100% {
+              opacity: 0.5;
+              transform: scale(0.95);
+            }
+            50% {
+              opacity: 0.8;
+              transform: scale(1.05);
+            }
+          }
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          @keyframes containerPulse {
+            0%, 100% {
+              opacity: 0.2;
+            }
+            50% {
+              opacity: 0.4;
+            }
+          }
+          @keyframes slideInLeft {
+            from {
+              opacity: 0;
+              transform: translateX(-20px) translateY(-50%);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0) translateY(-50%);
+            }
+          }
+          @keyframes slideInRight {
+            from {
+              opacity: 0;
+              transform: translateX(20px) translateY(-50%);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0) translateY(-50%);
+            }
+          }
+          @keyframes panelGlow {
+            0%, 100% {
+              opacity: 0.25;
+            }
+            50% {
+              opacity: 0.4;
+            }
+          }
+          @keyframes panelGlowSubtle {
+            0%, 100% {
+              opacity: 0.22;
+            }
+            50% {
+              opacity: 0.28;
+            }
+          }
+        `}</style>
       </div>
 
       {/* Panel inferior con iconos - Neumorfismo */}
       <div className="relative z-10 py-12" style={{ backgroundColor: '#1f4a1f' }}>
-        <div className="max-w-6xl mx-auto px-6">
+        {/* Efecto de partículas de fondo animadas */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {panelParticles.map((particle) => (
+            <div
+              key={particle.id}
+              className="absolute w-1 h-1 rounded-full"
+              style={{
+                backgroundColor: `rgba(34, 197, 94, ${particle.opacity})`,
+                left: particle.left,
+                top: particle.top,
+                animation: `sparkle ${particle.duration}s ease-in-out infinite`,
+                animationDelay: `${particle.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Efecto de brillo animado - continúa el efecto de la sección INICIO */}
+        <div 
+          className="absolute inset-0 opacity-25"
+          style={{
+            background: 'radial-gradient(ellipse 150% 200% at 50% 120%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.25) 35%, rgba(34, 197, 94, 0.15) 50%, transparent 75%)',
+            animation: 'panelGlowSubtle 5s ease-in-out infinite',
+          }}
+        />
+
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
             {menuItems.map((item) => (
               <button
