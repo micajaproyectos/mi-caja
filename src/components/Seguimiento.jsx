@@ -32,7 +32,7 @@ export default function Seguimiento() {
   
   // Estados para los filtros
   const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1); // Mes actual (1-12)
-  const [filtroAnio, setFiltroAnio] = useState(2025); // Año 2025 por defecto
+  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear()); // Año actual por defecto
   const [aniosDisponibles, setAniosDisponibles] = useState([]); // Años con datos disponibles
   
 
@@ -47,7 +47,7 @@ export default function Seguimiento() {
   const [datosVentasAcumuladas, setDatosVentasAcumuladas] = useState([]);
   const [loadingVentasAcumuladas, setLoadingVentasAcumuladas] = useState(false);
   const [errorVentasAcumuladas, setErrorVentasAcumuladas] = useState(null);
-  const [anioGrafico, setAnioGrafico] = useState(2025); // Año 2025 para el gráfico
+  const [anioGrafico, setAnioGrafico] = useState(new Date().getFullYear()); // Año actual para el gráfico
   const [aniosGraficoDisponibles, setAniosGraficoDisponibles] = useState([]); // Años disponibles para el gráfico
 
   // Estados para el gráfico de tipos de pago
@@ -483,8 +483,9 @@ export default function Seguimiento() {
       // Consultar cada tabla individualmente para evitar errores
       const aniosEncontrados = new Set();
       
-      // Siempre incluir el año 2025 por defecto
-      aniosEncontrados.add(2025);
+      // Siempre incluir el año actual por defecto
+      const anioActual = new Date().getFullYear();
+      aniosEncontrados.add(anioActual);
       
       // 1. Tabla ventas
       try {
@@ -497,7 +498,7 @@ export default function Seguimiento() {
           ventasData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio > 2025) aniosEncontrados.add(anio);
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
             }
           });
         }
@@ -515,7 +516,7 @@ export default function Seguimiento() {
           gastosData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio > 2025) aniosEncontrados.add(anio);
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
             }
           });
         }
@@ -534,7 +535,7 @@ export default function Seguimiento() {
           inventarioData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio > 2025) aniosEncontrados.add(anio);
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
             }
           });
         }
@@ -552,7 +553,7 @@ export default function Seguimiento() {
           proveedoresData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio > 2025) aniosEncontrados.add(anio);
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
             }
           });
         }
@@ -571,7 +572,7 @@ export default function Seguimiento() {
           clientesData.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              if (anio > 2025) aniosEncontrados.add(anio);
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
             }
           });
         }
@@ -579,38 +580,58 @@ export default function Seguimiento() {
         console.warn('⚠️ Error al consultar tabla clientes para años:', error);
       }
 
-                    // 6. Tabla pedidos
-       try {
-         const { data: pedidosData, error: pedidosError } = await supabase
-           .from('pedidos')
-           .select('fecha_cl')
-           .eq('usuario_id', usuarioId);
-         
-         if (!pedidosError && pedidosData) {
-           pedidosData.forEach(item => {
-             if (item.fecha_cl) {
-               const anio = new Date(item.fecha_cl).getFullYear();
-               if (anio >= 2025) aniosEncontrados.add(anio);
-             }
-           });
-         }
-       } catch (error) {
-         console.warn('⚠️ Error al consultar tabla pedidos para años:', error);
-       }
+      // 6. Tabla pedidos
+      try {
+        const { data: pedidosData, error: pedidosError } = await supabase
+          .from('pedidos')
+          .select('fecha_cl')
+          .eq('usuario_id', usuarioId);
+        
+        if (!pedidosError && pedidosData) {
+          pedidosData.forEach(item => {
+            if (item.fecha_cl) {
+              const anio = new Date(item.fecha_cl).getFullYear();
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('⚠️ Error al consultar tabla pedidos para años:', error);
+      }
+
+      // 7. Tabla venta_rapida
+      try {
+        const { data: ventasRapidasData, error: ventasRapidasError } = await supabase
+          .from('venta_rapida')
+          .select('fecha_cl')
+          .eq('usuario_id', usuarioId);
+        
+        if (!ventasRapidasError && ventasRapidasData) {
+          ventasRapidasData.forEach(item => {
+            if (item.fecha_cl) {
+              const anio = new Date(item.fecha_cl).getFullYear();
+              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('⚠️ Error al consultar tabla venta_rapida para años:', error);
+      }
       
       // Convertir a array y ordenar
       const aniosArray = Array.from(aniosEncontrados).sort((a, b) => b - a);
       
-      // Si no hay años disponibles, usar al menos el año 2025
+      // Si no hay años disponibles, usar al menos el año actual
       if (aniosArray.length === 0) {
-        setAniosDisponibles([2025]);
+        setAniosDisponibles([anioActual]);
       } else {
         setAniosDisponibles(aniosArray);
       }
     } catch (error) {
       console.error('❌ Error general al cargar años disponibles:', error);
-      // Fallback: usar año 2025
-      setAniosDisponibles([2025]);
+      // Fallback: usar año actual
+      const anioActual = new Date().getFullYear();
+      setAniosDisponibles([anioActual]);
     }
   };
 
@@ -634,9 +655,10 @@ export default function Seguimiento() {
       // Extraer años únicos y ordenarlos
       const aniosUnicos = [...new Set(aniosData?.map(item => item.anio) || [])].sort((a, b) => b - a);
       
-      // Si no hay años, usar al menos el año 2025
+      // Si no hay años, usar al menos el año actual
+      const anioActual = new Date().getFullYear();
       if (aniosUnicos.length === 0) {
-        setAniosGraficoDisponibles([2025]);
+        setAniosGraficoDisponibles([anioActual]);
       } else {
         setAniosGraficoDisponibles(aniosUnicos);
       }
@@ -647,8 +669,9 @@ export default function Seguimiento() {
       }
     } catch (error) {
       console.error('❌ Error al cargar años del gráfico:', error);
-      // Fallback: usar año 2025
-      setAniosGraficoDisponibles([2025]);
+      // Fallback: usar año actual
+      const anioActual = new Date().getFullYear();
+      setAniosGraficoDisponibles([anioActual]);
     }
   };
 
@@ -967,7 +990,7 @@ export default function Seguimiento() {
         .from('venta_rapida_tipo_pago_mensual')
         .select('tipo_pago, cantidad, porcentaje_mes')
         .eq('cliente_id', clienteId)
-        .eq('anio', anioGrafico)
+        .eq('anio', filtroAnio) // Usar filtroAnio para ser consistente con el selector
         .eq('mes_num', filtroMes)
         .order('cantidad', { ascending: false });
 
@@ -1053,7 +1076,7 @@ export default function Seguimiento() {
       cargarTiposPagoPedidos();
       cargarTiposPagoVentasRapidas();
     }
-  }, [clienteId, anioGrafico, filtroMes]);
+  }, [clienteId, anioGrafico, filtroMes, filtroAnio]); // Agregar filtroAnio para el gráfico de ventas rápidas
 
   // Colores para los tipos de pago en el gráfico circular
   const coloresTiposPago = {
