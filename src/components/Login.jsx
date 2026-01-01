@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { authService } from '../lib/authService.js';
@@ -63,58 +63,65 @@ function Login() {
     }
   };
 
+  // Generar partículas estáticas para el login solo una vez
+  const loginParticles = useMemo(() => {
+    return Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      opacity: 0.5 + Math.random() * 0.4, // Aumentada para mayor visibilidad
+      size: 1.5 + Math.random() * 0.5, // Tamaño variable
+    }));
+  }, []);
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
       <div 
-        className="absolute inset-0"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
           background: `
             linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
             radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%)
+            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
           `
         }}
       />
 
-      {/* Patrón de emojis de bolsas de dinero */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 100px,
-            transparent 100px,
-            transparent 200px
-          )`,
-          fontSize: '40px',
-          lineHeight: '100px',
-          opacity: 0.7
-        }}
-      >
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, 100px)',
-          gap: '50px',
-          padding: '50px'
-        }}>
-          {[...Array(100)].map((_, i) => (
-            <span key={i} style={{ 
-              opacity: 1,
-              filter: 'grayscale(100%)'
-            }}>💰</span>
-          ))}
-        </div>
+      {/* Efecto de partículas de fondo estáticas */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {loginParticles.map((particle) => (
+          <div
+            key={particle.id}
+            className="absolute rounded-full"
+            style={{
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              backgroundColor: `rgba(34, 197, 94, ${particle.opacity})`,
+              left: particle.left,
+              top: particle.top,
+              boxShadow: `0 0 ${particle.size * 2}px rgba(34, 197, 94, ${particle.opacity * 0.6})`,
+            }}
+          />
+        ))}
       </div>
+
+      {/* Efecto de brillo estático */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{
+          background: 'radial-gradient(ellipse 150% 200% at 50% 50%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.25) 35%, rgba(34, 197, 94, 0.15) 50%, transparent 75%)',
+        }}
+      />
 
       {/* Efecto de vidrio esmerilado adicional */}
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className="relative z-10 flex justify-center items-center h-screen">
+      <div className="relative z-10 flex justify-center items-center h-screen px-4 py-8">
         <div 
-          className="p-8 rounded-2xl w-96 transition-all duration-200 transform hover:scale-105"
+          className="p-6 md:p-8 rounded-2xl w-full max-w-sm md:max-w-md lg:max-w-lg transition-all duration-200 transform hover:scale-105"
           style={{
             backgroundColor: 'rgba(31, 74, 31, 0.9)',
             backdropFilter: 'blur(10px)',
@@ -244,6 +251,7 @@ function Login() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }

@@ -28,6 +28,7 @@ const NavBar = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isSavingInstagram, setIsSavingInstagram] = useState(false);
   const [mostrarQRPreview, setMostrarQRPreview] = useState(true);
+  const [logoLink, setLogoLink] = useState('');
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -57,8 +58,9 @@ const NavBar = () => {
           email: profile?.email || ''
         });
         
-        // Cargar link de Instagram
+        // Cargar link de Instagram y logo
         await cargarInstagramLink();
+        await cargarLogoLink();
       } catch (e) {
         console.error('Error cargando perfil:', e);
         setUserInfo({ nombre: 'Error', email: 'Error' });
@@ -66,8 +68,9 @@ const NavBar = () => {
         setIsLoadingProfile(false);
       }
     } else {
-      // Si ya tenemos los datos básicos, solo cargar Instagram
+      // Si ya tenemos los datos básicos, solo cargar Instagram y logo
       await cargarInstagramLink();
+      await cargarLogoLink();
     }
   };
 
@@ -97,6 +100,73 @@ const NavBar = () => {
       }
     } catch (error) {
       console.error('Error inesperado al cargar Instagram:', error);
+    }
+  };
+
+  // Función para convertir enlace de Google Drive a enlace directo
+  const convertGoogleDriveLink = (url) => {
+    if (!url || !url.includes('drive.google.com')) return url;
+    
+    // Extraer el ID del archivo del enlace de Google Drive
+    // Formato: https://drive.google.com/file/d/FILE_ID/view...
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      const fileId = match[1];
+      // Convertir a enlace directo de imagen
+      return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
+    return url;
+  };
+
+  // Función para obtener URL de imagen a través de proxy CORS
+  const getProxiedImageUrl = (url) => {
+    if (!url || url.trim() === '') return '';
+    
+    // Convertir enlaces de Google Drive primero
+    const convertedUrl = convertGoogleDriveLink(url);
+    
+    // Si es Google Drive, usar proxy también (puede tener problemas de CORS)
+    if (convertedUrl.includes('drive.google.com')) {
+      return `https://images.weserv.nl/?url=${encodeURIComponent(convertedUrl)}&output=webp`;
+    }
+    
+    // Si la URL es de Instagram o tiene problemas de CORS, usar proxy
+    if (convertedUrl.includes('instagram.com') || convertedUrl.includes('fbcdn.net')) {
+      // Usar proxy CORS público para imágenes
+      return `https://images.weserv.nl/?url=${encodeURIComponent(convertedUrl)}&output=webp`;
+    }
+    
+    return convertedUrl;
+  };
+
+  // Función para cargar el link del logo desde la base de datos
+  const cargarLogoLink = async () => {
+    try {
+      const userId = await authService.getCurrentUserId();
+      if (!userId) {
+        console.log('No hay userId para cargar logo');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('link_logo')
+        .eq('usuario_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          console.error('Error al cargar link del logo:', error);
+        }
+        return;
+      }
+
+      const link = data?.link_logo || '';
+      console.log('Logo link cargado:', link);
+      // Usar URL original o proxy según sea necesario
+      setLogoLink(link);
+    } catch (error) {
+      console.error('Error inesperado al cargar logo:', error);
     }
   };
 
@@ -569,6 +639,8 @@ const NavBar = () => {
           nombre: profile?.nombre || '',
           email: profile?.email || ''
         }));
+        // Cargar logo del usuario
+        await cargarLogoLink();
       } catch (e) {
         console.error('Error cargando datos básicos:', e);
       }
@@ -853,8 +925,35 @@ const NavBar = () => {
             }}
           >
             <div className="mb-4">
-              <h3 className="text-2xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Perfil</h3>
-              <p className="text-gray-300 text-sm">Información de tu cuenta</p>
+              <div className="flex items-center gap-3">
+                {logoLink && logoLink.trim() !== '' ? (
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 border-white/20 bg-white/5 flex items-center justify-center">
+                    <img 
+                      src={getProxiedImageUrl(logoLink)} 
+                      alt="Logo usuario" 
+                      className="w-full h-full object-cover"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        console.error('Error al cargar imagen del logo (intentando URL original):', logoLink);
+                        // Si falla el proxy, intentar con la URL original
+                        if (e.target.src !== logoLink) {
+                          e.target.src = logoLink;
+                        } else {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.style.display = 'none';
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log('Logo cargado exitosamente');
+                      }}
+                    />
+                  </div>
+                ) : null}
+                <div className="flex-1">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Perfil</h3>
+                  <p className="text-gray-300 text-xs sm:text-sm">Información de tu cuenta</p>
+                </div>
+              </div>
             </div>
             
             <div className="space-y-4 text-white">
