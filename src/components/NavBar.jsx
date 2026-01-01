@@ -782,9 +782,9 @@ const NavBar = () => {
                       <div className="flex items-center">
                         <span className="text-lg mr-2">🎉</span>
                         <div>
-                          <p className="text-white text-xs font-medium">¡Nuevas Mejoras Disponibles!</p>
+                          <p className="text-white text-xs font-medium">🎊 ¡Feliz Año Nuevo 2026!</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            Previsualización de imágenes de productos y mejoras en cuadre de caja. ¡Haz clic para ver más!
+                            El equipo de Mi Caja te desea un próspero año lleno de éxito. ¡Gracias por confiar en nosotros!
                           </p>
                         </div>
                       </div>

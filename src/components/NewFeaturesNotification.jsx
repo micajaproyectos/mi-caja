@@ -47,38 +47,30 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
         <div className="flex items-center justify-center mb-4">
           <div className="w-16 h-16 rounded-full flex items-center justify-center animate-pulse"
                style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '2px solid rgba(34, 197, 94, 0.3)' }}>
-            <span className="text-3xl">🎉</span>
+            <span className="text-3xl">🎊</span>
           </div>
         </div>
 
         {/* Contenido de la notificación */}
         <div className="text-center mb-6">
           <h3 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            ¡Nuevas Mejoras Disponibles!
+            ¡Feliz Año Nuevo 2026!
           </h3>
           
           <div className="text-left space-y-4">
-            {/* Gráficos Diarios */}
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">📊</span>
+            {/* Mensaje de saludo */}
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-2xl">🎉</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-1">Gráficos de Ventas Diarias</h4>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  Ahora puedes visualizar tus ventas día a día del mes actual. Ve a la sección de 
-                  <strong className="text-green-300"> Seguimiento</strong> y encontrarás nuevos gráficos de barras que muestran:
+                <h4 className="text-green-300 font-semibold text-lg mb-2">Saludo de Mi Caja</h4>
+                <p className="text-gray-300 text-sm leading-relaxed mb-3">
+                  El equipo de <strong className="text-green-300">Mi Caja</strong> te desea un próspero año nuevo lleno de éxito y crecimiento.
                 </p>
-                <ul className="mt-2 space-y-1 text-gray-300 text-sm">
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-400">•</span>
-                    <span><strong>Ventas Diarias:</strong> Total de ventas normales por cada día del mes</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-400">•</span>
-                    <span><strong>Ventas Rápidas Diarias:</strong> Total de ventas rápidas por cada día del mes</span>
-                  </li>
-                </ul>
-                <p className="text-gray-300 text-sm leading-relaxed mt-2">
-                  Identifica tendencias, compara días y optimiza tu estrategia de ventas con esta nueva herramienta de análisis.
+                <p className="text-gray-300 text-sm leading-relaxed mb-3">
+                  Agradecemos tu confianza en nosotros durante todo este tiempo. Estamos comprometidos en seguir brindándote las mejores herramientas para gestionar tu negocio de manera eficiente.
+                </p>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  ¡Que este 2026 esté lleno de logros y nuevas oportunidades para tu negocio! 🚀
                 </p>
               </div>
             </div>
@@ -96,7 +88,7 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
               border: '1px solid rgba(34, 197, 94, 0.3)' 
             }}
           >
-            ¡Entendido! Comenzar a usar
+            ¡Gracias! Continuar
           </button>
         </div>
       </div>

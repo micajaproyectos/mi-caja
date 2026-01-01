@@ -160,122 +160,122 @@ export default function Seguimiento() {
       const ultimoDiaDelMes = new Date(filtroAnio, filtroMes, 0).getDate();
       const fechaFin = `${filtroAnio}-${mesStr}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
 
-      // 1. Total de Ventas del mes usando la vista ventas_mensual_acum_v2
-      // Primero obtener el cliente_id del usuario
-      const { data: clienteData, error: clienteError } = await supabase
-        .from('usuarios')
-        .select('cliente_id')
-        .eq('usuario_id', usuarioId)
-        .single();
+      // Obtener cliente_id: usar el estado si ya existe, sino consultarlo
+      let clienteIdParaTotales = clienteId;
+      if (!clienteIdParaTotales) {
+        const { data: clienteData, error: clienteError } = await supabase
+          .from('usuarios')
+          .select('cliente_id')
+          .eq('usuario_id', usuarioId)
+          .single();
 
-      let totalVentas = 0;
-      if (!clienteError && clienteData) {
-        const { data: ventasData, error: ventasError } = await supabase
+        if (clienteError || !clienteData) {
+          console.error('❌ Error al obtener cliente_id:', clienteError);
+          setError('Error al obtener datos del cliente');
+          return;
+        }
+        clienteIdParaTotales = clienteData.cliente_id;
+        // Guardar en estado para próximas llamadas
+        setClienteId(clienteIdParaTotales);
+      }
+
+      // Ejecutar todas las consultas en paralelo usando Promise.all()
+      const [
+        ventasResult,
+        gastosResult,
+        inventarioResult,
+        proveedoresResult,
+        clientesResult,
+        pedidosResult,
+        ventasRapidasResult
+      ] = await Promise.all([
+        // 1. Total de Ventas del mes usando la vista ventas_mensual_acum_v2
+        supabase
           .from('ventas_mensual_acum_v2')
           .select('total_mes')
-          .eq('cliente_id', clienteData.cliente_id)
+          .eq('cliente_id', clienteIdParaTotales)
           .eq('anio', filtroAnio)
           .eq('mes_num', filtroMes)
-          .maybeSingle(); // Usa maybeSingle() para permitir 0 resultados sin error
+          .maybeSingle(),
+        
+        // 2. Total de Gastos del mes
+        supabase
+          .from('gasto')
+          .select('monto, fecha_cl')
+          .gte('fecha_cl', fechaInicio)
+          .lte('fecha_cl', fechaFin),
+        
+        // 3. Total de Inventario (costo_total) del mes
+        supabase
+          .from('inventario')
+          .select('costo_total, fecha_ingreso')
+          .eq('usuario_id', usuarioId)
+          .gte('fecha_ingreso', `${fechaInicio}T00:00:00`)
+          .lte('fecha_ingreso', `${fechaFin}T23:59:59`),
+        
+        // 4. Total de Proveedores del mes
+        supabase
+          .from('proveedores')
+          .select('monto, fecha_cl')
+          .gte('fecha_cl', fechaInicio)
+          .lte('fecha_cl', fechaFin),
+        
+        // 5. Total de Clientes del mes (suma de totales de pedidos)
+        supabase
+          .from('clientes')
+          .select('total_final, fecha_cl')
+          .eq('usuario_id', usuarioId)
+          .not('total_final', 'is', null)
+          .gte('fecha_cl', fechaInicio)
+          .lte('fecha_cl', fechaFin),
+        
+        // 6. Total de Pedidos del mes (suma de total_final de pedidos)
+        supabase
+          .from('pedidos')
+          .select('total_final, propina, fecha_cl')
+          .eq('usuario_id', usuarioId)
+          .not('total_final', 'is', null)
+          .gte('fecha_cl', fechaInicio)
+          .lte('fecha_cl', fechaFin),
+        
+        // 7. Total de Ventas Rápidas del mes
+        supabase
+          .from('venta_rapida')
+          .select('monto, fecha_cl')
+          .eq('usuario_id', usuarioId)
+          .gte('fecha_cl', fechaInicio)
+          .lte('fecha_cl', fechaFin)
+      ]);
 
-        if (ventasError) {
-          console.error('❌ Error al cargar ventas desde vista:', ventasError);
-        } else if (ventasData) {
-          totalVentas = parseFloat(ventasData.total_mes) || 0;
-        }
-      }
+      // Procesar resultados
+      const totalVentas = ventasResult.error ? 0 : (parseFloat(ventasResult.data?.total_mes) || 0);
+      
+      const totalGastos = gastosResult.error ? 0 : (gastosResult.data?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0);
+      const totalInventario = inventarioResult.error ? 0 : (inventarioResult.data?.reduce((sum, item) => sum + (parseFloat(item.costo_total) || 0), 0) || 0);
+      const totalProveedores = proveedoresResult.error ? 0 : (proveedoresResult.data?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0);
+      const totalClientes = clientesResult.error ? 0 : (clientesResult.data?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0);
+      const totalPedidos = pedidosResult.error ? 0 : (pedidosResult.data?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0);
+      const totalPropinas = pedidosResult.error ? 0 : (pedidosResult.data?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0);
+      const totalVentasRapidas = ventasRapidasResult.error ? 0 : (ventasRapidasResult.data?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0);
 
-      // 2. Total de Gastos del mes
-      const { data: gastosData, error: gastosError } = await supabase
-        .from('gasto')
-        .select('monto, fecha_cl')
-        .gte('fecha_cl', fechaInicio)
-        .lte('fecha_cl', fechaFin);
-
-      if (gastosError) {
-        console.error('❌ Error al cargar gastos:', gastosError);
-      }
-
-      // 3. Total de Inventario (costo_total) del mes
-      // Filtrar por fecha_ingreso en lugar de fecha_cl para evitar problemas de zona horaria
-      const { data: inventarioData, error: inventarioError } = await supabase
-        .from('inventario')
-        .select('costo_total, fecha_ingreso')
-        .eq('usuario_id', usuarioId)
-        .gte('fecha_ingreso', `${fechaInicio}T00:00:00`)
-        .lte('fecha_ingreso', `${fechaFin}T23:59:59`);
-
-      if (inventarioError) {
-        console.error('❌ Error al cargar inventario:', inventarioError);
-      }
-
-      // 4. Total de Proveedores del mes
-      const { data: proveedoresData, error: proveedoresError } = await supabase
-        .from('proveedores')
-        .select('monto, fecha_cl')
-        .gte('fecha_cl', fechaInicio)
-        .lte('fecha_cl', fechaFin);
-
-      if (proveedoresError) {
-        console.error('❌ Error al cargar proveedores:', proveedoresError);
-      }
-
-      // 5. Total de Clientes del mes (suma de totales de pedidos)
-      const { data: clientesData, error: clientesError } = await supabase
-        .from('clientes')
-        .select('total_final, fecha_cl')
-        .eq('usuario_id', usuarioId)
-        .not('total_final', 'is', null)
-        .gte('fecha_cl', fechaInicio)
-        .lte('fecha_cl', fechaFin);
-
-      if (clientesError) {
-        console.error('❌ Error al cargar clientes:', clientesError);
-      }
-
-                    // 6. Total de Pedidos del mes (suma de total_final de pedidos)
-       const { data: pedidosData, error: pedidosError } = await supabase
-         .from('pedidos')
-         .select('total_final, propina, fecha_cl')
-         .eq('usuario_id', usuarioId)
-         .not('total_final', 'is', null)
-         .gte('fecha_cl', fechaInicio)
-         .lte('fecha_cl', fechaFin);
-
-       if (pedidosError) {
-         console.error('❌ Error al cargar pedidos:', pedidosError);
-       }
-
-      // 7. Total de Ventas Rápidas del mes
-      const { data: ventasRapidasData, error: ventasRapidasError } = await supabase
-        .from('venta_rapida')
-        .select('monto, fecha_cl')
-        .eq('usuario_id', usuarioId)
-        .gte('fecha_cl', fechaInicio)
-        .lte('fecha_cl', fechaFin);
-
-      if (ventasRapidasError) {
-        console.error('❌ Error al cargar ventas rápidas:', ventasRapidasError);
-      }
-
-                    // Calcular totales (totalVentas ya se calculó arriba usando la vista)
-       const totalGastos = gastosData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
-       const totalInventario = inventarioData?.reduce((sum, item) => sum + (parseFloat(item.costo_total) || 0), 0) || 0;
-       const totalProveedores = proveedoresData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
-       const totalClientes = clientesData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
-      const totalPedidos = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.total_final) || 0), 0) || 0;
-      const totalPropinas = pedidosData?.reduce((sum, item) => sum + (parseFloat(item.propina) || 0), 0) || 0;
-      const totalVentasRapidas = ventasRapidasData?.reduce((sum, item) => sum + (parseFloat(item.monto) || 0), 0) || 0;
+      // Log errores si existen (sin detener el proceso)
+      if (ventasResult.error) console.error('❌ Error al cargar ventas desde vista:', ventasResult.error);
+      if (gastosResult.error) console.error('❌ Error al cargar gastos:', gastosResult.error);
+      if (inventarioResult.error) console.error('❌ Error al cargar inventario:', inventarioResult.error);
+      if (proveedoresResult.error) console.error('❌ Error al cargar proveedores:', proveedoresResult.error);
+      if (clientesResult.error) console.error('❌ Error al cargar clientes:', clientesResult.error);
+      if (pedidosResult.error) console.error('❌ Error al cargar pedidos:', pedidosResult.error);
+      if (ventasRapidasResult.error) console.error('❌ Error al cargar ventas rápidas:', ventasRapidasResult.error);
 
       setTotales({
-        ventas: totalVentas, // Solo ventas de la tabla ventas
+        ventas: totalVentas,
         gastos: totalGastos,
         inventario: totalInventario,
         proveedores: totalProveedores,
         clientes: totalClientes,
-        pedidos: totalPedidos, // Total de pedidos separado
-        propinas: totalPropinas, // Total de propinas del mes
-        ventasRapidas: totalVentasRapidas // Total de ventas rápidas del mes
+        pedidos: totalPedidos,
+        propinas: totalPropinas,
+        ventasRapidas: totalVentasRapidas
       });
 
     } catch (error) {
@@ -480,143 +480,84 @@ export default function Seguimiento() {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Consultar cada tabla individualmente para evitar errores
-      const aniosEncontrados = new Set();
-      
       // Siempre incluir el año actual por defecto
       const anioActual = new Date().getFullYear();
-      aniosEncontrados.add(anioActual);
+      const aniosEncontrados = new Set([anioActual]);
       
-      // 1. Tabla ventas
-      try {
-        const { data: ventasData, error: ventasError } = await supabase
+      // Ejecutar todas las consultas en paralelo usando Promise.all()
+      const [
+        ventasResult,
+        gastosResult,
+        inventarioResult,
+        proveedoresResult,
+        clientesResult,
+        pedidosResult,
+        ventasRapidasResult
+      ] = await Promise.all([
+        // 1. Tabla ventas
+        supabase
           .from('ventas')
           .select('fecha_cl')
-          .eq('usuario_id', usuarioId);
+          .eq('usuario_id', usuarioId),
         
-        if (!ventasError && ventasData) {
-          ventasData.forEach(item => {
-            if (item.fecha_cl) {
-              const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla ventas para años:', error);
-      }
-
-      // 2. Tabla gasto
-      try {
-        const { data: gastosData, error: gastosError } = await supabase
+        // 2. Tabla gasto
+        supabase
           .from('gasto')
-          .select('fecha_cl');
+          .select('fecha_cl'),
         
-        if (!gastosError && gastosData) {
-          gastosData.forEach(item => {
-            if (item.fecha_cl) {
-              const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla gasto para años:', error);
-      }
-
-      // 3. Tabla inventario
-      try {
-        const { data: inventarioData, error: inventarioError } = await supabase
+        // 3. Tabla inventario
+        supabase
           .from('inventario')
           .select('fecha_cl')
-          .eq('usuario_id', usuarioId);
+          .eq('usuario_id', usuarioId),
         
-        if (!inventarioError && inventarioData) {
-          inventarioData.forEach(item => {
-            if (item.fecha_cl) {
-              const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla inventario para años:', error);
-      }
-
-      // 4. Tabla proveedores
-      try {
-        const { data: proveedoresData, error: proveedoresError } = await supabase
+        // 4. Tabla proveedores
+        supabase
           .from('proveedores')
-          .select('fecha_cl');
+          .select('fecha_cl'),
         
-        if (!proveedoresError && proveedoresData) {
-          proveedoresData.forEach(item => {
-            if (item.fecha_cl) {
-              const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla proveedores para años:', error);
-      }
-
-      // 5. Tabla clientes
-      try {
-        const { data: clientesData, error: clientesError } = await supabase
+        // 5. Tabla clientes
+        supabase
           .from('clientes')
           .select('fecha_cl')
-          .eq('usuario_id', usuarioId);
+          .eq('usuario_id', usuarioId),
         
-        if (!clientesError && clientesData) {
-          clientesData.forEach(item => {
-            if (item.fecha_cl) {
-              const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla clientes para años:', error);
-      }
-
-      // 6. Tabla pedidos
-      try {
-        const { data: pedidosData, error: pedidosError } = await supabase
+        // 6. Tabla pedidos
+        supabase
           .from('pedidos')
           .select('fecha_cl')
-          .eq('usuario_id', usuarioId);
+          .eq('usuario_id', usuarioId),
         
-        if (!pedidosError && pedidosData) {
-          pedidosData.forEach(item => {
-            if (item.fecha_cl) {
-              const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla pedidos para años:', error);
-      }
-
-      // 7. Tabla venta_rapida
-      try {
-        const { data: ventasRapidasData, error: ventasRapidasError } = await supabase
+        // 7. Tabla venta_rapida
+        supabase
           .from('venta_rapida')
           .select('fecha_cl')
-          .eq('usuario_id', usuarioId);
-        
-        if (!ventasRapidasError && ventasRapidasData) {
-          ventasRapidasData.forEach(item => {
+          .eq('usuario_id', usuarioId)
+      ]);
+
+      // Procesar resultados y extraer años únicos
+      const procesarAños = (data, error, tablaNombre) => {
+        if (error) {
+          console.warn(`⚠️ Error al consultar tabla ${tablaNombre} para años:`, error);
+          return;
+        }
+        if (data) {
+          data.forEach(item => {
             if (item.fecha_cl) {
               const anio = new Date(item.fecha_cl).getFullYear();
-              aniosEncontrados.add(anio); // Incluir todos los años, no solo >= actual
+              aniosEncontrados.add(anio);
             }
           });
         }
-      } catch (error) {
-        console.warn('⚠️ Error al consultar tabla venta_rapida para años:', error);
-      }
+      };
+
+      procesarAños(ventasResult.data, ventasResult.error, 'ventas');
+      procesarAños(gastosResult.data, gastosResult.error, 'gasto');
+      procesarAños(inventarioResult.data, inventarioResult.error, 'inventario');
+      procesarAños(proveedoresResult.data, proveedoresResult.error, 'proveedores');
+      procesarAños(clientesResult.data, clientesResult.error, 'clientes');
+      procesarAños(pedidosResult.data, pedidosResult.error, 'pedidos');
+      procesarAños(ventasRapidasResult.data, ventasRapidasResult.error, 'venta_rapida');
       
       // Convertir a array y ordenar
       const aniosArray = Array.from(aniosEncontrados).sort((a, b) => b - a);
@@ -653,19 +594,19 @@ export default function Seguimiento() {
       }
 
       // Extraer años únicos y ordenarlos
-      const aniosUnicos = [...new Set(aniosData?.map(item => item.anio) || [])].sort((a, b) => b - a);
+      const aniosUnicos = [...new Set(aniosData?.map(item => item.anio) || [])];
       
-      // Si no hay años, usar al menos el año actual
+      // Siempre incluir el año actual en la lista, incluso si no hay datos aún
       const anioActual = new Date().getFullYear();
-      if (aniosUnicos.length === 0) {
-        setAniosGraficoDisponibles([anioActual]);
-      } else {
-        setAniosGraficoDisponibles(aniosUnicos);
-      }
+      const aniosConActual = [...new Set([...aniosUnicos, anioActual])].sort((a, b) => b - a);
+      
+      setAniosGraficoDisponibles(aniosConActual);
 
-      // Si el año actual del gráfico no está en la lista, usar el primer año disponible
-      if (aniosUnicos.length > 0 && !aniosUnicos.includes(anioGrafico)) {
-        setAnioGrafico(aniosUnicos[0]);
+      // Solo cambiar el año seleccionado si el año actual NO está en la lista Y el año actual del gráfico no está en la lista
+      // Pero como siempre incluimos el año actual, esto solo se ejecutará si anioGrafico no es el año actual
+      if (!aniosConActual.includes(anioGrafico)) {
+        // Si el año actual no está seleccionado, usar el año actual (que siempre está en la lista ahora)
+        setAnioGrafico(anioActual);
       }
     } catch (error) {
       console.error('❌ Error al cargar años del gráfico:', error);
