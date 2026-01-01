@@ -432,20 +432,8 @@ export default function RegistroVenta() {
   // Función para compatibilidad (mantiene la misma interfaz)
   const calcularTotalVenta = () => totalVenta;
   
-  // Función para calcular el vuelto
-  const calcularVuelto = () => {
-    const montoPagadoNum = parseFloat(montoPagado) || 0;
-    return montoPagadoNum - totalVenta;
-  };
-
-  // Función para calcular el total de caja (caja inicial + acumulado real)
-  const calcularTotalCaja = () => {
-    const cajaInicialNum = parseFloat(cajaInicial) || 0;
-    return cajaInicialNum + calcularAcumuladoReal();
-  };
-
-  // Función para calcular el acumulado real desde las ventas registradas
-  const calcularAcumuladoReal = () => {
+  // Función para calcular el acumulado real desde las ventas registradas (MEMOIZADA para evitar recalcular en cada render)
+  const acumuladoReal = useMemo(() => {
     const fechaActual = obtenerFechaActual();
     const ventasEfectivoHoy = ventasRegistradas.filter(venta => {
       const fechaVenta = venta.fecha_cl || venta.fecha;
@@ -461,7 +449,28 @@ export default function RegistroVenta() {
     }, 0);
 
     return acumulado;
-  };
+  }, [ventasRegistradas]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularAcumuladoReal = () => acumuladoReal;
+
+  // Función para calcular el total de caja (caja inicial + acumulado real) (MEMOIZADA para evitar recalcular en cada render)
+  const totalCaja = useMemo(() => {
+    const cajaInicialNum = parseFloat(cajaInicial) || 0;
+    return cajaInicialNum + acumuladoReal;
+  }, [cajaInicial, acumuladoReal]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularTotalCaja = () => totalCaja;
+
+  // Función para calcular el vuelto (MEMOIZADA para evitar recalcular en cada render)
+  const vuelto = useMemo(() => {
+    const montoPagadoNum = parseFloat(montoPagado) || 0;
+    return montoPagadoNum - totalVenta;
+  }, [montoPagado, totalVenta]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularVuelto = () => vuelto;
 
   // Función para filtrar ventas usando fecha_cl
   const filtrarVentas = useCallback(() => {
@@ -2402,7 +2411,7 @@ export default function RegistroVenta() {
                       </label>
                       <div className="bg-white/10 border border-green-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
                         <p className="text-green-300 text-lg md:text-xl lg:text-2xl font-bold">
-                          ${calcularAcumuladoReal().toLocaleString('es-CL')}
+                          ${acumuladoReal.toLocaleString('es-CL')}
                         </p>
                       </div>
                     </div>
@@ -2414,7 +2423,7 @@ export default function RegistroVenta() {
                       </label>
                       <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
                         <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
-                          ${calcularTotalCaja().toLocaleString('es-CL')}
+                          ${totalCaja.toLocaleString('es-CL')}
                         </p>
                       </div>
                     </div>
@@ -2425,15 +2434,15 @@ export default function RegistroVenta() {
                         <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
                           Vuelto a entregar:
                         </label>
-                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 md:p-3 text-center flex items-center justify-center flex-col`}>
-                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-lg md:text-xl lg:text-2xl font-bold`}>
-                            {calcularVuelto() >= 0 ? (
-                              `$${calcularVuelto().toLocaleString('es-CL')}`
+                        <div className={`${vuelto >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 md:p-3 text-center flex items-center justify-center flex-col`}>
+                          <p className={`${vuelto >= 0 ? 'text-green-300' : 'text-red-300'} text-lg md:text-xl lg:text-2xl font-bold`}>
+                            {vuelto >= 0 ? (
+                              `$${vuelto.toLocaleString('es-CL')}`
                             ) : (
-                              `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                              `Falta: $${Math.abs(vuelto).toLocaleString('es-CL')}`
                             )}
                           </p>
-                          {calcularVuelto() < 0 && (
+                          {vuelto < 0 && (
                             <p className="text-red-200 text-xs mt-1">
                               ⚠️ Insuficiente
                             </p>

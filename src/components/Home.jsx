@@ -16,7 +16,9 @@ export default function Home() {
         const userData = await authService.getCurrentUser();
         setNombreUsuario(userData?.nombre || '');
       } catch (error) {
-        console.error('Error al cargar datos del usuario:', error);
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error al cargar datos del usuario:', error);
+        }
         setNombreUsuario('');
       }
     };

@@ -144,7 +144,6 @@ const NavBar = () => {
     try {
       const userId = await authService.getCurrentUserId();
       if (!userId) {
-        console.log('No hay userId para cargar logo');
         return;
       }
 
@@ -934,7 +933,6 @@ const NavBar = () => {
                       className="w-full h-full object-cover"
                       crossOrigin="anonymous"
                       onError={(e) => {
-                        console.error('Error al cargar imagen del logo (intentando URL original):', logoLink);
                         // Si falla el proxy, intentar con la URL original
                         if (e.target.src !== logoLink) {
                           e.target.src = logoLink;
@@ -942,9 +940,6 @@ const NavBar = () => {
                           e.target.style.display = 'none';
                           e.target.parentElement.style.display = 'none';
                         }
-                      }}
-                      onLoad={() => {
-                        console.log('Logo cargado exitosamente');
                       }}
                     />
                   </div>

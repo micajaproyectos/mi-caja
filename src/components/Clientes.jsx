@@ -82,6 +82,27 @@ export default function Clientes() {
     mes: '',
     ano: ''
   });
+
+  // Contador de registros con total_final (MEMOIZADO para evitar recalcular en cada render)
+  const cantidadRegistrosConTotalFinal = useMemo(() => {
+    return registrosPedidos.filter(r => r.total_final && r.total_final > 0).length;
+  }, [registrosPedidos]);
+
+  // Total del resumen de clientes (MEMOIZADO para evitar recalcular en cada render)
+  const totalResumenClientes = useMemo(() => {
+    return resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0);
+  }, [resumenClientes]);
+
+  // Estadísticas del resumen (MEMOIZADAS para evitar recalcular en cada render)
+  const estadisticasResumen = useMemo(() => {
+    const pagados = resumenClientes.filter(e => estadosPago[e.nombre] === 'pagado').length;
+    const pendientes = resumenClientes.filter(e => !estadosPago[e.nombre] || estadosPago[e.nombre] === 'pendiente').length;
+    const totalCobrado = resumenClientes
+      .filter(e => estadosPago[e.nombre] === 'pagado')
+      .reduce((total, e) => total + e.montoTotal, 0);
+    
+    return { pagados, pendientes, totalCobrado };
+  }, [resumenClientes, estadosPago]);
   
   // Función para cargar empresas únicas del usuario autenticado
   // ✅ Esta función carga desde la base de datos, por lo que refleja el estado real
@@ -306,8 +327,8 @@ export default function Clientes() {
 
       setRegistrosPedidos(data || []);
       
-      // También calcular resumen de clientes después de cargar registros
-      await calcularResumenClientes();
+      // El resumen se calculará automáticamente cuando cambien los filtros del resumen
+      // mediante el useEffect correspondiente, evitando llamadas duplicadas
     } catch (error) {
       console.error('Error inesperado al cargar registros:', error);
     } finally {
@@ -896,12 +917,15 @@ export default function Clientes() {
     setProductosDelPedido(prev => prev.filter(producto => producto.id !== id));
   };
 
-  // Función para calcular el total del pedido
-  const calcularTotalPedido = () => {
+  // Función para calcular el total del pedido (MEMOIZADA para evitar recalcular en cada render)
+  const totalPedido = useMemo(() => {
     return productosDelPedido.reduce((total, producto) => {
       return total + parseInt(producto.total || 0);
     }, 0);
-  };
+  }, [productosDelPedido]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularTotalPedido = () => totalPedido;
 
   // Función para limpiar formulario
   const limpiarFormulario = () => {
@@ -1417,7 +1441,7 @@ export default function Clientes() {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-white font-bold">📋 Productos del Pedido ({productosDelPedido.length})</h4>
                       <div className="text-white font-bold">
-                        Total Pedido: ${formatearNumero(calcularTotalPedido())}
+                        Total Pedido: ${formatearNumero(totalPedido)}
                       </div>
                     </div>
                     
@@ -1590,9 +1614,9 @@ export default function Clientes() {
                   <div className="p-4 border-b border-white/10">
                     <p className="text-white font-medium">
                       {(filtros.producto || filtros.fecha_especifica || filtros.mes || filtros.ano) ? (
-                        `Registros filtrados: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                        `Registros filtrados: ${cantidadRegistrosConTotalFinal}`
                       ) : (
-                        `Registros del mes: ${registrosPedidos.filter(r => r.total_final && r.total_final > 0).length}`
+                        `Registros del mes: ${cantidadRegistrosConTotalFinal}`
                       )}
                     </p>
               </div>
@@ -1912,9 +1936,9 @@ export default function Clientes() {
                 <div className="p-4 border-b border-white/10">
                   <p className="text-white font-medium">
                     {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? (
-                      `Empresas filtradas: ${resumenClientes.length} | Total filtrado: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
+                      `Empresas filtradas: ${resumenClientes.length} | Total filtrado: ${formatearNumero(totalResumenClientes)}`
                     ) : (
-                      `Empresas del mes: ${resumenClientes.length} | Total del mes: ${formatearNumero(resumenClientes.reduce((total, empresa) => total + empresa.montoTotal, 0))}`
+                      `Empresas del mes: ${resumenClientes.length} | Total del mes: ${formatearNumero(totalResumenClientes)}`
                     )}
                   </p>
                 </div>
@@ -1998,7 +2022,7 @@ export default function Clientes() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div>
                       <div className="text-green-400 text-lg font-bold">
-                        {resumenClientes.filter(e => estadosPago[e.nombre] === 'pagado').length}
+                        {estadisticasResumen.pagados}
                       </div>
                       <div className="text-gray-300 text-sm">
                         {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? 
@@ -2009,7 +2033,7 @@ export default function Clientes() {
                     </div>
                     <div>
                       <div className="text-orange-400 text-lg font-bold">
-                        {resumenClientes.filter(e => !estadosPago[e.nombre] || estadosPago[e.nombre] === 'pendiente').length}
+                        {estadisticasResumen.pendientes}
                       </div>
                       <div className="text-gray-300 text-sm">
                         {(filtrosResumen.mes || filtrosResumen.ano) ? 
@@ -2020,11 +2044,7 @@ export default function Clientes() {
                     </div>
                     <div>
                       <div className="text-blue-400 text-lg font-bold">
-                        ${formatearNumero(
-                          resumenClientes
-                            .filter(e => estadosPago[e.nombre] === 'pagado')
-                            .reduce((total, e) => total + e.montoTotal, 0)
-                        )}
+                        ${formatearNumero(estadisticasResumen.totalCobrado)}
                       </div>
                       <div className="text-gray-300 text-sm">
                         {(filtrosResumen.nombre || filtrosResumen.mes || filtrosResumen.ano) ? 
