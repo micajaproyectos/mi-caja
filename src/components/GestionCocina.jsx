@@ -314,10 +314,61 @@ export default function GestionCocina() {
       }
       
       console.log(`✅ Todos los productos actualizados a ${nuevoEstado}`);
-      
+
+      // Si se marcó como terminado, crear notificación en Supabase
+      if (nuevoEstado === 'terminado') {
+        try {
+          // Obtener usuario_id
+          const usuarioId = await authService.getCurrentUserId();
+          if (!usuarioId) {
+            console.error('❌ No hay usuario autenticado para crear notificación');
+            return;
+          }
+
+          // Obtener cliente_id para el INSERT (requerido por RLS)
+          const { data: usuarioData, error: usuarioError } = await supabase
+            .from('usuarios')
+            .select('cliente_id')
+            .eq('usuario_id', usuarioId)
+            .single();
+
+          if (usuarioError || !usuarioData) {
+            console.error('❌ Error al obtener cliente_id:', usuarioError);
+            return;
+          }
+
+          const cliente_id = usuarioData.cliente_id;
+
+          // Extraer información de productos para la notificación
+          const productos = mesa.pedidos.map(pedido => ({
+            producto: pedido.producto,
+            cantidad: pedido.cantidad,
+            unidad: pedido.unidad || ''
+          }));
+          
+          // Insertar notificación en Supabase
+          const { error: notificacionError } = await supabase
+            .from('notificaciones_pedidos_terminados')
+            .insert([{
+              usuario_id: usuarioId,
+              cliente_id: cliente_id,
+              mesa: mesa.mesa,
+              productos: productos
+            }]);
+
+          if (notificacionError) {
+            console.error('❌ Error al crear notificación:', notificacionError);
+          } else {
+            console.log('✅ Notificación creada exitosamente');
+          }
+        } catch (error) {
+          console.error('❌ Error inesperado al crear notificación:', error);
+        }
+      }
+
       // Recargar pedidos manualmente para asegurar actualización inmediata
       await cargarPedidosCocina();
-      
+
     } catch (error) {
       console.error('❌ Error al cambiar estado de la mesa:', error);
       alert('❌ Error al actualizar el estado del pedido');

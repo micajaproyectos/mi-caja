@@ -22,9 +22,10 @@ import BarcodeScanner from './BarcodeScanner';
 // ========================================
 // 🖨️ CONFIGURACIÓN DE IMPRESIÓN TÉRMICA
 // ========================================
-// Cambiar a true para activar la impresión térmica
-// Requiere: Impresora compatible con Web Serial API o drivers específicos
-const IMPRESION_TERMICA_HABILITADA = false;
+// Usa window.print() - compatible con impresoras térmicas estándar de Windows
+// Modelo: XPrinter XP-58IIH (58mm)
+// El navegador Chrome/Edge recordará la impresora seleccionada
+const IMPRESION_TERMICA_HABILITADA = true;
 // ========================================
 
 export default function RegistroVenta() {
@@ -89,9 +90,6 @@ export default function RegistroVenta() {
   const [ventasRegistradas, setVentasRegistradas] = useState([]);
   const [loadingVentas, setLoadingVentas] = useState(false); // Para cargar tabla de ventas
   const [loadingProcesar, setLoadingProcesar] = useState(false); // Para botón "Procesar Venta"
-  
-  // Estados para impresora térmica
-  const [impresoraConectada, setImpresoraConectada] = useState(false);
   
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
@@ -1340,38 +1338,10 @@ export default function RegistroVenta() {
     }
     
     // 🖨️ PREGUNTAR SI DESEA IMPRIMIR **ANTES** DE REGISTRAR (mientras aún es un "user gesture")
-    // ⚠️ DESACTIVADO TEMPORALMENTE - Cambiar IMPRESION_TERMICA_HABILITADA a true para activar
     let deseaImprimir = false;
-    let impresoraLista = false;
     
     if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported()) {
       deseaImprimir = await mostrarConfirmacion('¿Desea imprimir el recibo de esta venta?');
-      
-      if (deseaImprimir) {
-        try {
-          // Conectar AHORA, mientras aún es un user gesture válido
-          if (!impresoraConectada) {
-            mostrarNotificacion('🖨️ Selecciona tu impresora...', 'info');
-            await thermalPrinter.connect();
-            setImpresoraConectada(true);
-            mostrarNotificacion('✅ Impresora conectada', 'success');
-          }
-          impresoraLista = true;
-        } catch (error) {
-          console.error('❌ Error al conectar impresora:', error);
-          
-          if (error.message?.includes('No se seleccionó')) {
-            mostrarNotificacion('⚠️ No se seleccionó ninguna impresora. Continuando sin imprimir.', 'warning');
-          } else if (error.message?.includes('Permiso denegado')) {
-            mostrarNotificacion('❌ Permiso de impresora denegado. Continuando sin imprimir.', 'error');
-          } else {
-            mostrarNotificacion(`⚠️ Error al conectar impresora. Continuando sin imprimir.`, 'warning');
-          }
-          
-          setImpresoraConectada(false);
-          deseaImprimir = false; // No intentar imprimir si falló la conexión
-        }
-      }
     }
     
     // ⚡ AHORA SÍ activar loading para registrar la venta
@@ -1431,8 +1401,12 @@ export default function RegistroVenta() {
       mostrarNotificacion(`✅ Venta registrada correctamente con ${productosVenta.length} productos. Total: $${totalVenta.toLocaleString()}`, 'success');
       
       // 🖨️ IMPRIMIR SI SE SOLICITÓ AL INICIO
-      if (deseaImprimir && impresoraLista) {
+      if (deseaImprimir) {
         try {
+          // Obtener nombre del usuario para el recibo
+          const usuarioActual = await authService.getCurrentUser();
+          const nombreUsuario = usuarioActual?.nombre || 'MI CAJA';
+          
           // Preparar datos del recibo
           const datosRecibo = {
             fecha: venta.fecha,
@@ -1447,23 +1421,17 @@ export default function RegistroVenta() {
             total: totalVenta
           };
           
-          // Imprimir recibo
-          mostrarNotificacion('🖨️ Imprimiendo recibo...', 'info');
-          await thermalPrinter.printReceipt(datosRecibo);
-          mostrarNotificacion('✅ Recibo impreso correctamente', 'success');
+          // Imprimir recibo (Chrome mostrará el diálogo de impresión)
+          mostrarNotificacion('🖨️ Abriendo diálogo de impresión...', 'info');
+          await thermalPrinter.printReceipt(datosRecibo, nombreUsuario);
+          mostrarNotificacion('✅ Recibo enviado a impresora', 'success');
           
-          // Preguntar si desea abrir el cajón (solo si es efectivo)
-          if (venta.tipo_pago === 'efectivo') {
-            const abrirCajon = await mostrarConfirmacion('¿Desea abrir el cajón de efectivo?');
-            if (abrirCajon) {
-              await thermalPrinter.openDrawer();
-              mostrarNotificacion('✅ Cajón abierto', 'success');
-            }
-          }
+          // Nota: No se puede abrir cajón de efectivo con window.print()
+          // Si necesitas esta funcionalidad, considera usar un servidor Node.js
+          
         } catch (error) {
           console.error('❌ Error al imprimir:', error);
           mostrarNotificacion(`❌ Error al imprimir: ${error.message}`, 'error');
-          setImpresoraConectada(false);
         }
       }
       
@@ -1538,6 +1506,97 @@ export default function RegistroVenta() {
       mostrarNotificacion('❌ Error inesperado al eliminar la venta', 'error');
     } finally {
       setLoadingVentas(false);
+    }
+  };
+
+  // Función para imprimir ventas seleccionadas
+  const imprimirVentasSeleccionadas = async () => {
+    if (ventasSeleccionadas.length === 0) {
+      mostrarNotificacion('⚠️ No hay ventas seleccionadas para imprimir', 'warning');
+      return;
+    }
+
+    try {
+      // Verificar si la impresión está habilitada y soportada
+      if (!IMPRESION_TERMICA_HABILITADA || !thermalPrinter.isSupported()) {
+        mostrarNotificacion('⚠️ La impresión no está disponible', 'warning');
+        return;
+      }
+
+      // Obtener las ventas seleccionadas
+      const ventasAMostrar = obtenerVentasAMostrar();
+      const ventasParaImprimir = ventasAMostrar.filter(v => ventasSeleccionadas.includes(v.id));
+
+      if (ventasParaImprimir.length === 0) {
+        mostrarNotificacion('⚠️ No se encontraron las ventas seleccionadas', 'warning');
+        return;
+      }
+
+      // Obtener nombre del usuario
+      const usuarioActual = await authService.getCurrentUser();
+      const nombreUsuario = usuarioActual?.nombre || 'MI CAJA';
+
+      // Agrupar ventas por fecha y tipo_pago (para crear recibos separados por transacción)
+      const ventasAgrupadas = {};
+      
+      ventasParaImprimir.forEach(venta => {
+        const fecha = venta.fecha_cl || venta.fecha;
+        const tipoPago = venta.tipo_pago;
+        const clave = `${fecha}_${tipoPago}`;
+        
+        if (!ventasAgrupadas[clave]) {
+          ventasAgrupadas[clave] = {
+            fecha: fecha,
+            tipo_pago: tipoPago,
+            productos: []
+          };
+        }
+        
+        ventasAgrupadas[clave].productos.push({
+          producto: venta.producto,
+          cantidad: venta.cantidad,
+          unidad: venta.unidad,
+          precio_unitario: venta.precio_unitario,
+          subtotal: venta.total_venta
+        });
+      });
+
+      // Calcular totales y crear recibos
+      const recibos = Object.values(ventasAgrupadas).map(grupo => {
+        const total = grupo.productos.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
+        return {
+          fecha: grupo.fecha,
+          tipo_pago: grupo.tipo_pago,
+          productos: grupo.productos,
+          total: total
+        };
+      });
+
+      // Imprimir cada recibo
+      for (let i = 0; i < recibos.length; i++) {
+        const recibo = recibos[i];
+        
+        // Si hay múltiples recibos, esperar un momento entre cada uno
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        try {
+          mostrarNotificacion(`🖨️ Imprimiendo recibo ${i + 1} de ${recibos.length}...`, 'info');
+          await thermalPrinter.printReceipt(recibo, nombreUsuario);
+          
+          if (i === recibos.length - 1) {
+            mostrarNotificacion(`✅ ${recibos.length} recibo(s) enviado(s) a impresora`, 'success');
+          }
+        } catch (error) {
+          console.error(`❌ Error al imprimir recibo ${i + 1}:`, error);
+          mostrarNotificacion(`❌ Error al imprimir recibo ${i + 1}: ${error.message}`, 'error');
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error inesperado al imprimir ventas:', error);
+      mostrarNotificacion(`❌ Error al imprimir: ${error.message}`, 'error');
     }
   };
 
@@ -2280,13 +2339,13 @@ export default function RegistroVenta() {
               </div>
               
               {/* Indicador de estado de impresora y diagnóstico */}
-              {/* ⚠️ DESACTIVADO - Cambiar IMPRESION_TERMICA_HABILITADA a true para activar */}
+              {/* Información de impresora */}
               {IMPRESION_TERMICA_HABILITADA && (
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  {impresoraConectada && (
+                  {thermalPrinter.isSupported() && (
                     <div className="flex items-center gap-2 text-xs text-green-400">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span>🖨️ Impresora conectada</span>
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span>🖨️ Impresión disponible</span>
                     </div>
                   )}
                   
@@ -2299,11 +2358,9 @@ export default function RegistroVenta() {
                         const resultado = await thermalPrinter.diagnostic();
                         
                         if (!resultado.supported) {
-                          mostrarNotificacion('❌ Tu navegador no soporta Web Serial API. Usa Chrome o Edge.', 'error');
-                        } else if (resultado.portsWithPermission === 0) {
-                          mostrarNotificacion('⚠️ No hay impresoras conectadas con permiso. Revisa la consola (F12) para más detalles.', 'warning');
+                          mostrarNotificacion('❌ Tu navegador no soporta impresión. Usa Chrome o Edge.', 'error');
                         } else {
-                          mostrarNotificacion(`✅ ${resultado.portsWithPermission} puerto(s) detectado(s). Revisa la consola (F12).`, 'success');
+                          mostrarNotificacion(`✅ ${resultado.message}. Revisa la consola (F12) para más detalles.`, 'success');
                         }
                       }}
                       className="text-xs text-blue-400 hover:text-blue-300 underline"
@@ -2555,7 +2612,7 @@ export default function RegistroVenta() {
               </div>
 
               {/* Botones de acción */}
-              <div className="mt-3 md:mt-4 flex justify-center gap-3">
+              <div className="mt-3 md:mt-4 flex justify-center gap-3 flex-wrap">
                 <button
                   onClick={limpiarFiltros}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -2564,14 +2621,24 @@ export default function RegistroVenta() {
                   🧹 Limpiar Filtros
                 </button>
                 {ventasSeleccionadas.length > 0 && (
-                  <button
-                    onClick={eliminarVentasSeleccionadas}
-                    disabled={loadingVentas}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    Eliminar seleccionados ({ventasSeleccionadas.length})
-                  </button>
+                  <>
+                    <button
+                      onClick={imprimirVentasSeleccionadas}
+                      disabled={loadingVentas || !IMPRESION_TERMICA_HABILITADA}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    >
+                      🖨️ Imprimir ({ventasSeleccionadas.length})
+                    </button>
+                    <button
+                      onClick={eliminarVentasSeleccionadas}
+                      disabled={loadingVentas}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    >
+                      Eliminar seleccionados ({ventasSeleccionadas.length})
+                    </button>
+                  </>
                 )}
               </div>
 

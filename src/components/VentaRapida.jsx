@@ -3,7 +3,17 @@ import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { obtenerFechaHoyChile, formatearFechaCortaChile } from '../lib/dateUtils.js';
 import { useSessionData } from '../lib/useSessionData.js';
+import thermalPrinter from '../lib/thermalPrinter.js';
 import Footer from './Footer';
+
+// ========================================
+// 🖨️ CONFIGURACIÓN DE IMPRESIÓN TÉRMICA
+// ========================================
+// Usa window.print() - compatible con impresoras térmicas estándar de Windows
+// Modelo: XPrinter XP-58IIH (58mm)
+// El navegador Chrome/Edge recordará la impresora seleccionada
+const IMPRESION_TERMICA_HABILITADA = true;
+// ========================================
 
 const VentaRapida = () => {
   const [venta, setVenta] = useState({
@@ -39,6 +49,41 @@ const VentaRapida = () => {
   
   // Estado para notificación de dispositivos táctiles
   const [notificacionTactil, setNotificacionTactil] = useState(false);
+
+  // Estado para notificaciones personalizadas
+  const [notificacionPersonalizada, setNotificacionPersonalizada] = useState(null);
+
+  // Estado para confirmaciones personalizadas
+  const [confirmacionPersonalizada, setConfirmacionPersonalizada] = useState(null);
+
+  // Función para mostrar notificaciones (inteligente según modo pantalla completa)
+  const mostrarNotificacion = (mensaje, tipo = 'info') => {
+    setNotificacionPersonalizada({ mensaje, tipo });
+    setTimeout(() => setNotificacionPersonalizada(null), 3000);
+  };
+
+  // Función para mostrar confirmaciones (inteligente según modo pantalla completa)
+  const mostrarConfirmacion = (mensaje) => {
+    return new Promise((resolve) => {
+      if (pantallaCompleta) {
+        // Mostrar confirmación personalizada en pantalla completa
+        setConfirmacionPersonalizada({
+          mensaje,
+          onConfirm: () => {
+            setConfirmacionPersonalizada(null);
+            resolve(true);
+          },
+          onCancel: () => {
+            setConfirmacionPersonalizada(null);
+            resolve(false);
+          }
+        });
+      } else {
+        // Usar confirm nativo fuera de pantalla completa
+        resolve(confirm(mensaje));
+      }
+    });
+  };
 
   // Función para detectar dispositivos táctiles (tablets/móviles) y navegadores específicos
   const esDispositivoTactil = () => {
@@ -180,8 +225,16 @@ const VentaRapida = () => {
     
     // Validar campos requeridos
     if (!venta.monto || parseFloat(venta.monto) <= 0) {
-      alert('Por favor ingresa un monto válido mayor a 0');
+      mostrarNotificacion('⚠️ Por favor ingresa un monto válido mayor a 0', 'error');
       return;
+    }
+
+    // 🖨️ PREGUNTAR SI DESEA IMPRIMIR **ANTES** DE REGISTRAR (solo para efectivo y transferencia)
+    let deseaImprimir = false;
+    
+    if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported() && 
+        (venta.tipo_pago === 'efectivo' || venta.tipo_pago === 'transferencia')) {
+      deseaImprimir = await mostrarConfirmacion('¿Desea imprimir el recibo de esta venta?');
     }
 
     setLoading(true);
@@ -190,7 +243,7 @@ const VentaRapida = () => {
       // Obtener el usuario_id del usuario autenticado
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
-        alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+        mostrarNotificacion('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.', 'error');
         setLoading(false);
         return;
       }
@@ -208,11 +261,37 @@ const VentaRapida = () => {
 
       if (error) {
         console.error('Error al registrar venta rápida:', error);
-        alert('Error al registrar la venta rápida: ' + error.message);
+        mostrarNotificacion('❌ Error al registrar la venta rápida: ' + error.message, 'error');
+        setLoading(false);
         return;
       }
 
-      alert('✅ Venta rápida registrada exitosamente');
+      mostrarNotificacion('✅ Venta rápida registrada exitosamente', 'success');
+      
+      // 🖨️ IMPRIMIR SI SE SOLICITÓ AL INICIO
+      if (deseaImprimir) {
+        try {
+          // Obtener nombre del usuario para el recibo
+          const usuarioActual = await authService.getCurrentUser();
+          const nombreUsuario = usuarioActual?.nombre || 'MI CAJA';
+          
+          // Preparar datos del recibo de venta rápida
+          const datosRecibo = {
+            fecha: venta.fecha,
+            tipo_pago: venta.tipo_pago,
+            monto: parseFloat(venta.monto)
+          };
+          
+          // Imprimir recibo (Chrome mostrará el diálogo de impresión)
+          mostrarNotificacion('🖨️ Abriendo diálogo de impresión...', 'info');
+          await thermalPrinter.printReceiptVentaRapida(datosRecibo, nombreUsuario);
+          mostrarNotificacion('✅ Recibo enviado a impresora', 'success');
+          
+        } catch (error) {
+          console.error('❌ Error al imprimir:', error);
+          mostrarNotificacion(`❌ Error al imprimir: ${error.message}`, 'error');
+        }
+      }
 
       // Limpiar formulario
       setVenta({
@@ -230,7 +309,7 @@ const VentaRapida = () => {
 
     } catch (error) {
       console.error('Error inesperado al registrar venta rápida:', error);
-      alert('Error inesperado al registrar la venta rápida');
+      mostrarNotificacion('❌ Error inesperado al registrar la venta rápida', 'error');
     } finally {
       setLoading(false);
     }
@@ -579,6 +658,50 @@ const VentaRapida = () => {
             <div className="text-sm">
               <div className="font-semibold">{obtenerInfoDispositivo().navegador} en {obtenerInfoDispositivo().tipo}</div>
               <div className="text-xs opacity-90">La pantalla completa puede cerrarse al usar campos de texto</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notificaciones personalizadas para pantalla completa */}
+      {notificacionPersonalizada && (
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border max-w-sm text-center animate-fade-in ${
+          notificacionPersonalizada.tipo === 'success' ? 'bg-green-600/95 border-green-400/30' :
+          notificacionPersonalizada.tipo === 'error' ? 'bg-red-600/95 border-red-400/30' :
+          'bg-blue-600/95 border-blue-400/30'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">
+              {notificacionPersonalizada.tipo === 'success' ? '✅' :
+               notificacionPersonalizada.tipo === 'error' ? '❌' : 'ℹ️'}
+            </span>
+            <p className="text-sm font-medium">
+              {notificacionPersonalizada.mensaje}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmaciones personalizadas para pantalla completa */}
+      {confirmacionPersonalizada && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+            <p className="text-white text-center mb-6 text-lg">
+              {confirmacionPersonalizada.mensaje}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={confirmacionPersonalizada.onCancel}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                No
+              </button>
+              <button
+                onClick={confirmacionPersonalizada.onConfirm}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              >
+                Sí
+              </button>
             </div>
           </div>
         </div>

@@ -205,6 +205,9 @@ export default function Pedidos() {
   // Estado para notificaciones automáticas
   const [notificacion, setNotificacion] = useState(null);
   
+  // Estado para notificaciones de pedidos terminados desde cocina
+  const [notificacionesPedidosTerminados, setNotificacionesPedidosTerminados] = useState([]);
+  
   // Ref para debounce de Realtime (evita flash visual)
   const realtimeTimeoutRef = useRef(null);
 
@@ -397,6 +400,22 @@ export default function Pedidos() {
       // Un solo setState con ambos cambios para un solo re-render
       setProductosPorMesa(productosPorMesaTemp);
       setDatosInicialCargados(true);
+      
+      // Limpiar selecciones de cocina que ya no existen (IDs inválidos)
+      setProductosSeleccionadosParaCocina(prev => {
+        const limpio = {};
+        Object.keys(prev).forEach(mesa => {
+          const productosMesa = productosPorMesaTemp[mesa] || [];
+          const idsValidos = productosMesa.map(p => p.id);
+          const seleccionadosMesa = prev[mesa] || [];
+          // Filtrar solo los IDs que existen en los productos actuales
+          const seleccionadosValidos = seleccionadosMesa.filter(id => idsValidos.includes(id));
+          if (seleccionadosValidos.length > 0) {
+            limpio[mesa] = seleccionadosValidos;
+          }
+        });
+        return limpio;
+      });
       
       if (IS_DEBUG) console.log('✅ Productos:', Object.keys(productosPorMesaTemp).length, 'mesas');
 
@@ -2338,6 +2357,72 @@ export default function Pedidos() {
     };
   }, []);
 
+  // Función para cargar notificaciones de pedidos terminados desde Supabase
+  const cargarNotificacionesPedidosTerminados = async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('notificaciones_pedidos_terminados')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error al cargar notificaciones:', error);
+        return;
+      }
+
+      setNotificacionesPedidosTerminados(data || []);
+    } catch (error) {
+      console.error('❌ Error inesperado al cargar notificaciones:', error);
+    }
+  };
+
+  // Función para eliminar una notificación
+  const eliminarNotificacion = async (notificacionId) => {
+    try {
+      const { error } = await supabase
+        .from('notificaciones_pedidos_terminados')
+        .delete()
+        .eq('id', notificacionId);
+
+      if (error) {
+        console.error('❌ Error al eliminar notificación:', error);
+      }
+    } catch (error) {
+      console.error('❌ Error inesperado al eliminar notificación:', error);
+    }
+  };
+
+  // Cargar notificaciones y configurar Realtime (separado del useEffect anterior)
+  useEffect(() => {
+    cargarNotificacionesPedidosTerminados();
+
+    // Configurar suscripción Realtime para notificaciones
+    const channelNotificaciones = supabase
+      .channel('notificaciones_pedidos_terminados_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'notificaciones_pedidos_terminados'
+        },
+        (payload) => {
+          // Recargar notificaciones cuando hay cambios
+          cargarNotificacionesPedidosTerminados();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channelNotificaciones);
+    };
+  }, []);
+
   // Guardar productos en localStorage cuando cambien (solo después de cargar datos iniciales)
   // Usar debounce implícito con timeout para no bloquear la UI
   useEffect(() => {
@@ -2466,6 +2551,53 @@ export default function Pedidos() {
         }`}>
           <div className="text-sm font-medium">
             {notificacion.mensaje}
+          </div>
+        </div>
+      )}
+
+      {/* Notificaciones tipo banda de pedidos terminados desde cocina */}
+      {notificacionesPedidosTerminados.length > 0 && (
+        <div className="fixed top-0 left-0 right-0 z-[70] bg-green-600/95 backdrop-blur-md border-b-2 border-green-400/50 animate-slide-down py-1.5">
+          <div 
+            className="overflow-x-auto"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <div className="flex gap-2 px-2" style={{ minWidth: 'max-content' }}>
+              {notificacionesPedidosTerminados.map((notificacion) => (
+                <div 
+                  key={notificacion.id}
+                  className="flex items-center gap-1.5 bg-green-800/90 rounded-md px-2.5 py-1.5 flex-shrink-0 border border-green-300/40"
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  <div className="text-sm animate-pulse">✅</div>
+                  <span className="font-bold text-xs text-white">
+                    {notificacion.mesa}:
+                  </span>
+                  {notificacion.productos && notificacion.productos.length > 0 && (
+                    <span className="text-xs text-green-100">
+                      {notificacion.productos.map((item, index) => (
+                        <span key={index}>
+                          {item.producto}
+                          <span className="font-bold text-yellow-200 mx-0.5">x{item.cantidad}</span>
+                          {index < notificacion.productos.length - 1 && <span className="mx-1 text-green-300">•</span>}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => eliminarNotificacion(notificacion.id)}
+                    className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-all duration-200 font-bold text-xs ml-0.5"
+                    aria-label="Cerrar notificación"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
