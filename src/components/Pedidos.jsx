@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
@@ -1556,8 +1556,8 @@ export default function Pedidos() {
     console.log(`Cambiando estado de ${mesa} a ${nuevoEstado}`);
   };
 
-  // Función para calcular años disponibles de los pedidos registrados
-  const calcularAniosDisponibles = () => {
+  // Función para calcular años disponibles de los pedidos registrados (MEMOIZADA)
+  const aniosDisponiblesMemo = useMemo(() => {
     const anios = new Set();
     
     // Solo incluir el año 2025 por defecto
@@ -1576,11 +1576,16 @@ export default function Pedidos() {
     });
     
     const aniosArray = Array.from(anios).sort((a, b) => b - a); // Orden descendente
-    setAniosDisponibles(aniosArray);
-  };
+    return aniosArray;
+  }, [pedidosRegistrados]);
 
-  // Función para aplicar filtros a los pedidos registrados
-  const aplicarFiltros = () => {
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularAniosDisponibles = useCallback(() => {
+    setAniosDisponibles(aniosDisponiblesMemo);
+  }, [aniosDisponiblesMemo]);
+
+  // Función para aplicar filtros a los pedidos registrados (MEMOIZADA)
+  const pedidosFiltradosMemo = useMemo(() => {
     let filtrados = [...pedidosRegistrados];
     const fechaActual = obtenerFechaHoyChile();
 
@@ -1665,8 +1670,13 @@ export default function Pedidos() {
       }
     }
 
-    setPedidosFiltrados(filtrados);
-  };
+    return filtrados;
+  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const aplicarFiltros = useCallback(() => {
+    setPedidosFiltrados(pedidosFiltradosMemo);
+  }, [pedidosFiltradosMemo]);
 
   // Función para limpiar todos los filtros
   const limpiarFiltros = () => {
@@ -1678,86 +1688,10 @@ export default function Pedidos() {
     // Los efectos se encargarán de aplicar los filtros correctamente
   };
 
-  // Función para calcular estadísticas dinámicas según filtros aplicados
-  const calcularEstadisticasPedidos = () => {
-    let pedidosFiltrados = [...pedidosRegistrados];
-    const fechaActual = obtenerFechaHoyChile();
-
-    // Aplicar los mismos filtros que en aplicarFiltros()
-    // Si no hay filtros activos, mostrar solo los pedidos del día actual
-    if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
-      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-        const fechaPedido = pedido.fecha_cl || pedido.fecha;
-        return fechaPedido === fechaActual;
-      });
-    } else {
-      // Filtro por fecha específica
-      if (filtroFecha) {
-        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-          const fechaPedido = pedido.fecha_cl || pedido.fecha;
-          return fechaPedido === filtroFecha;
-        });
-      }
-
-      // Filtro por mes
-      if (filtroMes && !filtroFecha) {
-        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-          let fechaPedido = pedido.fecha_cl || pedido.fecha;
-          
-          if (!fechaPedido && pedido.created_at) {
-            const fechaCreated = new Date(pedido.created_at);
-            fechaPedido = fechaCreated.toISOString().split('T')[0];
-          }
-          
-          if (!fechaPedido) return false;
-          
-          const [year, month] = fechaPedido.split('-');
-          const mesPedido = parseInt(month);
-          const mesFiltro = parseInt(filtroMes);
-          return mesPedido === mesFiltro;
-        });
-      }
-
-      // Filtro por año (siempre aplicarlo cuando hay filtros activos)
-      if (filtroAnio && !filtroFecha) {
-        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-          let fechaPedido = pedido.fecha_cl || pedido.fecha;
-          
-          if (!fechaPedido && pedido.created_at) {
-            const fechaCreated = new Date(pedido.created_at);
-            fechaPedido = fechaCreated.toISOString().split('T')[0];
-          }
-          
-          if (!fechaPedido) return false;
-          const year = fechaPedido.split('-')[0];
-          return parseInt(year) === parseInt(filtroAnio);
-        });
-      }
-
-      // Si hay mes y año seleccionados
-      if (filtroMes && filtroAnio && !filtroFecha) {
-        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-          let fechaPedido = pedido.fecha_cl || pedido.fecha;
-          
-          if (!fechaPedido && pedido.created_at) {
-            const fechaCreated = new Date(pedido.created_at);
-            fechaPedido = fechaCreated.toISOString().split('T')[0];
-          }
-          
-          if (!fechaPedido) return false;
-          const [year, month] = fechaPedido.split('-');
-          return parseInt(month) === parseInt(filtroMes) && 
-                 parseInt(year) === parseInt(filtroAnio);
-        });
-      }
-
-      // Filtro por tipo de pago
-      if (filtroTipoPago) {
-        pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-          return pedido.tipo_pago === filtroTipoPago;
-        });
-      }
-    }
+  // Función para calcular estadísticas dinámicas según filtros aplicados (MEMOIZADA)
+  const estadisticasPedidosMemo = useMemo(() => {
+    // Usar pedidosFiltradosMemo en lugar de recalcular los filtros
+    const pedidosFiltrados = pedidosFiltradosMemo;
 
     // Solo considerar pedidos con total_final (pedidos completos)
     const pedidosCompletos = pedidosFiltrados.filter(pedido => 
@@ -1802,7 +1736,10 @@ export default function Pedidos() {
     });
 
     return estadisticas;
-  };
+  }, [pedidosFiltradosMemo]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const calcularEstadisticasPedidos = () => estadisticasPedidosMemo;
 
   // Función para obtener el título dinámico del resumen
   const obtenerTituloResumenPedidos = () => {
@@ -2142,6 +2079,8 @@ export default function Pedidos() {
     // Validar fecha primero
     if (!validarFecha(pedido.fecha)) {
       alert('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD');
+      registrandoPedidoRef.current = false;
+      setRegistrandoPedido(false);
       return;
     }
 
@@ -2149,18 +2088,24 @@ export default function Pedidos() {
     const productosSeleccionados = productosSeleccionadosParaPago[mesa] || [];
     if (productosSeleccionados.length === 0) {
       alert('❌ Por favor selecciona al menos un producto para pagar');
+      registrandoPedidoRef.current = false;
+      setRegistrandoPedido(false);
       return;
     }
 
     // Validar que se haya seleccionado un tipo de pago
     if (!pedido.tipo_pago) {
       alert('❌ Por favor selecciona un método de pago');
+      registrandoPedidoRef.current = false;
+      setRegistrandoPedido(false);
       return;
     }
 
     // Validar que la fecha esté presente
     if (!pedido.fecha) {
       alert('❌ Por favor completa la fecha del pedido');
+      registrandoPedidoRef.current = false;
+      setRegistrandoPedido(false);
       return;
     }
 
@@ -2168,6 +2113,8 @@ export default function Pedidos() {
     const usuarioId = await authService.getCurrentUserId();
     if (!usuarioId) {
       alert('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.');
+      registrandoPedidoRef.current = false;
+      setRegistrandoPedido(false);
       return;
     }
 
@@ -2237,6 +2184,8 @@ export default function Pedidos() {
       if (error) {
         console.error('Error al registrar pedidos:', error);
         alert('Error al registrar pedido: ' + error.message);
+        registrandoPedidoRef.current = false;
+        setRegistrandoPedido(false);
         return;
       }
 
@@ -2298,8 +2247,12 @@ export default function Pedidos() {
       // Limpiar productos pagados de Supabase (sincronización multi-dispositivo)
       await limpiarMesaEnSupabase(mesa, productosSeleccionados);
 
-      // Recargar la tabla de pedidos registrados
-      await cargarPedidosRegistrados();
+      // Recargar la tabla de pedidos registrados en segundo plano (sin await para mejor UX)
+      // Esto permite que el usuario vea el feedback inmediatamente
+      // mientras los pedidos se recargan en segundo plano
+      cargarPedidosRegistrados().catch(error => {
+        console.error('Error al recargar pedidos (no crítico):', error);
+      });
 
     } catch (error) {
       console.error('Error general al registrar pedido:', error);
@@ -2476,13 +2429,11 @@ export default function Pedidos() {
 
   // Aplicar filtros cuando cambien los valores de filtro O los pedidos registrados
   useEffect(() => {
-    aplicarFiltros();
-    calcularAniosDisponibles(); // Calcular años disponibles cuando cambien los pedidos
-    
-    // Calcular estadísticas junto con los filtros (evitar useEffect adicional)
-    const nuevasEstadisticas = calcularEstadisticasPedidos();
-    setEstadisticasPedidos(nuevasEstadisticas);
-  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
+    // Actualizar estado con valores memoizados (evita recálculos innecesarios)
+    setPedidosFiltrados(pedidosFiltradosMemo);
+    setAniosDisponibles(aniosDisponiblesMemo);
+    setEstadisticasPedidos(estadisticasPedidosMemo);
+  }, [pedidosFiltradosMemo, aniosDisponiblesMemo, estadisticasPedidosMemo]);
 
   // Escuchar cambios en el estado de pantalla completa
   useEffect(() => {

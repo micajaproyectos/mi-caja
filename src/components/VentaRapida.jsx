@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { obtenerFechaHoyChile, formatearFechaCortaChile } from '../lib/dateUtils.js';
@@ -55,6 +55,12 @@ const VentaRapida = () => {
 
   // Estado para confirmaciones personalizadas
   const [confirmacionPersonalizada, setConfirmacionPersonalizada] = useState(null);
+
+  // Estado para prevenir doble clic en registro de venta rápida
+  const [registrando, setRegistrando] = useState(false);
+  
+  // Ref para verificación síncrona inmediata (previene doble ejecución)
+  const registrandoRef = useRef(false);
 
   // Función para mostrar notificaciones (inteligente según modo pantalla completa)
   const mostrarNotificacion = (mensaje, tipo = 'info') => {
@@ -167,8 +173,33 @@ const VentaRapida = () => {
       ...prev,
       fecha: fechaActual
     }));
+    // Limpiar filtros al montar para mostrar solo ventas del día actual
+    limpiarFiltros();
     recargarDatos();
   }, [recargarDatos]);
+
+  // Resetear filtros cuando cambia el día
+  useEffect(() => {
+    const verificarCambioFecha = () => {
+      const fechaActual = obtenerFechaHoyChile();
+      const fechaGuardada = localStorage.getItem('ultimaFechaVentaRapida');
+      
+      if (fechaGuardada && fechaGuardada !== fechaActual) {
+        limpiarFiltros();
+        localStorage.setItem('ultimaFechaVentaRapida', fechaActual);
+      } else if (!fechaGuardada) {
+        localStorage.setItem('ultimaFechaVentaRapida', fechaActual);
+      }
+    };
+
+    // Verificar cada minuto si ha cambiado la fecha
+    const intervalId = setInterval(verificarCambioFecha, 60000);
+    
+    // Verificar inmediatamente al montar
+    verificarCambioFecha();
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Escuchar cambios en el estado de pantalla completa
   useEffect(() => {
@@ -222,10 +253,22 @@ const VentaRapida = () => {
 
   const registrarVentaRapida = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevenir doble clic - si ya se está registrando, no hacer nada
+    if (registrandoRef.current) {
+      console.log('⚠️ Intento de doble clic detectado y prevenido.');
+      return;
+    }
+
+    registrandoRef.current = true;
+    setRegistrando(true);
     
     // Validar campos requeridos
     if (!venta.monto || parseFloat(venta.monto) <= 0) {
       mostrarNotificacion('⚠️ Por favor ingresa un monto válido mayor a 0', 'error');
+      registrandoRef.current = false;
+      setRegistrando(false);
       return;
     }
 
@@ -245,6 +288,8 @@ const VentaRapida = () => {
       if (!usuarioId) {
         mostrarNotificacion('❌ Error: Usuario no autenticado. Por favor, inicia sesión nuevamente.', 'error');
         setLoading(false);
+        registrandoRef.current = false;
+        setRegistrando(false);
         return;
       }
 
@@ -263,6 +308,8 @@ const VentaRapida = () => {
         console.error('Error al registrar venta rápida:', error);
         mostrarNotificacion('❌ Error al registrar la venta rápida: ' + error.message, 'error');
         setLoading(false);
+        registrandoRef.current = false;
+        setRegistrando(false);
         return;
       }
 
@@ -304,13 +351,20 @@ const VentaRapida = () => {
       setMontoPagado('');
       setMostrarVuelto(false);
 
-      // Recargar la tabla de ventas
-      await cargarVentasRapidas();
+      // Recargar la tabla de ventas en segundo plano (sin await para mejor UX)
+      // Esto permite que el usuario vea el feedback inmediatamente
+      // mientras las ventas se recargan en segundo plano
+      cargarVentasRapidas().catch(error => {
+        console.error('Error al recargar ventas (no crítico):', error);
+      });
 
     } catch (error) {
       console.error('Error inesperado al registrar venta rápida:', error);
       mostrarNotificacion('❌ Error inesperado al registrar la venta rápida', 'error');
     } finally {
+      // Siempre limpiar el estado de procesamiento, incluso si hay error
+      registrandoRef.current = false;
+      setRegistrando(false);
       setLoading(false);
     }
   };
@@ -928,10 +982,10 @@ const VentaRapida = () => {
                   </label>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || registrando}
                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-3 md:p-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
                   >
-                    {loading ? (
+                    {loading || registrando ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                         <span>Registrando...</span>

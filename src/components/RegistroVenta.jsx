@@ -582,8 +582,8 @@ export default function RegistroVenta() {
     return Array.from(anios).sort((a, b) => b - a);
   };
 
-  // Función para obtener las ventas que se deben mostrar
-  const obtenerVentasAMostrar = () => {
+  // Función para obtener las ventas que se deben mostrar (MEMOIZADA para optimizar rendimiento)
+  const ventasAMostrar = useMemo(() => {
     // Mostrar TODAS las ventas filtradas (incluyendo productos individuales)
     // Esto permite ver todos los productos que componen cada venta
     // Si ventasMostradas es mayor o igual al total, mostrar todas
@@ -591,7 +591,10 @@ export default function RegistroVenta() {
       return ventasFiltradas;
     }
     return ventasFiltradas.slice(0, ventasMostradas);
-  };
+  }, [ventasFiltradas, ventasMostradas]);
+
+  // Función para compatibilidad (mantiene la misma interfaz)
+  const obtenerVentasAMostrar = () => ventasAMostrar;
 
 
 
@@ -778,33 +781,34 @@ export default function RegistroVenta() {
       }
     }
 
-    // Filtrar ventas que tienen total_final (ventas completas) para el conteo
-    const ventasCompletas = ventasFiltradas.filter(venta => venta.total_final !== null && venta.total_final !== undefined);
-
-    // Para montos acumulados, usar TODAS las ventas filtradas (columna total_venta)
-    // Para conteo de ventas, usar solo ventas completas (columna total_final)
+    // Optimización: Calcular todas las estadísticas en una sola pasada sobre el array
+    // Esto reduce de 11 iteraciones a solo 1, mejorando significativamente el rendimiento
     const estadisticas = {
-      total: {
-        cantidad: ventasCompletas.length, // Conteo usando total_final
-        monto: ventasFiltradas.reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
-      },
-      efectivo: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'efectivo').length, // Conteo usando total_final
-        monto: ventasFiltradas.filter(v => v.tipo_pago === 'efectivo').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
-      },
-      debito: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'debito').length, // Conteo usando total_final
-        monto: ventasFiltradas.filter(v => v.tipo_pago === 'debito').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
-      },
-      credito: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'credito').length, // Conteo usando total_final
-        monto: ventasFiltradas.filter(v => v.tipo_pago === 'credito').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
-      },
-      transferencia: {
-        cantidad: ventasCompletas.filter(v => v.tipo_pago === 'transferencia').length, // Conteo usando total_final
-        monto: ventasFiltradas.filter(v => v.tipo_pago === 'transferencia').reduce((sum, venta) => sum + (parseFloat(venta.total_venta) || 0), 0) // Montos usando total_venta
-      }
+      total: { cantidad: 0, monto: 0 },
+      efectivo: { cantidad: 0, monto: 0 },
+      debito: { cantidad: 0, monto: 0 },
+      credito: { cantidad: 0, monto: 0 },
+      transferencia: { cantidad: 0, monto: 0 }
     };
+
+    ventasFiltradas.forEach(venta => {
+      const monto = parseFloat(venta.total_venta) || 0;
+      const esCompleta = venta.total_final !== null && venta.total_final !== undefined;
+      
+      // Actualizar totales
+      estadisticas.total.monto += monto;
+      if (esCompleta) {
+        estadisticas.total.cantidad++;
+      }
+      
+      // Actualizar por tipo de pago
+      if (venta.tipo_pago && estadisticas[venta.tipo_pago]) {
+        estadisticas[venta.tipo_pago].monto += monto;
+        if (esCompleta) {
+          estadisticas[venta.tipo_pago].cantidad++;
+        }
+      }
+    });
 
     return estadisticas;
   }, [ventasRegistradas, filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
@@ -1491,8 +1495,7 @@ export default function RegistroVenta() {
         return;
       }
 
-      // Obtener las ventas seleccionadas
-      const ventasAMostrar = obtenerVentasAMostrar();
+      // Obtener las ventas seleccionadas (usar ventasAMostrar memoizado directamente)
       const ventasParaImprimir = ventasAMostrar.filter(v => ventasSeleccionadas.includes(v.id));
 
       if (ventasParaImprimir.length === 0) {
@@ -1631,8 +1634,7 @@ export default function RegistroVenta() {
 
   // Función para seleccionar/deseleccionar todas las ventas visibles
   const toggleSeleccionarTodas = () => {
-    const ventasVisibles = obtenerVentasAMostrar();
-    const idsVisibles = ventasVisibles.map(v => v.id);
+    const idsVisibles = ventasAMostrar.map(v => v.id);
     
     if (ventasSeleccionadas.length === idsVisibles.length) {
       // Si todas están seleccionadas, deseleccionar todas
@@ -2667,7 +2669,7 @@ export default function RegistroVenta() {
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">
                             <input
                               type="checkbox"
-                              checked={ventasSeleccionadas.length === obtenerVentasAMostrar().length && obtenerVentasAMostrar().length > 0}
+                              checked={ventasSeleccionadas.length === ventasAMostrar.length && ventasAMostrar.length > 0}
                               onChange={toggleSeleccionarTodas}
                               className="w-4 h-4 cursor-pointer accent-green-500"
                               title="Seleccionar todas"
@@ -2683,10 +2685,8 @@ export default function RegistroVenta() {
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Acciones</th>
                         </tr>
                       </thead>
-                                                                     <tbody>
-                          {(() => {
-                            const ventasAMostrar = obtenerVentasAMostrar();
-                            return ventasAMostrar.map((venta, index) => {
+                      <tbody>
+                          {ventasAMostrar.map((venta, index) => {
                               const estaEditando = editandoId === venta.id;
                               
                               return (
@@ -2867,8 +2867,7 @@ export default function RegistroVenta() {
                                   </td>
                                 </tr>
                               );
-                            });
-                          })()}
+                            })}
                        </tbody>
                     </table>
 

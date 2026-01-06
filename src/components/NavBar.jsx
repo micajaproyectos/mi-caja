@@ -26,8 +26,13 @@ const NavBar = () => {
   const [showClaveInternaNotification, setShowClaveInternaNotification] = useState(false);
   const [instagramLink, setInstagramLink] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [isSavingInstagram, setIsSavingInstagram] = useState(false);
   const [mostrarQRPreview, setMostrarQRPreview] = useState(true);
+  const [mostrarSeccionQR, setMostrarSeccionQR] = useState(false);
+  const [googleLink, setGoogleLink] = useState('');
+  const [qrCodeUrlGoogle, setQrCodeUrlGoogle] = useState('');
+  const [isGenerandoQRGoogle, setIsGenerandoQRGoogle] = useState(false);
+  const [mostrarQRPreviewGoogle, setMostrarQRPreviewGoogle] = useState(true);
+  const [mostrarSeccionGoogle, setMostrarSeccionGoogle] = useState(false);
   const [logoLink, setLogoLink] = useState('');
   const menuRef = useRef(null);
 
@@ -58,8 +63,9 @@ const NavBar = () => {
           email: profile?.email || ''
         });
         
-        // Cargar link de Instagram y logo
+        // Cargar link de Instagram, Google y logo
         await cargarInstagramLink();
+        await cargarGoogleLink();
         await cargarLogoLink();
       } catch (e) {
         console.error('Error cargando perfil:', e);
@@ -68,8 +74,9 @@ const NavBar = () => {
         setIsLoadingProfile(false);
       }
     } else {
-      // Si ya tenemos los datos básicos, solo cargar Instagram y logo
+      // Si ya tenemos los datos básicos, solo cargar Instagram, Google y logo
       await cargarInstagramLink();
+      await cargarGoogleLink();
       await cargarLogoLink();
     }
   };
@@ -139,6 +146,35 @@ const NavBar = () => {
     return convertedUrl;
   };
 
+  // Función para cargar el link de Google Reviews desde la base de datos
+  const cargarGoogleLink = async () => {
+    try {
+      const userId = await authService.getCurrentUserId();
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('opiniones_google')
+        .eq('usuario_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error al cargar link de Google:', error);
+        return;
+      }
+
+      const link = data?.opiniones_google || '';
+      setGoogleLink(link);
+      
+      // Generar QR si existe el link
+      if (link) {
+        await generarQRGoogle(link);
+      }
+    } catch (error) {
+      console.error('Error inesperado al cargar Google:', error);
+    }
+  };
+
   // Función para cargar el link del logo desde la base de datos
   const cargarLogoLink = async () => {
     try {
@@ -169,42 +205,140 @@ const NavBar = () => {
     }
   };
 
-  // Función para guardar el link de Instagram
-  const guardarInstagramLink = async () => {
-    if (!instagramLink.trim()) {
-      alert('Por favor ingresa un link de Instagram válido');
+  // Función para generar el código QR estilo Google con branding Mi Caja
+  const generarQRGoogle = async (link) => {
+    if (!link || !link.trim()) {
+      alert('⚠️ No hay link de Google Reviews configurado');
       return;
     }
 
-    setIsSavingInstagram(true);
+    setIsGenerandoQRGoogle(true);
     try {
-      const userId = await authService.getCurrentUserId();
-      if (!userId) {
-        alert('Error: Usuario no autenticado');
-        return;
-      }
+      // 1. Generar el QR básico en BLANCO sobre fondo azul de Google
+      const qrDataUrl = await QRCode.toDataURL(link, {
+        width: 400,
+        margin: 2,
+        color: {
+          dark: '#FFFFFF', // QR en blanco
+          light: '#4285F4' // Azul de Google
+        }
+      });
 
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ link_instagram: instagramLink.trim() })
-        .eq('usuario_id', userId);
+      // 2. Crear un canvas para el diseño completo (estilo Google)
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Dimensiones: formato cuadrado estilo Google
+      canvas.width = 500;
+      canvas.height = 650;
 
-      if (error) {
-        console.error('Error al guardar link de Instagram:', error);
-        alert('Error al guardar el link de Instagram');
-        return;
-      }
+      // 3. Fondo con degradado de Google (azul → rojo → amarillo → verde)
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#4285F4');    // Azul Google
+      gradient.addColorStop(0.33, '#EA4335'); // Rojo Google
+      gradient.addColorStop(0.66, '#FBBC04'); // Amarillo Google
+      gradient.addColorStop(1, '#34A853');    // Verde Google
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Generar el QR
-      await generarQR(instagramLink.trim());
-      alert('✅ Link de Instagram guardado exitosamente');
+      // Función para dibujar el contenido (con o sin logo)
+      const dibujarContenido = (logoImg = null) => {
+        // Logo de Mi Caja en esquina superior izquierda (discreto)
+        if (logoImg) {
+          // Logo pequeño: máximo 40px
+          const maxLogoSize = 40;
+          let logoWidth = logoImg.width;
+          let logoHeight = logoImg.height;
+          
+          // Escalar manteniendo proporciones
+          const aspectRatio = logoWidth / logoHeight;
+          if (aspectRatio > 1) {
+            logoWidth = maxLogoSize;
+            logoHeight = maxLogoSize / aspectRatio;
+          } else {
+            logoHeight = maxLogoSize;
+            logoWidth = maxLogoSize * aspectRatio;
+          }
+          
+          // Posicionar en esquina superior izquierda
+          const logoX = 20;
+          const logoY = 20;
+          
+          // Añadir opacidad sutil para que no predomine
+          ctx.globalAlpha = 0.7;
+          ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+          ctx.globalAlpha = 1.0; // Restaurar opacidad
+        } else {
+          // Si no hay logo, solo emoji discreto en esquina
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+          ctx.font = '24px Inter, Arial, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('🏪', 20, 45);
+        }
+
+        // Nombre del usuario en la parte superior
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        const nombreUsuario = userInfo.nombre || 'Usuario';
+        ctx.fillText(nombreUsuario, canvas.width / 2, 80);
+
+        // QR Code centrado
+        const qrSize = 300;
+        const qrX = (canvas.width - qrSize) / 2;
+        const qrY = 110;
+        
+        const qrImg = new Image();
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+          
+          // Mensaje bajo el QR
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 18px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Su opinión es nuestra propina ❤️', canvas.width / 2, qrY + qrSize + 35);
+          
+          // Texto "Opiniones de Google"
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Opiniones de Google', canvas.width / 2, qrY + qrSize + 60);
+          
+          // Marca de agua "Powered by Mi Caja 💰" en la parte inferior
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.font = 'bold 12px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Powered by Mi Caja 💰', canvas.width / 2, canvas.height - 20);
+          
+          setQrCodeUrlGoogle(canvas.toDataURL('image/png'));
+        };
+        qrImg.src = qrDataUrl;
+      };
+
+      // Cargar siempre el logo de Mi Caja desde la carpeta public (no el logo del usuario)
+      const logoImage = new Image();
+      logoImage.onload = () => {
+        dibujarContenido(logoImage);
+      };
+      logoImage.onerror = () => {
+        dibujarContenido(null);
+      };
+      logoImage.src = '/favicon.png';
+      
+      // Timeout de seguridad: si no carga en 2 segundos, usar emoji
+      setTimeout(() => {
+        if (!logoImage.complete) {
+          dibujarContenido(null);
+        }
+      }, 2000);
     } catch (error) {
-      console.error('Error inesperado al guardar Instagram:', error);
-      alert('Error inesperado al guardar el link');
+      console.error('Error al generar QR de Google:', error);
+      alert('❌ Error al generar el QR de Google Reviews');
     } finally {
-      setIsSavingInstagram(false);
+      setIsGenerandoQRGoogle(false);
     }
   };
+
 
   // Función para generar el código QR estilo Instagram con branding Mi Caja
   const generarQR = async (link) => {
@@ -324,7 +458,7 @@ const NavBar = () => {
           // Marca de agua Mi Caja (sutil en blanco)
           ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
           ctx.font = '11px Inter, Arial, sans-serif';
-          ctx.fillText('Powered by Mi Caja', canvas.width / 2, canvas.height - 15);
+          ctx.fillText('Powered by Mi Caja 💰', canvas.width / 2, canvas.height - 15);
 
           // Convertir el canvas a URL y guardar
           const finalImageUrl = canvas.toDataURL('image/png', 1.0);
@@ -379,6 +513,22 @@ const NavBar = () => {
     const nombreArchivo = userInfo.nombre 
       ? `micaja-instagram-${userInfo.nombre.replace(/\s+/g, '-').toLowerCase()}.png`
       : 'micaja-instagram-qr.png';
+    link.download = nombreArchivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Función para descargar el QR de Google
+  const descargarQRGoogle = () => {
+    if (!qrCodeUrlGoogle) return;
+
+    const link = document.createElement('a');
+    link.href = qrCodeUrlGoogle;
+    // Nombre de archivo descriptivo con el nombre del usuario
+    const nombreArchivo = userInfo.nombre 
+      ? `micaja-google-${userInfo.nombre.replace(/\s+/g, '-').toLowerCase()}.png`
+      : 'micaja-google-qr.png';
     link.download = nombreArchivo;
     document.body.appendChild(link);
     link.click();
@@ -970,79 +1120,160 @@ const NavBar = () => {
 
                   {/* Sección de Instagram QR */}
                   <div className="mt-6 pt-6 border-t border-white/10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xl">📱</span>
-                      <h4 className="text-lg font-semibold text-white">QR de Instagram</h4>
-                    </div>
-                    <p className="text-xs text-gray-300 mb-3">
-                      Genera un código QR para compartir tu Instagram con tus clientes
-                    </p>
-                    
-                    {/* Input para link de Instagram */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-300">
-                        Link de Instagram
-                      </label>
-                      <input
-                        type="url"
-                        value={instagramLink}
-                        onChange={(e) => setInstagramLink(e.target.value)}
-                        placeholder="https://instagram.com/tu_usuario"
-                        className="w-full p-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm"
-                      />
-                      
-                      {/* Botón para guardar y generar QR */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">📱</span>
+                        <h4 className="text-lg font-semibold text-white">QR de Instagram</h4>
+                      </div>
                       <button
-                        onClick={guardarInstagramLink}
-                        disabled={isSavingInstagram || !instagramLink.trim()}
-                        className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm"
+                        onClick={() => setMostrarSeccionQR(!mostrarSeccionQR)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-white"
+                        title={mostrarSeccionQR ? "Contraer sección" : "Desplegar sección"}
                       >
-                        {isSavingInstagram ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Guardando...
-                          </span>
+                        {mostrarSeccionQR ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
                         ) : (
-                          '💾 Guardar y Generar QR'
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
                         )}
                       </button>
                     </div>
+                    
+                    {/* Contenido desplegable */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      mostrarSeccionQR ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <p className="text-xs text-gray-300 mb-3">
+                        Genera un código QR para compartir tu Instagram con tus clientes
+                      </p>
+                      
+                      {/* Mostrar mensaje si no hay link en la base de datos */}
+                      {!instagramLink || instagramLink.trim() === '' ? (
+                        <div className="p-3 bg-yellow-900/30 border border-yellow-500/30 rounded-lg">
+                          <p className="text-xs text-yellow-200 text-center">
+                            ⚠️ No hay link de Instagram configurado en tu cuenta
+                          </p>
+                        </div>
+                      ) : null}
 
-                    {/* Mostrar QR si existe */}
-                    {qrCodeUrl && (
-                      <div className="mt-4">
-                        {/* Botón para ocultar/mostrar previsualización */}
-                        <button
-                          onClick={() => setMostrarQRPreview(!mostrarQRPreview)}
-                          className="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-all duration-200 mb-2 flex items-center justify-center gap-2"
-                        >
-                          <span>{mostrarQRPreview ? '👁️ Ocultar' : '👁️‍🗨️ Mostrar'} Previsualización</span>
-                        </button>
-                        
-                        {/* Previsualización del QR (ocultable) */}
-                        {mostrarQRPreview && (
-                          <div className="p-4 bg-white rounded-lg">
-                            <div className="flex flex-col items-center gap-3">
-                              <img 
-                                src={qrCodeUrl} 
-                                alt="QR Code Instagram" 
-                                className="w-48 h-48 object-contain"
-                              />
-                              <button
-                                onClick={descargarQR}
-                                className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm flex items-center justify-center gap-2"
-                              >
-                                <span>📥</span>
-                                <span>Descargar QR</span>
-                              </button>
-                              <p className="text-xs text-gray-500 text-center">
-                                Comparte este QR para que tus clientes puedan seguirte en Instagram
-                              </p>
+                      {/* Mostrar QR si existe */}
+                      {qrCodeUrl && (
+                        <div className="mt-4">
+                          {/* Botón para ocultar/mostrar previsualización */}
+                          <button
+                            onClick={() => setMostrarQRPreview(!mostrarQRPreview)}
+                            className="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-all duration-200 mb-2 flex items-center justify-center gap-2"
+                          >
+                            <span>{mostrarQRPreview ? '👁️ Ocultar' : '👁️‍🗨️ Mostrar'} Previsualización</span>
+                          </button>
+                          
+                          {/* Previsualización del QR (ocultable) */}
+                          {mostrarQRPreview && (
+                            <div className="p-2 bg-white rounded-lg">
+                              <div className="flex flex-col items-center gap-2">
+                                <img 
+                                  src={qrCodeUrl} 
+                                  alt="QR Code Instagram" 
+                                  className="w-full max-w-[320px] h-auto object-contain"
+                                />
+                                <button
+                                  onClick={descargarQR}
+                                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm flex items-center justify-center gap-2"
+                                >
+                                  <span>📥</span>
+                                  <span>Descargar QR</span>
+                                </button>
+                                <p className="text-xs text-gray-500 text-center px-2">
+                                  Comparte este QR para que tus clientes puedan seguirte en Instagram
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sección de Opiniones Google */}
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">⭐</span>
+                        <h4 className="text-lg font-semibold text-white">Opiniones Google</h4>
                       </div>
-                    )}
+                      <button
+                        onClick={() => setMostrarSeccionGoogle(!mostrarSeccionGoogle)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-white"
+                        title={mostrarSeccionGoogle ? "Contraer sección" : "Desplegar sección"}
+                      >
+                        {mostrarSeccionGoogle ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    
+                    {/* Contenido desplegable */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      mostrarSeccionGoogle ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <p className="text-xs text-gray-300 mb-3">
+                        Genera un código QR para que tus clientes puedan dejar su opinión en Google
+                      </p>
+                      
+                      {/* Mostrar mensaje si no hay link en la base de datos */}
+                      {!googleLink || googleLink.trim() === '' ? (
+                        <div className="p-3 bg-yellow-900/30 border border-yellow-500/30 rounded-lg">
+                          <p className="text-xs text-yellow-200 text-center">
+                            ⚠️ No hay link de Google Reviews configurado en tu cuenta
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {/* Mostrar QR si existe */}
+                      {qrCodeUrlGoogle && (
+                        <div className="mt-4">
+                          {/* Botón para ocultar/mostrar previsualización */}
+                          <button
+                            onClick={() => setMostrarQRPreviewGoogle(!mostrarQRPreviewGoogle)}
+                            className="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-all duration-200 mb-2 flex items-center justify-center gap-2"
+                          >
+                            <span>{mostrarQRPreviewGoogle ? '👁️ Ocultar' : '👁️‍🗨️ Mostrar'} Previsualización</span>
+                          </button>
+                          
+                          {/* Previsualización del QR (ocultable) */}
+                          {mostrarQRPreviewGoogle && (
+                            <div className="p-2 bg-white rounded-lg">
+                              <div className="flex flex-col items-center gap-2">
+                                <img 
+                                  src={qrCodeUrlGoogle} 
+                                  alt="QR Code Google Reviews" 
+                                  className="w-full max-w-[320px] h-auto object-contain"
+                                />
+                                <button
+                                  onClick={descargarQRGoogle}
+                                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm flex items-center justify-center gap-2"
+                                >
+                                  <span>📥</span>
+                                  <span>Descargar QR</span>
+                                </button>
+                                <p className="text-xs text-gray-500 text-center px-2">
+                                  Comparte este QR para que tus clientes puedan dejar su opinión en Google
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
