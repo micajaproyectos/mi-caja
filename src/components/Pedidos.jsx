@@ -178,6 +178,12 @@ export default function Pedidos() {
   
   // Estado para control de envío a cocina
   const [enviandoACocina, setEnviandoACocina] = useState(false);
+  
+  // Estado para prevenir doble clic en registro de pedido
+  const [registrandoPedido, setRegistrandoPedido] = useState(false);
+  
+  // Ref para verificación síncrona inmediata (previene doble ejecución)
+  const registrandoPedidoRef = useRef(false);
 
   // Estados para edición inline
   const [editandoId, setEditandoId] = useState(null);
@@ -2123,6 +2129,16 @@ export default function Pedidos() {
 
   // Función para registrar pedido en Supabase
   const registrarPedido = async (mesa) => {
+    // Prevenir doble clic - verificación síncrona inmediata con useRef
+    if (registrandoPedidoRef.current) {
+      console.log('⚠️ Intento de doble registro bloqueado');
+      return;
+    }
+    
+    // Marcar inmediatamente como procesando (síncrono)
+    registrandoPedidoRef.current = true;
+    setRegistrandoPedido(true);
+
     // Validar fecha primero
     if (!validarFecha(pedido.fecha)) {
       alert('❌ Por favor ingresa una fecha válida en formato YYYY-MM-DD');
@@ -2208,9 +2224,15 @@ export default function Pedidos() {
       });
 
       // INSERTAR TODOS LOS PEDIDOS EN UNA SOLA OPERACIÓN (mucho más rápido)
-      const { error } = await supabase
+      console.log('📝 Insertando pedidos:', pedidosParaInsertar.length, 'productos');
+      const { error, data } = await supabase
         .from('pedidos')
-        .insert(pedidosParaInsertar);
+        .insert(pedidosParaInsertar)
+        .select();
+      
+      if (data) {
+        console.log('✅ Pedidos insertados:', data.length, 'filas');
+      }
 
       if (error) {
         console.error('Error al registrar pedidos:', error);
@@ -2282,6 +2304,10 @@ export default function Pedidos() {
     } catch (error) {
       console.error('Error general al registrar pedido:', error);
       alert('❌ Error al registrar pedido: ' + error.message);
+    } finally {
+      // Siempre limpiar el estado de procesamiento, incluso si hay error
+      registrandoPedidoRef.current = false;
+      setRegistrandoPedido(false);
     }
   };
 
@@ -3354,10 +3380,16 @@ export default function Pedidos() {
                           
                           {/* Botón Registrar Pago */}
                           <button
-                            onClick={() => registrarPedido(mesaSeleccionada)}
-                            disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (!registrandoPedido && !registrandoPedidoRef.current) {
+                                registrarPedido(mesaSeleccionada);
+                              }
+                            }}
+                            disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0 || registrandoPedido}
                             className={`p-2 rounded-lg border-2 transition-all duration-200 ${
-                              (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0
+                              (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0 || registrandoPedido
                                 ? 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
                                 : 'bg-green-600 border-green-500 text-white hover:bg-green-700'
                             }`}
@@ -3365,9 +3397,12 @@ export default function Pedidos() {
                             <div className="text-center">
                               <div className="text-base mb-1">💳</div>
                               <p className="font-medium text-xs">
-                                Registrar Pago {((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
-                                  ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length})` 
-                                  : '')}
+                                {registrandoPedido 
+                                  ? '⏳ Registrando...' 
+                                  : `Registrar Pago ${((productosSeleccionadosParaPago[mesaSeleccionada] || []).length > 0 
+                                      ? `(${(productosSeleccionadosParaPago[mesaSeleccionada] || []).length})` 
+                                      : '')}`
+                                }
                               </p>
                             </div>
                           </button>
