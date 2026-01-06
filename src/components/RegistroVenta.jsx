@@ -475,9 +475,10 @@ export default function RegistroVenta() {
     let ventasFiltradas = [...ventasRegistradas];
     const fechaActual = obtenerFechaActual();
 
-    // Si no hay filtros activos, mostrar solo las ventas del día actual
+    // Si no hay filtros activos, mostrar solo las ventas del día actual del usuario logueado
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
       ventasFiltradas = ventasFiltradas.filter(venta => {
+        // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
         const fechaVenta = venta.fecha_cl || venta.fecha;
         return fechaVenta === fechaActual;
       });
@@ -493,15 +494,8 @@ export default function RegistroVenta() {
       // Filtrar por mes (si se selecciona)
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaVenta = venta.fecha_cl || venta.fecha;
-          
-          if (!fechaVenta && venta.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
-          }
-          
+          // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
+          const fechaVenta = venta.fecha_cl || venta.fecha;
           if (!fechaVenta) return false;
           
           const [year, month] = fechaVenta.split('-');
@@ -514,16 +508,10 @@ export default function RegistroVenta() {
       // Filtrar por año (si se selecciona)
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaVenta = venta.fecha_cl || venta.fecha;
-          
-          if (!fechaVenta && venta.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
-          }
-          
+          // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
+          const fechaVenta = venta.fecha_cl || venta.fecha;
           if (!fechaVenta) return false;
+          
           const year = fechaVenta.split('-')[0];
           return parseInt(year) === parseInt(filtroAnio);
         });
@@ -532,16 +520,10 @@ export default function RegistroVenta() {
       // Si hay mes y año seleccionados (sin día específico)
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaVenta = venta.fecha_cl || venta.fecha;
-          
-          if (!fechaVenta && venta.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
-          }
-          
+          // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
+          const fechaVenta = venta.fecha_cl || venta.fecha;
           if (!fechaVenta) return false;
+          
           const [year, month] = fechaVenta.split('-');
           return parseInt(month) === parseInt(filtroMes) && 
                  parseInt(year) === parseInt(filtroAnio);
@@ -736,10 +718,11 @@ export default function RegistroVenta() {
   const estadisticasDinamicas = useMemo(() => {
     let ventasFiltradas = [...ventasRegistradas];
 
-    // Si no hay filtros activos, mostrar solo las ventas del día actual
+    // Si no hay filtros activos, mostrar solo las ventas del día actual del usuario logueado
     if (!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago) {
       const hoy = obtenerFechaActual();
       ventasFiltradas = ventasFiltradas.filter(venta => {
+        // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
         const fechaVenta = venta.fecha_cl || venta.fecha;
         return fechaVenta === hoy;
       });
@@ -754,16 +737,10 @@ export default function RegistroVenta() {
 
       if (filtroMes && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaVenta = venta.fecha_cl || venta.fecha;
-          
-          if (!fechaVenta && venta.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
-          }
-          
+          // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
+          const fechaVenta = venta.fecha_cl || venta.fecha;
           if (!fechaVenta) return false;
+          
           const [year, month] = fechaVenta.split('-');
           const mesVenta = parseInt(month);
           const mesFiltro = parseInt(filtroMes);
@@ -773,16 +750,10 @@ export default function RegistroVenta() {
 
       if (filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaVenta = venta.fecha_cl || venta.fecha;
-          
-          if (!fechaVenta && venta.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
-          }
-          
+          // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
+          const fechaVenta = venta.fecha_cl || venta.fecha;
           if (!fechaVenta) return false;
+          
           const year = fechaVenta.split('-')[0];
           return parseInt(year) === parseInt(filtroAnio);
         });
@@ -790,16 +761,10 @@ export default function RegistroVenta() {
 
       if (filtroMes && filtroAnio && !filtroDia) {
         ventasFiltradas = ventasFiltradas.filter(venta => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaVenta = venta.fecha_cl || venta.fecha;
-          
-          if (!fechaVenta && venta.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(venta.created_at);
-            fechaVenta = fechaCreated.toISOString().split('T')[0];
-          }
-          
+          // Usar fecha_cl si existe, sino fecha (ambas ya están en formato YYYY-MM-DD)
+          const fechaVenta = venta.fecha_cl || venta.fecha;
           if (!fechaVenta) return false;
+          
           const [year, month] = fechaVenta.split('-');
           return parseInt(month) === parseInt(filtroMes) && 
                  parseInt(year) === parseInt(filtroAnio);
@@ -985,6 +950,8 @@ export default function RegistroVenta() {
 
   // Cargar ventas y productos del inventario al montar el componente
   useEffect(() => {
+    // Asegurar que los filtros estén limpios al montar para mostrar solo ventas del día actual
+    limpiarFiltros();
     recargarDatos();
   }, [recargarDatos]);
 
@@ -1033,6 +1000,7 @@ export default function RegistroVenta() {
       clearInterval(intervalId);
     };
   }, [venta.fecha]);
+
 
   // Cerrar dropdown al hacer clic fuera (soporte para móviles y desktop)
   useEffect(() => {
