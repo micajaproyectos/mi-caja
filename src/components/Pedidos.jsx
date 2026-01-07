@@ -2951,6 +2951,16 @@ export default function Pedidos() {
                       <p className="text-gray-400 text-center py-6">No hay productos en esta mesa</p>
                     ) : (
                       <div className="space-y-4">
+                    {/* Encabezados de columnas */}
+                    <div className="hidden sm:flex flex-row items-center py-2 px-2">
+                      <div className="flex-1">
+                        <p className="text-orange-300 text-base font-medium text-center">🍳 Envíos a Cocina</p>
+                      </div>
+                      <div className="hidden sm:block w-px bg-white/20 mx-3 sm:mx-4 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="text-green-300 text-base font-medium text-center">💰 Centro de Pago</p>
+                      </div>
+                    </div>
                     {/* Lista de productos de la mesa */}
                     <div className="space-y-2">
                       {productosPorMesa[mesaSeleccionada].map((producto) => {
@@ -2960,21 +2970,28 @@ export default function Pedidos() {
                         return (
                           <div 
                             key={producto.id} 
-                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 sm:py-3 px-2 gap-2 transition-all duration-200"
+                            className="flex flex-col sm:flex-row sm:items-center py-1 sm:py-1.5 px-2 gap-1.5 transition-all duration-200 border-b border-white/30"
                           >
                             {/* Checkbox para Cocina y contenido principal */}
                             <div className="flex items-start gap-2 flex-1 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={estaSeleccionadoCocina}
-                                onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
-                                className="w-5 h-5 sm:w-6 sm:h-6 lg:w-4 lg:h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
-                                title="Enviar a cocina"
-                              />
-                              
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col gap-1">
-                                  <p className="text-white font-medium text-sm truncate">{producto.producto}</p>
+                              <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                <div className="flex items-start gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={estaSeleccionadoCocina}
+                                    onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
+                                    className="w-5 h-5 sm:w-6 sm:h-6 lg:w-4 lg:h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
+                                    title="Enviar a cocina"
+                                  />
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-col gap-0.5">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="text-white font-medium text-sm">{producto.producto}</p>
+                                        <p className="text-gray-300 text-xs">
+                                          {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
+                                        </p>
+                                      </div>
                                   {/* Campo de comentarios */}
                                   <input
                                     type="text"
@@ -2985,19 +3002,21 @@ export default function Pedidos() {
                                       const comentariosUpper = e.target.value.toUpperCase();
                                       guardarComentariosEnSupabase(producto.id, comentariosUpper);
                                     }}
-                                    className="w-full px-2 py-1 rounded-none bg-transparent text-white placeholder-gray-400 focus:outline-none border-0 border-b border-white/30 focus:border-green-400 text-xs sm:text-sm"
+                                    className="w-full px-2 py-0.5 rounded-none bg-transparent text-white placeholder-gray-400 focus:outline-none border-0 border-b border-white/30 focus:border-green-400 text-xs sm:text-sm"
                                     placeholder="Comentarios..."
                                     style={{ textTransform: 'uppercase' }}
                                   />
-                                  <p className="text-gray-300 text-xs">
-                                    {producto.cantidad} {producto.unidad} - ${parseFloat(producto.precio_unitario).toLocaleString()}
-                                  </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                             
+                            {/* Línea divisoria visual centrada */}
+                            <div className="hidden sm:block w-px bg-white/20 mx-2 sm:mx-3 self-stretch flex-shrink-0"></div>
+                            
                             {/* Checkbox para Pago y valores */}
-                            <div className="flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0">
+                            <div className="flex items-center justify-end gap-1.5 sm:gap-2 flex-1 sm:flex-shrink-0">
                               {/* Checkbox para Pago */}
                               <input
                                 type="checkbox"
@@ -3032,6 +3051,7 @@ export default function Pedidos() {
                             <span className="text-orange-200 text-xs">
                               ({(productosSeleccionadosParaCocina[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
                             </span>
+                            <span className="text-gray-400 text-xs italic">Selecciona para enviar a cocina</span>
                           </div>
                           <button
                             onClick={() => enviarACocina(mesaSeleccionada)}
@@ -3060,6 +3080,7 @@ export default function Pedidos() {
                             <span className="text-green-200 text-xs">
                               ({(productosSeleccionadosParaPago[mesaSeleccionada] || []).length}/{productosPorMesa[mesaSeleccionada].length})
                             </span>
+                            <span className="text-gray-400 text-xs italic">Selecciona para dividir la cuenta</span>
                           </div>
                           <button
                             onClick={() => toggleSeleccionarTodosParaPago(mesaSeleccionada)}
@@ -3896,6 +3917,22 @@ export default function Pedidos() {
                      <div className="text-right">
                        <p className="text-yellow-300 font-bold text-lg md:text-xl">
                          ${estadisticasPedidos.propinas.toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {/* Total en Caja */}
+                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                     <div className="flex items-center">
+                       <span className="text-blue-400 text-lg md:text-xl mr-3">💰</span>
+                       <div>
+                         <p className="text-blue-200 text-sm md:text-base font-medium">Total en Caja</p>
+                         <p className="text-blue-300 text-xs md:text-sm">Caja inicial + acumulado</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-blue-300 font-bold text-lg md:text-xl">
+                         ${calcularTotalCaja().toLocaleString()}
                        </p>
                      </div>
                    </div>

@@ -2,12 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { useSessionData } from '../lib/useSessionData.js';
+import SeguimientoBloqueado from './SeguimientoBloqueado';
 import Footer from './Footer';
 
 const Auditoria = () => {
   const [loading, setLoading] = useState(true);
   const [registrosAuditoria, setRegistrosAuditoria] = useState([]);
   const [registrosFiltrados, setRegistrosFiltrados] = useState([]);
+  
+  // Estados para bloqueo por clave interna
+  const [claveInternaValidada, setClaveInternaValidada] = useState(false);
+  const [tieneClaveInterna, setTieneClaveInterna] = useState(false);
+  const [verificandoClave, setVerificandoClave] = useState(false);
   
   // Estados para filtros
   const [filtroTabla, setFiltroTabla] = useState('');
@@ -200,6 +206,53 @@ const Auditoria = () => {
     }
   };
 
+  // Función para verificar si el usuario tiene clave interna y si está validada
+  const verificarClaveInterna = async () => {
+    try {
+      setVerificandoClave(true);
+      const usuarioId = await authService.getCurrentUserId();
+      
+      if (!usuarioId) {
+        setTieneClaveInterna(false);
+        setClaveInternaValidada(false);
+        return;
+      }
+
+      // Obtener si el usuario tiene clave interna configurada
+      const { data: usuarioData, error } = await supabase
+        .from('usuarios')
+        .select('clave_interna')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (error || !usuarioData || !usuarioData.clave_interna) {
+        setTieneClaveInterna(false);
+        setClaveInternaValidada(true); // Si no tiene clave, puede acceder libremente
+        return;
+      }
+
+      // Usuario tiene clave interna configurada
+      setTieneClaveInterna(true);
+      // NO usar sessionStorage/localStorage
+      // La validación debe pedirse SIEMPRE al entrar a Auditoría
+      // Solo el estado en memoria determina si está validada
+      setClaveInternaValidada(false);
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.error('❌ Error verificando clave interna:', e);
+      }
+      setTieneClaveInterna(false);
+      setClaveInternaValidada(true);
+    } finally {
+      setVerificandoClave(false);
+    }
+  };
+
+  // Función para manejar cuando la clave es validada correctamente
+  const handleClaveValidada = () => {
+    setClaveInternaValidada(true);
+  };
+
   // Función para recargar datos
   const recargarDatos = useCallback(() => {
     cargarAuditoria();
@@ -207,6 +260,11 @@ const Auditoria = () => {
 
   // Hook para gestionar cambios de sesión
   useSessionData(recargarDatos, 'Auditoria');
+
+  // Verificar clave interna al montar
+  useEffect(() => {
+    verificarClaveInterna();
+  }, []);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -352,6 +410,11 @@ const Auditoria = () => {
 
       {/* Efecto de vidrio esmerilado adicional */}
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+
+      {/* Bloqueo por clave interna - mostrar solo si tiene clave y no está validada */}
+      {tieneClaveInterna && !claveInternaValidada && (
+        <SeguimientoBloqueado onClaveValidada={handleClaveValidada} />
+      )}
 
       {/* Contenido principal */}
       <div className={`${pantallaCompletaTabla ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
