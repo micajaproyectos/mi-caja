@@ -862,12 +862,18 @@ export default function Pedidos() {
 
   // Función para seleccionar un producto del inventario
   const seleccionarProducto = (producto) => {
+    const cantidad = '1';
+    const precio = parseFloat(producto.precio_venta) || 0;
+    const cantidadNum = 1;
+    const subtotal = +(cantidadNum * precio).toFixed(2);
+    
     setProductoActual({
       ...productoActual,
       producto: producto.producto,
       precio_unitario: producto.precio_venta.toString(),
       unidad: producto.unidad,
-      subtotal: 0,
+      cantidad: cantidad,
+      subtotal: subtotal,
       comentarios: ''
     });
     setBusquedaProducto(producto.producto);
@@ -904,12 +910,18 @@ export default function Pedidos() {
 
       if (data) {
         // Completar el formulario con los datos del producto encontrado
+        const cantidad = '1';
+        const precio = parseFloat(data.precio_venta) || 0;
+        const cantidadNum = 1;
+        const subtotal = +(cantidadNum * precio).toFixed(2);
+        
         setProductoActual({
           ...productoActual,
           producto: data.producto,
           precio_unitario: data.precio_venta.toString(),
           unidad: data.unidad,
-          subtotal: 0,
+          cantidad: cantidad,
+          subtotal: subtotal,
           comentarios: ''
         });
         setBusquedaProducto(data.producto);
@@ -2747,15 +2759,37 @@ export default function Pedidos() {
 
                <div>
                  <label className="block text-white font-medium mb-2 text-sm">Cantidad</label>
-                 <input
-                   type="number"
-                   step="0.01"
-                   name="cantidad"
-                   value={productoActual.cantidad}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                   placeholder="0.00"
-                 />
+                 <div className="flex items-center gap-1.5">
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const nuevaCantidad = Math.max(0, (parseInt(productoActual.cantidad) || 0) - 1);
+                       handleChange({ target: { name: 'cantidad', value: nuevaCantidad.toString() } });
+                     }}
+                     className="px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors text-sm font-bold min-w-[32px]"
+                   >
+                     −
+                   </button>
+                   <input
+                     type="number"
+                     name="cantidad"
+                     value={productoActual.cantidad}
+                     onChange={handleChange}
+                     readOnly
+                     className="w-16 px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-center"
+                     placeholder="0"
+                   />
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const nuevaCantidad = (parseInt(productoActual.cantidad) || 0) + 1;
+                       handleChange({ target: { name: 'cantidad', value: nuevaCantidad.toString() } });
+                     }}
+                     className="px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors text-sm font-bold min-w-[32px]"
+                   >
+                     +
+                   </button>
+                 </div>
                </div>
 
                <div>

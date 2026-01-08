@@ -241,12 +241,18 @@ export default function RegistroVenta() {
 
   // Función para seleccionar un producto del inventario
   const seleccionarProducto = (producto) => {
+    const cantidad = producto.unidad === 'unidad' ? '1' : '';
+    const precio = parseFloat(producto.precio_venta) || 0;
+    const cantidadNum = producto.unidad === 'unidad' ? 1 : 0;
+    const subtotal = producto.unidad === 'unidad' ? +(cantidadNum * precio).toFixed(2) : 0;
+    
     setProductoActual({
       ...productoActual,
       producto: producto.producto,
       precio_unitario: producto.precio_venta.toString(),
       unidad: producto.unidad,
-      subtotal: 0
+      cantidad: cantidad,
+      subtotal: subtotal
     });
     setBusquedaProducto(producto.producto);
     setMostrarDropdown(false);
@@ -287,12 +293,18 @@ export default function RegistroVenta() {
 
       if (data) {
         // Completar el formulario con los datos del producto encontrado
+        const cantidad = data.unidad === 'unidad' ? '1' : '';
+        const precio = parseFloat(data.precio_venta) || 0;
+        const cantidadNum = data.unidad === 'unidad' ? 1 : 0;
+        const subtotal = data.unidad === 'unidad' ? +(cantidadNum * precio).toFixed(2) : 0;
+        
         setProductoActual({
           ...productoActual,
           producto: data.producto,
           precio_unitario: data.precio_venta.toString(),
           unidad: data.unidad,
-          subtotal: 0
+          cantidad: cantidad,
+          subtotal: subtotal
         });
         setCodigoInternoVenta(codigo);
         setBusquedaProducto(data.producto);
@@ -2994,6 +3006,22 @@ export default function RegistroVenta() {
                         <div className="text-right">
                           <p className="text-indigo-300 font-bold text-lg md:text-xl">
                             ${calcularEstadisticasDinamicas().transferencia.monto.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Total en Caja */}
+                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-blue-400 text-lg md:text-xl mr-3">💰</span>
+                          <div>
+                            <p className="text-blue-200 text-sm md:text-base font-medium">Total en Caja</p>
+                            <p className="text-blue-300 text-xs md:text-sm">Caja inicial + acumulado</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-blue-300 font-bold text-lg md:text-xl">
+                            ${calcularTotalCaja().toLocaleString()}
                           </p>
                         </div>
                       </div>
