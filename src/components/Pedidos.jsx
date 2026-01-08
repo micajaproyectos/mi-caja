@@ -831,31 +831,39 @@ export default function Pedidos() {
 
     const busquedaNormalizada = normalizarTexto(busqueda);
     
-    // OPTIMIZACIÓN: Filtrado simple y rápido (sin sistema de puntuación complejo)
-    // Esto reduce el tiempo de procesamiento en cada keystroke
-    const filtrados = productosInventario
+    // OPTIMIZACIÓN CRÍTICA: Normalizar todos los productos una sola vez ANTES de filtrar
+    // Esto evita normalizaciones repetidas en filter y sort, mejorando significativamente el rendimiento
+    const productosNormalizados = productosInventario.map(producto => ({
+      ...producto,
+      nombreNormalizado: normalizarTexto(producto.producto)
+    }));
+    
+    // Coincidencia simple: todas las palabras deben estar en el nombre
+    const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
+    
+    // Filtrado más eficiente usando nombres ya normalizados
+    const filtrados = productosNormalizados
       .filter(producto => {
-        const nombreNormalizado = normalizarTexto(producto.producto);
-        
-        // Coincidencia simple: todas las palabras deben estar en el nombre
-        const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
-        return palabrasBusqueda.every(palabra => nombreNormalizado.includes(palabra));
+        return palabrasBusqueda.every(palabra => producto.nombreNormalizado.includes(palabra));
       })
       .sort((a, b) => {
         // Ordenar por: 1) coincidencias al inicio, 2) longitud del nombre
-        const nombreA = normalizarTexto(a.producto);
-        const nombreB = normalizarTexto(b.producto);
-        
-        const aComienza = nombreA.startsWith(busquedaNormalizada);
-        const bComienza = nombreB.startsWith(busquedaNormalizada);
+        // Ya no necesitamos normalizar de nuevo, el nombre ya está normalizado
+        const aComienza = a.nombreNormalizado.startsWith(busquedaNormalizada);
+        const bComienza = b.nombreNormalizado.startsWith(busquedaNormalizada);
         
         if (aComienza && !bComienza) return -1;
         if (!aComienza && bComienza) return 1;
         
         // Si ambos o ninguno comienzan con la búsqueda, ordenar por longitud
-        return nombreA.length - nombreB.length;
+        return a.nombreNormalizado.length - b.nombreNormalizado.length;
       })
-      .slice(0, 50); // Limitar a 50 resultados para mejor rendimiento
+      .slice(0, 50) // Limitar a 50 resultados para mejor rendimiento
+      .map(producto => {
+        // Remover el campo temporal antes de guardar en el estado
+        const { nombreNormalizado, ...productoSinNormalizado } = producto;
+        return productoSinNormalizado;
+      });
 
     setProductosFiltrados(filtrados);
   };
@@ -938,11 +946,6 @@ export default function Pedidos() {
   // Función para manejar cambios en la búsqueda de productos (CON DEBOUNCE)
   const handleBusquedaProducto = (e) => {
     const valor = e.target.value;
-    
-    // Evitar procesar si el valor no cambió realmente
-    if (valor === busquedaProducto && valor === ultimaBusquedaRef.current) {
-      return;
-    }
 
     // Actualizar el estado inmediatamente (para que el usuario vea su escritura)
     setBusquedaProducto(valor);
@@ -960,8 +963,8 @@ export default function Pedidos() {
     }
     
     if (valor.trim()) {
-      // OPTIMIZACIÓN: Aplicar debounce de 200ms antes de filtrar
-      // Esto evita procesar cada keystroke y mejora significativamente el rendimiento
+      // OPTIMIZACIÓN: Aplicar debounce de 100ms antes de filtrar (reducido de 200ms)
+      // Esto mejora la respuesta percibida mientras mantiene buen rendimiento
       busquedaTimeoutRef.current = setTimeout(() => {
         if (productosInventario.length > 0) {
           filtrarProductos(valor);
@@ -970,7 +973,7 @@ export default function Pedidos() {
           setProductosFiltrados([]);
           setMostrarDropdown(true);
         }
-      }, 200); // Esperar 200ms después del último keystroke
+      }, 100); // Reducido de 200ms a 100ms para mejor respuesta
     } else {
       // Búsqueda vacía, limpiar todo inmediatamente (sin debounce)
       setProductosFiltrados([]);
