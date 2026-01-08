@@ -833,13 +833,13 @@ const VentaRapida = () => {
           </div>
 
           {/* Formulario de Venta Rápida */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 border border-white/20">
-            <form onSubmit={registrarVentaRapida} className="space-y-6">
-              {/* Primera fila: Fecha, Monto y Tipo de Pago */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-4 border border-white/20">
+            <form onSubmit={registrarVentaRapida} className="space-y-3">
+              {/* Primera fila: Fecha y Monto */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Fecha */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-white">
                     Fecha
                   </label>
                   <input
@@ -847,14 +847,14 @@ const VentaRapida = () => {
                     name="fecha"
                     value={venta.fecha}
                     onChange={handleChange}
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm"
                     required
                   />
                 </div>
 
                 {/* Monto */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-white">
                     Monto
                   </label>
                   <input
@@ -865,49 +865,113 @@ const VentaRapida = () => {
                     placeholder="Ingresa el monto"
                     step="1"
                     min="0"
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm"
                     required
                   />
                 </div>
+              </div>
 
-                {/* Tipo de Pago */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
-                    Tipo de Pago
-                  </label>
-                  <select
-                    name="tipo_pago"
-                    value={venta.tipo_pago}
-                    onChange={handleChange}
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
-                    style={{ colorScheme: 'dark' }}
-                    required
+              {/* Tipo de Pago - Botones */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-white">
+                  Tipo de Pago
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVenta({...venta, tipo_pago: 'efectivo'});
+                      setMontoPagado('');
+                      setMostrarVuelto(false);
+                    }}
+                    className={`p-1.5 rounded-lg border-2 transition-all duration-200 ${
+                      venta.tipo_pago === 'efectivo' 
+                        ? 'bg-green-600 border-green-500 text-white' 
+                        : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    }`}
                   >
-                    <option value="efectivo" className="bg-gray-800">Efectivo</option>
-                    <option value="debito" className="bg-gray-800">Débito</option>
-                    <option value="credito" className="bg-gray-800">Crédito</option>
-                    <option value="transferencia" className="bg-gray-800">Transferencia</option>
-                  </select>
+                    <div className="text-center">
+                      <div className="text-green-400 text-sm mb-0.5">💵</div>
+                      <p className="font-medium text-xs">Efectivo</p>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVenta({...venta, tipo_pago: 'debito'});
+                      setMontoPagado('');
+                      setMostrarVuelto(false);
+                    }}
+                    className={`p-1.5 rounded-lg border-2 transition-all duration-200 ${
+                      venta.tipo_pago === 'debito' 
+                        ? 'bg-green-600 border-green-500 text-white' 
+                        : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-blue-400 text-sm mb-0.5">💳</div>
+                      <p className="font-medium text-xs">Débito</p>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVenta({...venta, tipo_pago: 'credito'});
+                      setMontoPagado('');
+                      setMostrarVuelto(false);
+                    }}
+                    className={`p-1.5 rounded-lg border-2 transition-all duration-200 ${
+                      venta.tipo_pago === 'credito' 
+                        ? 'bg-green-600 border-green-500 text-white' 
+                        : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-orange-400 text-sm mb-0.5">💳</div>
+                      <p className="font-medium text-xs">Crédito</p>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVenta({...venta, tipo_pago: 'transferencia'});
+                      setMontoPagado('');
+                      setMostrarVuelto(false);
+                    }}
+                    className={`p-1.5 rounded-lg border-2 transition-all duration-200 ${
+                      venta.tipo_pago === 'transferencia' 
+                        ? 'bg-green-600 border-green-500 text-white' 
+                        : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-purple-400 text-sm mb-0.5">📱</div>
+                      <p className="font-medium text-xs">Transferencia</p>
+                    </div>
+                  </button>
                 </div>
               </div>
 
               {/* Calculadora de Vuelto (solo para Efectivo) - Aparece primero */}
               {venta.tipo_pago === 'efectivo' && venta.monto && parseFloat(venta.monto) > 0 && (
-                <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-blue-400/30">
-                  <h4 className="text-blue-200 font-semibold mb-4 text-sm md:text-base flex items-center gap-2">
-                    <span className="text-xl">🧮</span>
+                <div className="bg-blue-500/20 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-blue-400/30">
+                  <h4 className="text-blue-200 font-semibold mb-2 text-xs md:text-sm flex items-center gap-1.5">
+                    <span className="text-base">🧮</span>
                     Calculadora de Vuelto
                   </h4>
                   
                   {/* Grid de 3 columnas: Monto de venta, Monto pagado y Vuelto */}
-                  <div className={`grid grid-cols-1 gap-4 ${mostrarVuelto && montoPagado ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+                  <div className={`grid grid-cols-1 gap-2 ${mostrarVuelto && montoPagado ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
                     {/* Monto de la venta (solo lectura) */}
                     <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      <label className="block text-blue-100 text-xs mb-1">
                         Monto de la venta:
                       </label>
-                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-3 md:p-4 text-center h-[58px] flex items-center justify-center">
-                        <p className="text-blue-300 text-xl md:text-2xl font-bold">
+                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 text-center h-[42px] flex items-center justify-center">
+                        <p className="text-blue-300 text-base md:text-lg font-bold">
                           ${parseFloat(venta.monto).toLocaleString('es-CL')}
                         </p>
                       </div>
@@ -915,7 +979,7 @@ const VentaRapida = () => {
 
                     {/* Monto pagado por el cliente */}
                     <div>
-                      <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                      <label className="block text-blue-100 text-xs mb-1">
                         Monto pagado por el cliente:
                       </label>
                       <input
@@ -928,18 +992,18 @@ const VentaRapida = () => {
                         placeholder="Ingresa el monto recibido"
                         step="100"
                         min="0"
-                        className="w-full p-3 md:p-4 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                        className="w-full p-2 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm h-[42px]"
                       />
                     </div>
 
                     {/* Vuelto a entregar (solo si hay monto pagado) */}
                     {mostrarVuelto && montoPagado && (
                       <div>
-                        <label className="block text-blue-100 text-xs md:text-sm mb-2">
+                        <label className="block text-blue-100 text-xs mb-1">
                           Vuelto a entregar:
                         </label>
-                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-3 md:p-4 text-center h-[58px] flex items-center justify-center flex-col`}>
-                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-xl md:text-2xl font-bold`}>
+                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 text-center h-[42px] flex items-center justify-center flex-col`}>
+                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-base md:text-lg font-bold`}>
                             {calcularVuelto() >= 0 ? (
                               `$${calcularVuelto().toLocaleString('es-CL')}`
                             ) : (
@@ -947,7 +1011,7 @@ const VentaRapida = () => {
                             )}
                           </p>
                           {calcularVuelto() < 0 && (
-                            <p className="text-red-200 text-xs mt-1">
+                            <p className="text-red-200 text-[10px] mt-0.5">
                               ⚠️ Insuficiente
                             </p>
                           )}
@@ -959,14 +1023,14 @@ const VentaRapida = () => {
               )}
 
               {/* Segunda fila: Monto a Registrar y Botón de Registro - Aparecen después de la calculadora */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Monto a Registrar */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-white">
                     Monto a Registrar
                   </label>
-                  <div className="bg-yellow-500/20 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-yellow-400/30 flex items-center justify-center">
-                    <p className="text-lg md:text-xl font-bold text-yellow-300">
+                  <div className="bg-yellow-500/20 backdrop-blur-sm rounded-lg p-2 border border-yellow-400/30 flex items-center justify-center h-[42px]">
+                    <p className="text-base md:text-lg font-bold text-yellow-300">
                       {venta.monto && parseFloat(venta.monto) > 0 
                         ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
                         : '$0'
@@ -976,14 +1040,14 @@ const VentaRapida = () => {
                 </div>
                 
                 {/* Botón de Registro */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-white opacity-0">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-white opacity-0">
                     Acción
                   </label>
                   <button
                     type="submit"
                     disabled={loading || registrando}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-3 md:p-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm md:text-base"
+                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm h-[42px]"
                   >
                     {loading || registrando ? (
                       <>

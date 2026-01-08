@@ -197,7 +197,9 @@ const NavBar = () => {
       }
 
       const link = data?.link_logo || '';
-      console.log('Logo link cargado:', link);
+      if (import.meta.env.DEV) {
+        console.log('Logo link cargado:', link);
+      }
       // Usar URL original o proxy según sea necesario
       setLogoLink(link);
     } catch (error) {
@@ -730,15 +732,19 @@ const NavBar = () => {
     // Verificar si ya se mostró permanentemente
     const permanentlyShown = localStorage.getItem('newFeaturesNotificationShown');
     if (permanentlyShown) {
-      console.log('❌ Notificación ya marcada como mostrada permanentemente');
-      console.log('🔧 Limpiando localStorage para resetear notificación...');
+      if (import.meta.env.DEV) {
+        console.log('❌ Notificación ya marcada como mostrada permanentemente');
+        console.log('🔧 Limpiando localStorage para resetear notificación...');
+      }
       localStorage.removeItem('newFeaturesNotificationShown');
       localStorage.removeItem('newFeaturesNotificationDismissed');
       return true; // Mostrar después de limpiar
     }
     
     // Por ahora, mostrar siempre para testing (después podemos ajustar la lógica de fechas)
-    console.log('✅ Mostrando notificación - modo testing activado');
+    if (import.meta.env.DEV) {
+      console.log('✅ Mostrando notificación - modo testing activado');
+    }
     return true;
   };
 
@@ -898,18 +904,26 @@ const NavBar = () => {
 
   // Verificar notificación de nuevas funcionalidades
   useEffect(() => {
-    console.log('🔍 Verificando notificación de nuevas funcionalidades...');
+    if (import.meta.env.DEV) {
+      console.log('🔍 Verificando notificación de nuevas funcionalidades...');
+    }
     
     const showPopup = shouldShowNewFeaturesNotification();
     const showVisual = shouldShowNewFeaturesVisualNotification();
     
-    console.log('🔍 Resultados:', { showPopup, showVisual });
+    if (import.meta.env.DEV) {
+      console.log('🔍 Resultados:', { showPopup, showVisual });
+    }
     
     if (showPopup || showVisual) {
-      console.log('✅ Mostrando notificación visual en menú');
+      if (import.meta.env.DEV) {
+        console.log('✅ Mostrando notificación visual en menú');
+      }
       setShowNewFeaturesVisualNotification(true);
     } else {
-      console.log('❌ No se muestra ninguna notificación');
+      if (import.meta.env.DEV) {
+        console.log('❌ No se muestra ninguna notificación');
+      }
     }
   }, []);
 
