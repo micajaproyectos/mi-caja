@@ -1017,9 +1017,9 @@ const NavBar = () => {
                       <div className="flex items-center">
                         <span className="text-lg mr-2">🎉</span>
                         <div>
-                          <p className="text-white text-xs font-medium">🎊 ¡Feliz Año Nuevo 2026!</p>
+                          <p className="text-white text-xs font-medium">✨ Nuevas Actualizaciones</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            El equipo de Mi Caja te desea un próspero año lleno de éxito. ¡Gracias por confiar en nosotros!
+                            🔊 Sonidos en Pedidos y Cocina • 📊 Cierre de Caja en Registro de Venta
                           </p>
                         </div>
                       </div>

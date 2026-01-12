@@ -15,6 +15,7 @@ import Clientes from './components/Clientes';
 import Seguimiento from './components/Seguimiento';
 import Pedidos from './components/Pedidos';
 import Comunidad from './components/Comunidad';
+import Calendario from './components/Calendario';
 import Insumos from './components/Insumos';
 import VentaRapida from './components/VentaRapida';
 import Auditoria from './components/Auditoria';
@@ -111,6 +112,11 @@ function App() {
           <Route path="/comunidad" element={
             <RutaPrivada>
               <Comunidad />
+            </RutaPrivada>
+          } />
+          <Route path="/calendario" element={
+            <RutaPrivada>
+              <Calendario />
             </RutaPrivada>
           } />
           <Route path="/insumos" element={

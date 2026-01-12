@@ -133,6 +133,9 @@ export default function Pedidos() {
   // Estados para selección de productos para pago
   const [productosSeleccionadosParaPago, setProductosSeleccionadosParaPago] = useState({});
   
+  // Estado para productos enviados a cocina (información para mostrar)
+  const [productosEnviadosACocina, setProductosEnviadosACocina] = useState({});
+  
   // Estados para propina
   const [propinaActiva, setPropinaActiva] = useState(false);
   const [porcentajePropina, setPorcentajePropina] = useState(10);
@@ -216,6 +219,9 @@ export default function Pedidos() {
   
   // Ref para debounce de Realtime (evita flash visual)
   const realtimeTimeoutRef = useRef(null);
+  
+  // Ref para controlar el debounce del sonido (evita múltiples sonidos simultáneos)
+  const ultimaVezSonidoRef = useRef(0);
 
   // Función para detectar dispositivos táctiles (tablets/móviles) y navegadores específicos
   const esDispositivoTactil = () => {
@@ -837,9 +843,9 @@ export default function Pedidos() {
       ...producto,
       nombreNormalizado: normalizarTexto(producto.producto)
     }));
-    
-    // Coincidencia simple: todas las palabras deben estar en el nombre
-    const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
+        
+        // Coincidencia simple: todas las palabras deben estar en el nombre
+        const palabrasBusqueda = busquedaNormalizada.split(/\s+/).filter(p => p.length > 0);
     
     // Filtrado más eficiente usando nombres ya normalizados
     const filtrados = productosNormalizados
@@ -2069,6 +2075,19 @@ export default function Pedidos() {
       alert(`✅ ${productosAEnviar.length} producto(s) de ${mesa} enviados a cocina exitosamente`);
       console.log(`🍳 ${productosAEnviar.length} productos enviados a cocina`);
 
+      // Guardar productos enviados para mostrar en la lista informativa
+      setProductosEnviadosACocina(prev => {
+        const productosEnviados = productosAEnviar.map(p => ({
+          producto: p.producto,
+          cantidad: p.cantidad,
+          unidad: p.unidad || ''
+        }));
+        return {
+          ...prev,
+          [mesa]: [...(prev[mesa] || []), ...productosEnviados]
+        };
+      });
+
       // NO limpiar selección para mantener visualización de productos enviados
 
     } catch (error) {
@@ -2391,6 +2410,50 @@ export default function Pedidos() {
     }
   };
 
+  // Función para reproducir sonido de alarma cuando llega una notificación de pedido terminado
+  // Con debounce para evitar múltiples sonidos simultáneos cuando hay varias notificaciones juntas
+  const playAlarmSoundPedidos = useCallback(() => {
+    try {
+      // Verificar que la página esté visible
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      // Debounce: Solo reproducir si pasaron al menos 2 segundos desde el último sonido
+      const ahora = Date.now();
+      const tiempoDesdeUltimoSonido = ahora - ultimaVezSonidoRef.current;
+      const DEBOUNCE_TIEMPO = 2000; // 2 segundos - ajustable según necesidad
+      
+      // Si ya se reprodujo un sonido hace menos de 2 segundos, ignorar esta notificación
+      if (tiempoDesdeUltimoSonido < DEBOUNCE_TIEMPO) {
+        return; // Ignorar notificaciones muy cercanas en el tiempo
+      }
+      
+      // Actualizar la última vez que se reprodujo el sonido
+      ultimaVezSonidoRef.current = ahora;
+
+      // Usar HTML5 Audio con archivo de sonido
+      const audio = new Audio('/sounds/alarma-pedidos.wav');
+      audio.volume = 0.7; // 70% de volumen (ajustable según necesidad)
+      
+      // Reproducir el sonido
+      audio.play().catch(error => {
+        // Si falla (permisos del navegador, archivo no encontrado, etc.)
+        console.warn('No se pudo reproducir el sonido de alarma de pedidos:', error);
+        
+        if (error.name === 'NotAllowedError') {
+          console.info('Permisos de audio bloqueados. El usuario debe interactuar primero con la página.');
+        } else if (error.name === 'NotSupportedError' || error.code === 4) {
+          console.info('Archivo de sonido no encontrado. Por favor, verifica que alarma-pedidos.wav esté en public/sounds/');
+        }
+      });
+      
+    } catch (error) {
+      // Silenciar errores de audio (navegador no soporta, etc.)
+      console.warn('Error al reproducir sonido de alarma de pedidos:', error);
+    }
+  }, []);
+
   // Cargar notificaciones y configurar Realtime (separado del useEffect anterior)
   useEffect(() => {
     cargarNotificacionesPedidosTerminados();
@@ -2406,6 +2469,11 @@ export default function Pedidos() {
           table: 'notificaciones_pedidos_terminados'
         },
         (payload) => {
+          // Reproducir sonido solo cuando llega una nueva notificación (INSERT)
+          if (payload.eventType === 'INSERT') {
+            playAlarmSoundPedidos();
+          }
+          
           // Recargar notificaciones cuando hay cambios
           cargarNotificacionesPedidosTerminados();
         }
@@ -2773,11 +2841,11 @@ export default function Pedidos() {
                    >
                      −
                    </button>
-                   <input
-                     type="number"
-                     name="cantidad"
-                     value={productoActual.cantidad}
-                     onChange={handleChange}
+                 <input
+                   type="number"
+                   name="cantidad"
+                   value={productoActual.cantidad}
+                   onChange={handleChange}
                      readOnly
                      className="w-16 px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-center"
                      placeholder="0"
@@ -3013,15 +3081,15 @@ export default function Pedidos() {
                             <div className="flex items-start gap-2 flex-1 min-w-0">
                               <div className="flex flex-col gap-1 flex-1 min-w-0">
                                 <div className="flex items-start gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={estaSeleccionadoCocina}
-                                    onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
-                                    className="w-5 h-5 sm:w-6 sm:h-6 lg:w-4 lg:h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
-                                    title="Enviar a cocina"
-                                  />
-                                  
-                                  <div className="flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={estaSeleccionadoCocina}
+                                onChange={() => toggleSeleccionProductoCocina(mesaSeleccionada, producto.id)}
+                                className="w-5 h-5 sm:w-6 sm:h-6 lg:w-4 lg:h-4 mt-1 text-orange-600 bg-white/10 border-orange-400 rounded focus:ring-orange-500 focus:ring-1 cursor-pointer flex-shrink-0"
+                                title="Enviar a cocina"
+                              />
+                              
+                              <div className="flex-1 min-w-0">
                                     <div className="flex flex-col gap-0.5">
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-white font-medium text-sm">{producto.producto}</p>
@@ -3107,6 +3175,23 @@ export default function Pedidos() {
                             }
                           </button>
                         </div>
+                        
+                        {/* Lista de productos enviados a cocina (informativa) */}
+                        {(productosEnviadosACocina[mesaSeleccionada] || []).length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-orange-400/20">
+                            <div className="text-orange-300 text-xs font-semibold mb-1">✅ Enviados a cocina:</div>
+                            <div className="space-y-1 max-h-24 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                              {productosEnviadosACocina[mesaSeleccionada].map((producto, index) => (
+                                <div key={index} className="text-xs text-orange-200/80 flex items-center gap-1">
+                                  <span>•</span>
+                                  <span className="truncate">{producto.producto}</span>
+                                  <span className="text-orange-300 font-semibold">x{producto.cantidad}</span>
+                                  {producto.unidad && <span className="text-orange-200/60">{producto.unidad}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Tarjeta Pago - Derecha */}

@@ -139,6 +139,12 @@ export default function Home() {
       route: '/auditoria'
     },
     {
+      id: 'calendario',
+      icon: '📅',
+      label: 'Calendario Mi Caja',
+      route: '/calendario'
+    },
+    {
       id: 'comunidad',
       icon: '💬',
       label: 'Comunidad Mi Caja',

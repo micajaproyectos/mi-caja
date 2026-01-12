@@ -90,6 +90,38 @@ export default function GestionCocina() {
     }
   };
 
+  // Función para reproducir sonido de alarma cuando llega un nuevo pedido
+  const playAlarmSound = () => {
+    try {
+      // Verificar que la página esté visible
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      // Usar HTML5 Audio con archivo de sonido (más confiable que Web Audio API)
+      const audio = new Audio('/sounds/alarma-cocina.mp3');
+      audio.volume = 0.7; // 70% de volumen (ajustable según necesidad)
+      
+      // Reproducir el sonido
+      audio.play().catch(error => {
+        // Si falla (permisos del navegador, archivo no encontrado, etc.)
+        console.warn('No se pudo reproducir el sonido de alarma:', error);
+        
+        // Fallback: intentar con sonido alternativo si el principal no existe
+        // Esto evita errores si el archivo aún no se ha subido
+        if (error.name === 'NotAllowedError') {
+          console.info('Permisos de audio bloqueados. El usuario debe interactuar primero con la página.');
+        } else if (error.name === 'NotSupportedError' || error.code === 4) {
+          console.info('Archivo de sonido no encontrado. Por favor, agrega alarma-cocina.mp3 en public/sounds/');
+        }
+      });
+      
+    } catch (error) {
+      // Silenciar errores de audio (navegador no soporta, etc.)
+      console.warn('Error al reproducir sonido de alarma:', error);
+    }
+  };
+
   // Cargar datos al montar y configurar suscripción en tiempo real
   useEffect(() => {
     cargarPedidosCocina();
@@ -106,6 +138,12 @@ export default function GestionCocina() {
         },
         (payload) => {
           console.log('🔄 Cambio detectado en pedidos_cocina:', payload);
+          
+          // Reproducir sonido solo cuando llega un nuevo pedido (INSERT)
+          if (payload.eventType === 'INSERT') {
+            playAlarmSound();
+          }
+          
           cargarPedidosCocina(); // Recargar pedidos
         }
       )

@@ -18,5 +18,16 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['pdfjs-dist']
+  },
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Eliminar console.log, console.warn, console.info, console.debug en producción
+        // Mantener console.error para errores críticos
+        drop_console: false, // No eliminar todos los console
+        pure_funcs: ['console.log', 'console.warn', 'console.info', 'console.debug']
+      }
+    }
   }
 })

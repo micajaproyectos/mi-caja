@@ -102,23 +102,28 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
         {/* Contenido de la notificación */}
         <div className="text-center mb-6">
           <h3 className="text-2xl font-bold text-white mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-            ¡Feliz Año Nuevo 2026!
+            Nuevas Actualizaciones
           </h3>
           
           <div className="text-left space-y-4">
-            {/* Mensaje de saludo */}
+            {/* Nuevas actualizaciones */}
             <div className="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10">
               <span className="text-2xl">🎉</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-2">Saludo de Mi Caja</h4>
+                <h4 className="text-green-300 font-semibold text-lg mb-2">Nuevas Actualizaciones</h4>
                 <p className="text-gray-300 text-sm leading-relaxed mb-3">
-                  El equipo de <strong className="text-green-300">Mi Caja</strong> te desea un próspero año nuevo lleno de éxito y crecimiento.
+                  Estamos emocionados de compartir contigo las nuevas funcionalidades que hemos agregado a <strong className="text-green-300">Mi Caja</strong>:
                 </p>
-                <p className="text-gray-300 text-sm leading-relaxed mb-3">
-                  Agradecemos tu confianza en nosotros durante todo este tiempo. Estamos comprometidos en seguir brindándote las mejores herramientas para gestionar tu negocio de manera eficiente.
-                </p>
+                <div className="space-y-2 mb-3">
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    🔊 <strong className="text-green-300">Nuevos sonidos:</strong> Hemos agregado notificaciones sonoras en las secciones de <strong>Pedidos</strong> y <strong>Cocina</strong> para mejorar tu experiencia y mantenerte alerta de los cambios importantes.
+                  </p>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    📊 <strong className="text-green-300">Cierre de Caja:</strong> Ahora puedes registrar y verificar el cierre de jornada directamente desde <strong>Registro de Venta</strong>, permitiéndote comparar los valores físicos con los registrados en el sistema de manera rápida y eficiente.
+                  </p>
+                </div>
                 <p className="text-gray-300 text-sm leading-relaxed">
-                  ¡Que este 2026 esté lleno de logros y nuevas oportunidades para tu negocio! 🚀
+                  Estas mejoras están diseñadas para hacer tu gestión más fácil y eficiente. ¡Gracias por confiar en nosotros! 🚀
                 </p>
               </div>
             </div>

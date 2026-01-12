@@ -96,6 +96,9 @@ export default function RegistroVenta() {
   const [mostrarVuelto, setMostrarVuelto] = useState(false);
   const [calculadoraColapsada, setCalculadoraColapsada] = useState(false);
   
+  // Estado para colapsar/expandir sección de Cierre de Jornada
+  const [cierreJornadaColapsado, setCierreJornadaColapsado] = useState(false);
+  
   // Estados para cuadrar caja (solo frontend)
   const [cajaInicial, setCajaInicial] = useState(() => {
     // Cargar caja inicial desde localStorage al inicializar
@@ -114,6 +117,327 @@ export default function RegistroVenta() {
     return '';
   });
   // Ya no necesitamos el estado cajaAcumulada porque se calcula desde las ventas registradas
+  
+  // Estado para jornada seleccionada (Cierre de Jornada)
+  const [jornadaSeleccionada, setJornadaSeleccionada] = useState(null); // null, 'manana', o 'tarde'
+  
+  // Estados para valores verificados físicamente en el cierre de jornada
+  const [valoresVerificados, setValoresVerificados] = useState({
+    efectivo: '',
+    debito: '',
+    credito: '',
+    transferencia: '',
+    cajaInicial: ''
+  });
+  
+  // Estado para almacenar cierres de jornada registrados (información complementaria)
+  const [cierresRegistrados, setCierresRegistrados] = useState([]);
+  
+  // Función para calcular diferencias
+  const calcularDiferencia = (registrado, verificado) => {
+    const reg = parseFloat(registrado) || 0;
+    const ver = parseFloat(verificado) || 0;
+    // Redondear a número entero ya que los valores verificados son solo enteros
+    return Math.round(ver - reg);
+  };
+  
+  // Función para obtener color de diferencia
+  const obtenerColorDiferencia = (diferencia) => {
+    if (diferencia === 0) return 'text-green-300';
+    if (diferencia > 0) return 'text-yellow-300';
+    return 'text-red-300';
+  };
+
+  // Función memoizada para obtener estado de diferencia (optimización de rendimiento)
+  const obtenerEstadoDiferencia = useCallback((diff) => {
+    if (diff === 0) return { texto: '✅', color: 'text-green-400' };
+    if (diff > 0) return { texto: `+${diff.toLocaleString('es-CL')}`, color: 'text-yellow-400' };
+    return { texto: `${diff.toLocaleString('es-CL')}`, color: 'text-red-400' };
+  }, []);
+
+  // Función para verificar si todos los campos están completos
+  const todosLosCamposCompletos = useMemo(() => {
+    return (
+      valoresVerificados.efectivo !== '' &&
+      valoresVerificados.debito !== '' &&
+      valoresVerificados.credito !== '' &&
+      valoresVerificados.transferencia !== '' &&
+      valoresVerificados.cajaInicial !== ''
+    );
+  }, [valoresVerificados]);
+
+  // Función para calcular el total en caja verificado (Efectivo + Caja Inicial)
+  const calcularTotalEnCajaVerificado = useMemo(() => {
+    const efectivo = parseFloat(valoresVerificados.efectivo) || 0;
+    const cajaInicialVal = parseFloat(valoresVerificados.cajaInicial) || 0;
+    // Total en Caja = Efectivo Verificado + Caja Inicial Verificada
+    return efectivo + cajaInicialVal;
+  }, [valoresVerificados.efectivo, valoresVerificados.cajaInicial]);
+
+  // Función para calcular el total de ventas verificado (suma de todos los tipos de pago + caja inicial)
+  // Suma progresivamente todos los campos completados
+  const calcularTotalVentasVerificado = useMemo(() => {
+    const efectivo = parseFloat(valoresVerificados.efectivo) || 0;
+    const debito = parseFloat(valoresVerificados.debito) || 0;
+    const credito = parseFloat(valoresVerificados.credito) || 0;
+    const transferencia = parseFloat(valoresVerificados.transferencia) || 0;
+    const cajaInicialVal = parseFloat(valoresVerificados.cajaInicial) || 0;
+    
+    // Total Ventas = Efectivo + Débito + Crédito + Transferencia + Caja Inicial
+    // Suma todos los campos que tengan valor (suma progresiva)
+    return efectivo + debito + credito + transferencia + cajaInicialVal;
+  }, [valoresVerificados]);
+
+  // Sincronizar cajaInicial desde la calculadora de vuelto hacia valoresVerificados
+  useEffect(() => {
+    if (cajaInicial) {
+      setValoresVerificados(prev => ({
+        ...prev,
+        cajaInicial: cajaInicial
+      }));
+    }
+  }, [cajaInicial]);
+
+  // Función para manejar el cierre de jornada (SOLO FRONTEND)
+  const handleCerrarJornada = async () => {
+    // 1. Validar que haya jornada seleccionada
+    if (!jornadaSeleccionada) {
+      mostrarNotificacion('❌ Por favor selecciona una jornada (Mañana o Tarde)', 'error');
+      return;
+    }
+
+    // 2. Validar que todos los campos estén completos
+    if (!todosLosCamposCompletos) {
+      const camposFaltantes = [];
+      if (!valoresVerificados.efectivo) camposFaltantes.push('Efectivo');
+      if (!valoresVerificados.debito) camposFaltantes.push('Débito');
+      if (!valoresVerificados.credito) camposFaltantes.push('Crédito');
+      if (!valoresVerificados.transferencia) camposFaltantes.push('Transferencia');
+      if (!valoresVerificados.cajaInicial) camposFaltantes.push('Caja Inicial');
+      
+      mostrarNotificacion(
+        `❌ Por favor completa todos los campos. Faltan: ${camposFaltantes.join(', ')}`, 
+        'error'
+      );
+      return;
+    }
+
+    // 3. Calcular diferencias para el resumen
+    const diferencias = {
+      efectivo: calcularDiferencia(calcularEstadisticasDinamicas().efectivo.monto, valoresVerificados.efectivo),
+      debito: calcularDiferencia(calcularEstadisticasDinamicas().debito.monto, valoresVerificados.debito),
+      credito: calcularDiferencia(calcularEstadisticasDinamicas().credito.monto, valoresVerificados.credito),
+      transferencia: calcularDiferencia(calcularEstadisticasDinamicas().transferencia.monto, valoresVerificados.transferencia),
+      totalVentas: calcularDiferencia((calcularEstadisticasDinamicas().total.monto + (parseFloat(cajaInicial) || 0)), calcularTotalVentasVerificado),
+      totalEnCaja: calcularDiferencia(calcularTotalCaja(), calcularTotalEnCajaVerificado)
+    };
+
+    const tieneDiferencias = Object.values(diferencias).some(d => d !== 0);
+
+    // 4. Construir mensaje de confirmación
+    const mensajeConfirmacion = 
+      `¿Confirmar cierre de Jornada ${jornadaSeleccionada === 'manana' ? '🌅 Mañana' : '🌆 Tarde'}?\n\n` +
+      `📊 Resumen:\n` +
+      `• Total Ventas Verificado: $${calcularTotalVentasVerificado.toLocaleString('es-CL')}\n` +
+      `• Total en Caja Verificado: $${calcularTotalEnCajaVerificado.toLocaleString('es-CL')}\n\n` +
+      (tieneDiferencias 
+        ? `⚠️ Diferencias detectadas:\n` +
+          (diferencias.efectivo !== 0 ? `• Efectivo: $${diferencias.efectivo.toLocaleString('es-CL')}\n` : '') +
+          (diferencias.debito !== 0 ? `• Débito: $${diferencias.debito.toLocaleString('es-CL')}\n` : '') +
+          (diferencias.credito !== 0 ? `• Crédito: $${diferencias.credito.toLocaleString('es-CL')}\n` : '') +
+          (diferencias.transferencia !== 0 ? `• Transferencia: $${diferencias.transferencia.toLocaleString('es-CL')}\n` : '') +
+          (diferencias.totalVentas !== 0 ? `• Total Ventas: $${diferencias.totalVentas.toLocaleString('es-CL')}\n` : '') +
+          (diferencias.totalEnCaja !== 0 ? `• Total en Caja: $${diferencias.totalEnCaja.toLocaleString('es-CL')}\n` : '') +
+          `\n¿Deseas continuar?`
+        : `✅ No hay diferencias. Todo cuadra perfectamente.\n\n¿Deseas continuar?`);
+
+    // 5. Mostrar confirmación
+    const confirmar = await mostrarConfirmacion(mensajeConfirmacion);
+    if (!confirmar) {
+      mostrarNotificacion('❌ Cierre de jornada cancelado', 'info');
+      return;
+    }
+
+    // 6. Guardar en la base de datos
+    setLoadingProcesar(true);
+    
+    try {
+      // Obtener usuario_id
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        mostrarNotificacion('❌ Error: Usuario no autenticado', 'error');
+        setLoadingProcesar(false);
+        return;
+      }
+
+      // Obtener cliente_id para el INSERT (requerido por RLS)
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      if (usuarioError || !usuarioData) {
+        console.error('Error al obtener cliente_id del usuario:', usuarioError);
+        mostrarNotificacion('❌ Error: No se pudo obtener la información del usuario', 'error');
+        setLoadingProcesar(false);
+        return;
+      }
+
+      const cliente_id = usuarioData.cliente_id || null;
+
+      // Obtener estadísticas registradas (del sistema)
+      const estadisticas = calcularEstadisticasDinamicas();
+      const totalCajaRegistrado = calcularTotalCaja();
+      const totalVentasRegistrado = estadisticas.total.monto + (parseFloat(cajaInicial) || 0);
+
+      // Obtener valores verificados (ingresados manualmente)
+      const efectivoVerificado = parseFloat(valoresVerificados.efectivo) || 0;
+      const debitoVerificado = parseFloat(valoresVerificados.debito) || 0;
+      const creditoVerificado = parseFloat(valoresVerificados.credito) || 0;
+      const transferenciaVerificada = parseFloat(valoresVerificados.transferencia) || 0;
+      const cajaInicialVerificada = parseFloat(valoresVerificados.cajaInicial) || 0;
+
+      // Obtener fecha actual
+      const fechaActual = obtenerFechaActual();
+
+      // Preparar datos para insertar
+      const cierreCajaData = {
+        usuario_id: usuarioId,
+        cliente_id: cliente_id,
+        fecha: fechaActual,
+        jornada: jornadaSeleccionada,
+        // Valores verificados
+        efectivo_verificado: efectivoVerificado,
+        debito_verificado: debitoVerificado,
+        credito_verificado: creditoVerificado,
+        transferencia_verificada: transferenciaVerificada,
+        caja_inicial_verificada: cajaInicialVerificada,
+        // Valores registrados
+        efectivo_registrado: estadisticas.efectivo.monto,
+        debito_registrado: estadisticas.debito.monto,
+        credito_registrado: estadisticas.credito.monto,
+        transferencia_registrada: estadisticas.transferencia.monto,
+        caja_inicial_registrada: parseFloat(cajaInicial) || 0,
+        // Totales verificados
+        total_ventas_verificado: calcularTotalVentasVerificado,
+        total_en_caja_verificado: calcularTotalEnCajaVerificado,
+        // Totales registrados
+        total_ventas_registrado: totalVentasRegistrado,
+        total_en_caja_registrado: totalCajaRegistrado
+      };
+
+      // Insertar en la tabla cierre_caja
+      const { error: insertError } = await supabase
+        .from('cierre_caja')
+        .insert([cierreCajaData]);
+
+      if (insertError) {
+        console.error('❌ Error al guardar cierre de jornada:', insertError);
+        mostrarNotificacion('❌ Error al guardar cierre de jornada: ' + insertError.message, 'error');
+        setLoadingProcesar(false);
+        return;
+      }
+
+      // Mostrar mensaje de éxito
+      mostrarNotificacion(
+        `✅ Cierre de Jornada ${jornadaSeleccionada === 'manana' ? 'Mañana' : 'Tarde'} registrado correctamente\n\n` +
+        `Total Ventas: $${calcularTotalVentasVerificado.toLocaleString('es-CL')}\n` +
+        `Total en Caja: $${calcularTotalEnCajaVerificado.toLocaleString('es-CL')}`,
+        'success'
+      );
+
+      // 7. Limpiar estado
+      setValoresVerificados({
+        efectivo: '',
+        debito: '',
+        credito: '',
+        transferencia: '',
+        cajaInicial: ''
+      });
+      setJornadaSeleccionada(null);
+      
+      // 8. Recargar cierres registrados para mostrar el nuevo cierre
+      cargarCierresRegistrados();
+      
+    } catch (error) {
+      console.error('❌ Error inesperado al guardar cierre de jornada:', error);
+      mostrarNotificacion('❌ Error inesperado al guardar cierre de jornada', 'error');
+    } finally {
+      setLoadingProcesar(false);
+    }
+  };
+
+  // Función para cargar cierres de jornada registrados (solo los más recientes)
+  const cargarCierresRegistrados = useCallback(async () => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { data, error } = await supabase
+        .from('cierre_caja')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('created_at', { ascending: false })
+        .limit(10); // Solo los 10 más recientes para no cargar mucho
+
+      if (error) {
+        console.error('Error al cargar cierres registrados:', error);
+        return;
+      }
+
+      setCierresRegistrados(data || []);
+    } catch (error) {
+      console.error('Error inesperado al cargar cierres registrados:', error);
+    }
+  }, []);
+
+  // Cargar cierres registrados al montar el componente
+  useEffect(() => {
+    cargarCierresRegistrados();
+  }, [cargarCierresRegistrados]);
+
+  // Memoizar el procesamiento de cierres registrados para optimizar rendimiento
+  const cierresProcesados = useMemo(() => {
+    return cierresRegistrados.slice(0, 3).map((cierre) => {
+      // Formatear fecha usando la función del componente que maneja correctamente las fechas de Supabase
+      const fechaFormateada = formatearFecha(cierre.fecha);
+      const jornadaLabel = cierre.jornada === 'manana' ? '🌅 Mañana' : '🌆 Tarde';
+      
+      // Calcular diferencias para cada campo
+      const diffEfectivo = Math.round((parseFloat(cierre.efectivo_verificado || 0) - parseFloat(cierre.efectivo_registrado || 0)));
+      const diffDebito = Math.round((parseFloat(cierre.debito_verificado || 0) - parseFloat(cierre.debito_registrado || 0)));
+      const diffCredito = Math.round((parseFloat(cierre.credito_verificado || 0) - parseFloat(cierre.credito_registrado || 0)));
+      const diffTransferencia = Math.round((parseFloat(cierre.transferencia_verificada || 0) - parseFloat(cierre.transferencia_registrada || 0)));
+      const diffCajaInicial = Math.round((parseFloat(cierre.caja_inicial_verificada || 0) - parseFloat(cierre.caja_inicial_registrada || 0)));
+      const diffTotalVentas = Math.round((parseFloat(cierre.total_ventas_verificado || 0) - parseFloat(cierre.total_ventas_registrado || 0)));
+      const diffTotalCaja = Math.round((parseFloat(cierre.total_en_caja_verificado || 0) - parseFloat(cierre.total_en_caja_registrado || 0)));
+      
+      // Pre-calcular estados de diferencia para evitar llamadas duplicadas
+      const estadoEfectivo = obtenerEstadoDiferencia(diffEfectivo);
+      const estadoDebito = obtenerEstadoDiferencia(diffDebito);
+      const estadoCredito = obtenerEstadoDiferencia(diffCredito);
+      const estadoTransferencia = obtenerEstadoDiferencia(diffTransferencia);
+      const estadoCajaInicial = obtenerEstadoDiferencia(diffCajaInicial);
+      const estadoTotalVentas = obtenerEstadoDiferencia(diffTotalVentas);
+      const estadoTotalCaja = obtenerEstadoDiferencia(diffTotalCaja);
+      
+      return {
+        id: cierre.id,
+        fechaFormateada,
+        jornadaLabel,
+        estados: {
+          efectivo: estadoEfectivo,
+          debito: estadoDebito,
+          credito: estadoCredito,
+          transferencia: estadoTransferencia,
+          cajaInicial: estadoCajaInicial,
+          totalVentas: estadoTotalVentas,
+          totalCaja: estadoTotalCaja
+        }
+      };
+    });
+  }, [cierresRegistrados, obtenerEstadoDiferencia, formatearFecha]);
   
   // Estados para filtros
   const [filtroDia, setFiltroDia] = useState('');
@@ -3029,6 +3353,423 @@ export default function RegistroVenta() {
                   </div>
                 </div>
               )}
+
+              {/* Sección de Cierre de Jornada */}
+              <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                <h4 className="text-orange-300 font-bold text-base md:text-lg mb-4 md:mb-5 flex items-center justify-between">
+                  <span>📅 Cierre de Jornada</span>
+                  <button
+                    type="button"
+                    onClick={() => setCierreJornadaColapsado(!cierreJornadaColapsado)}
+                    className="text-orange-300 hover:text-orange-200 transition-colors p-1"
+                    title={cierreJornadaColapsado ? 'Expandir sección' : 'Colapsar sección'}
+                  >
+                    {cierreJornadaColapsado ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    )}
+                  </button>
+                </h4>
+                
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  cierreJornadaColapsado ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'
+                }`}>
+                  <div className="space-y-4 md:space-y-5">
+                  {/* Selector de Jornada */}
+                  <div>
+                    <label className="block text-white font-medium mb-2 text-sm md:text-base">
+                      Selecciona la Jornada
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setJornadaSeleccionada('manana')}
+                        className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 text-white ${
+                          jornadaSeleccionada === 'manana'
+                            ? 'bg-orange-600 border-orange-500 shadow-lg'
+                            : 'bg-orange-600/20 border-orange-500/30 hover:bg-orange-600/30'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-orange-300 text-2xl md:text-3xl mb-2">🌅</div>
+                          <p className="font-medium text-sm md:text-base">Jornada Mañana</p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setJornadaSeleccionada('tarde')}
+                        className={`p-3 md:p-4 rounded-lg border-2 transition-all duration-200 text-white ${
+                          jornadaSeleccionada === 'tarde'
+                            ? 'bg-blue-600 border-blue-500 shadow-lg'
+                            : 'bg-blue-600/20 border-blue-500/30 hover:bg-blue-600/30'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-blue-300 text-2xl md:text-3xl mb-2">🌆</div>
+                          <p className="font-medium text-sm md:text-base">Jornada Tarde</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Resumen de Cierre con Comparación */}
+                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 md:p-5 border border-white/10">
+                    <h5 className="text-green-300 font-semibold text-sm md:text-base mb-3 md:mb-4">
+                      Verificación Física - Comparación con Resumen de Ventas
+                    </h5>
+                    <p className="text-gray-300 text-xs md:text-sm mb-3 md:mb-4 italic">
+                      Ingresa los valores verificados físicamente. La diferencia se calculará automáticamente comparando con el resumen de ventas mostrado arriba.
+                    </p>
+                    
+                    {/* Tabla de comparación simplificada */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs md:text-sm">
+                        <thead>
+                          <tr className="border-b border-white/20">
+                            <th className="text-left py-2 px-2 text-white/70 font-medium">Concepto</th>
+                            <th className="text-center py-2 px-2 text-yellow-300 font-medium">Verificado Físicamente</th>
+                            <th className="text-center py-2 px-2 text-purple-300 font-medium">Diferencia</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-white">
+                          {/* Efectivo */}
+                          <tr className="border-b border-white/10">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center">
+                                <span className="text-green-400 text-sm mr-1">💵</span>
+                                <span>Efectivo</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={valoresVerificados.efectivo}
+                                onChange={(e) => {
+                                  const valor = e.target.value;
+                                  // Solo permitir números enteros (eliminar decimales)
+                                  const valorEntero = valor.includes('.') ? Math.floor(parseFloat(valor) || 0).toString() : valor;
+                                  setValoresVerificados({...valoresVerificados, efectivo: valorEntero});
+                                }}
+                                className="w-full px-2 py-1 rounded border border-yellow-500/50 bg-white/10 text-yellow-300 text-center focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className={`py-2 px-2 text-center font-bold ${obtenerColorDiferencia(calcularDiferencia(calcularEstadisticasDinamicas().efectivo.monto, valoresVerificados.efectivo))}`}>
+                              {valoresVerificados.efectivo ? 
+                                `$${calcularDiferencia(calcularEstadisticasDinamicas().efectivo.monto, valoresVerificados.efectivo).toLocaleString('es-CL')}` 
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+
+                          {/* Débito */}
+                          <tr className="border-b border-white/10">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center">
+                                <span className="text-blue-400 text-sm mr-1">💳</span>
+                                <span>Débito</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={valoresVerificados.debito}
+                                onChange={(e) => {
+                                  const valor = e.target.value;
+                                  // Solo permitir números enteros (eliminar decimales)
+                                  const valorEntero = valor.includes('.') ? Math.floor(parseFloat(valor) || 0).toString() : valor;
+                                  setValoresVerificados({...valoresVerificados, debito: valorEntero});
+                                }}
+                                className="w-full px-2 py-1 rounded border border-yellow-500/50 bg-white/10 text-yellow-300 text-center focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className={`py-2 px-2 text-center font-bold ${obtenerColorDiferencia(calcularDiferencia(calcularEstadisticasDinamicas().debito.monto, valoresVerificados.debito))}`}>
+                              {valoresVerificados.debito ? 
+                                `$${calcularDiferencia(calcularEstadisticasDinamicas().debito.monto, valoresVerificados.debito).toLocaleString('es-CL')}` 
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+
+                          {/* Crédito */}
+                          <tr className="border-b border-white/10">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center">
+                                <span className="text-orange-400 text-sm mr-1">💳</span>
+                                <span>Crédito</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={valoresVerificados.credito}
+                                onChange={(e) => {
+                                  const valor = e.target.value;
+                                  // Solo permitir números enteros (eliminar decimales)
+                                  const valorEntero = valor.includes('.') ? Math.floor(parseFloat(valor) || 0).toString() : valor;
+                                  setValoresVerificados({...valoresVerificados, credito: valorEntero});
+                                }}
+                                className="w-full px-2 py-1 rounded border border-yellow-500/50 bg-white/10 text-yellow-300 text-center focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className={`py-2 px-2 text-center font-bold ${obtenerColorDiferencia(calcularDiferencia(calcularEstadisticasDinamicas().credito.monto, valoresVerificados.credito))}`}>
+                              {valoresVerificados.credito ? 
+                                `$${calcularDiferencia(calcularEstadisticasDinamicas().credito.monto, valoresVerificados.credito).toLocaleString('es-CL')}` 
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+
+                          {/* Transferencia */}
+                          <tr className="border-b border-white/10">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center">
+                                <span className="text-indigo-400 text-sm mr-1">📱</span>
+                                <span>Transferencia</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={valoresVerificados.transferencia}
+                                onChange={(e) => {
+                                  const valor = e.target.value;
+                                  // Solo permitir números enteros (eliminar decimales)
+                                  const valorEntero = valor.includes('.') ? Math.floor(parseFloat(valor) || 0).toString() : valor;
+                                  setValoresVerificados({...valoresVerificados, transferencia: valorEntero});
+                                }}
+                                className="w-full px-2 py-1 rounded border border-yellow-500/50 bg-white/10 text-yellow-300 text-center focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className={`py-2 px-2 text-center font-bold ${obtenerColorDiferencia(calcularDiferencia(calcularEstadisticasDinamicas().transferencia.monto, valoresVerificados.transferencia))}`}>
+                              {valoresVerificados.transferencia ? 
+                                `$${calcularDiferencia(calcularEstadisticasDinamicas().transferencia.monto, valoresVerificados.transferencia).toLocaleString('es-CL')}` 
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+
+                          {/* Caja Inicial */}
+                          <tr className="border-b border-white/10">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center">
+                                <span className="text-green-400 text-sm mr-1">💰</span>
+                                <span>Caja Inicial</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={valoresVerificados.cajaInicial || cajaInicial || ''}
+                                onChange={(e) => {
+                                  const valor = e.target.value;
+                                  // Solo permitir números enteros (eliminar decimales)
+                                  const valorEntero = valor.includes('.') ? Math.floor(parseFloat(valor) || 0).toString() : valor;
+                                  setValoresVerificados({...valoresVerificados, cajaInicial: valorEntero});
+                                  // Sincronizar con la calculadora de vuelto
+                                  setCajaInicial(valorEntero);
+                                  const fechaActual = obtenerFechaActual();
+                                  localStorage.setItem('cajaInicial', valorEntero);
+                                  localStorage.setItem('cajaInicialFecha', fechaActual);
+                                }}
+                                className="w-full px-2 py-1 rounded border border-yellow-500/50 bg-white/10 text-yellow-300 text-center focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="py-2 px-2 text-center font-bold text-gray-400">
+                              -
+                            </td>
+                          </tr>
+
+                          {/* Total en Caja - Calculado automáticamente */}
+                          <tr className="border-b border-white/10">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center font-semibold">
+                                <span className="text-green-300 text-base mr-1">💼</span>
+                                <span>Total en Caja</span>
+                              </div>
+                              <p className="text-green-200 text-xs mt-0.5 italic">
+                                Suma: Efectivo + Caja Inicial
+                              </p>
+                            </td>
+                            <td className="py-2 px-2">
+                              <div className="bg-white/10 border border-green-400/50 rounded px-2 py-1 text-green-300 font-bold text-center">
+                                ${calcularTotalEnCajaVerificado.toLocaleString('es-CL')}
+                              </div>
+                            </td>
+                            <td className={`py-2 px-2 text-center font-bold ${(valoresVerificados.efectivo && valoresVerificados.cajaInicial) ? obtenerColorDiferencia(calcularDiferencia(calcularTotalCaja(), calcularTotalEnCajaVerificado)) : 'text-gray-400'}`}>
+                              {(valoresVerificados.efectivo && valoresVerificados.cajaInicial) ? 
+                                `$${calcularDiferencia(calcularTotalCaja(), calcularTotalEnCajaVerificado).toLocaleString('es-CL')}` 
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+
+                          {/* Total Ventas - Calculado automáticamente */}
+                          <tr className="bg-blue-600/20 border-t-2 border-blue-500/30">
+                            <td className="py-2 px-2">
+                              <div className="flex items-center font-semibold">
+                                <span className="text-blue-300 text-base mr-1">📊</span>
+                                <span>Total Ventas</span>
+                              </div>
+                              <p className="text-blue-200 text-xs mt-0.5 italic">
+                                Suma: Efectivo + Débito + Crédito + Transferencia + Caja Inicial
+                              </p>
+                            </td>
+                            <td className="py-2 px-2">
+                              <div className="bg-white/10 border border-blue-400/50 rounded px-2 py-1 text-blue-300 font-bold text-center">
+                                ${calcularTotalVentasVerificado.toLocaleString('es-CL')}
+                              </div>
+                            </td>
+                            <td className={`py-2 px-2 text-center font-bold text-base ${todosLosCamposCompletos ? obtenerColorDiferencia(calcularDiferencia((calcularEstadisticasDinamicas().total.monto + (parseFloat(cajaInicial) || 0)), calcularTotalVentasVerificado)) : 'text-gray-400'}`}>
+                              {todosLosCamposCompletos ? 
+                                `$${calcularDiferencia((calcularEstadisticasDinamicas().total.monto + (parseFloat(cajaInicial) || 0)), calcularTotalVentasVerificado).toLocaleString('es-CL')}` 
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Cierres de Jornada Registrados (Información complementaria) */}
+                  {cierresRegistrados.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <h6 className="text-gray-300 text-xs font-semibold">📋 Cierres Registrados:</h6>
+                        <span className="text-gray-400 text-xs">({cierresRegistrados.length} {cierresRegistrados.length === 1 ? 'registro' : 'registros'})</span>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                        {cierresProcesados.map((cierre) => (
+                          <div key={cierre.id} className="bg-white/5 backdrop-blur-sm rounded px-2 py-1.5 border border-white/5">
+                            {/* Header: Fecha y Jornada */}
+                            <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-white/5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-gray-300 text-xs font-medium">{cierre.fechaFormateada}</span>
+                                <span className="text-gray-400 text-xs">-</span>
+                                <span className="text-orange-300 text-xs">{cierre.jornadaLabel}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Tabla compacta de diferencias - Dos columnas */}
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                              {/* Columna Izquierda: Tipos de Pago y Total Ventas */}
+                              <div className="space-y-0.5">
+                                {/* Efectivo */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">💵 Ef:</span>
+                                  <span className={cierre.estados.efectivo.color}>
+                                    {cierre.estados.efectivo.texto}
+                                  </span>
+                                </div>
+                                
+                                {/* Débito */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">💳 Déb:</span>
+                                  <span className={cierre.estados.debito.color}>
+                                    {cierre.estados.debito.texto}
+                                  </span>
+                                </div>
+                                
+                                {/* Crédito */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">💳 Créd:</span>
+                                  <span className={cierre.estados.credito.color}>
+                                    {cierre.estados.credito.texto}
+                                  </span>
+                                </div>
+                                
+                                {/* Transferencia */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">📱 Trans:</span>
+                                  <span className={cierre.estados.transferencia.color}>
+                                    {cierre.estados.transferencia.texto}
+                                  </span>
+                                </div>
+                                
+                                {/* Total Ventas */}
+                                <div className="flex items-center justify-between pt-0.5 border-t border-white/5">
+                                  <span className="text-gray-300 font-medium">📊 Tot.V:</span>
+                                  <span className={`${cierre.estados.totalVentas.color} font-semibold`}>
+                                    {cierre.estados.totalVentas.texto}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Columna Derecha: Caja */}
+                              <div className="space-y-0.5">
+                                {/* Caja Inicial */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">💰 C.Inic:</span>
+                                  <span className={cierre.estados.cajaInicial.color}>
+                                    {cierre.estados.cajaInicial.texto}
+                                  </span>
+                                </div>
+                                
+                                {/* Total en Caja */}
+                                <div className="flex items-center justify-between pt-0.5 border-t border-white/5">
+                                  <span className="text-gray-300 font-medium">💼 Tot.Caja:</span>
+                                  <span className={`${cierre.estados.totalCaja.color} font-semibold`}>
+                                    {cierre.estados.totalCaja.texto}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {cierresRegistrados.length > 3 && (
+                        <p className="text-gray-400 text-xs mt-1.5 italic text-center">
+                          Mostrando 3 de {cierresRegistrados.length} cierres recientes
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Botón de Cierre de Jornada */}
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={handleCerrarJornada}
+                      disabled={loadingProcesar || !jornadaSeleccionada || !todosLosCamposCompletos}
+                      className={`px-6 md:px-8 py-3 md:py-4 rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                        loadingProcesar || !jornadaSeleccionada || !todosLosCamposCompletos
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed transform-none'
+                          : 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold'
+                      }`}
+                    >
+                      {loadingProcesar 
+                        ? '⏳ Cerrando Jornada...' 
+                        : !jornadaSeleccionada 
+                          ? '⚠️ Selecciona una Jornada'
+                          : !todosLosCamposCompletos
+                            ? '⚠️ Completa todos los campos'
+                            : '✅ Cerrar Jornada'
+                      }
+                    </button>
+                  </div>
+                  </div>
+                </div>
+              </div>
               
               {/* Botones de control */}
               <div className="mt-4 md:mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
