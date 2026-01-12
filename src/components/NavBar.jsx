@@ -35,8 +35,30 @@ const NavBar = () => {
   const [mostrarSeccionGoogle, setMostrarSeccionGoogle] = useState(false);
   const [logoLink, setLogoLink] = useState('');
   const menuRef = useRef(null);
+  const ultimaVezSonidoRef = useRef(0);
+
+  // Función para reproducir sonido de alerta cuando se cierra sesión
+  const playLogoutSound = React.useCallback(() => {
+    try {
+      const audio = new Audio('/sounds/aleta-micaja.wav');
+      audio.volume = 0.7; // 70% de volumen
+      audio.play().catch(error => {
+        // Si falla, ignorar silenciosamente (no afectar el flujo de logout)
+        if (import.meta.env.DEV) {
+          console.warn('No se pudo reproducir el sonido de logout:', error);
+        }
+      });
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Error al reproducir sonido de logout:', error);
+      }
+    }
+  }, []);
 
   const handleLogout = async () => {
+    // Reproducir sonido de alerta antes de cerrar sesión
+    playLogoutSound();
+    
     try {
       await authService.signOut();
       navigate('/login');
@@ -539,6 +561,46 @@ const NavBar = () => {
 
   const closeProfile = () => setIsProfileOpen(false);
 
+  // Función para reproducir sonido de alerta cuando se abren las notificaciones
+  const playNotificationSound = React.useCallback(() => {
+    try {
+      // Verificar que la página esté visible
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      // Debounce: Solo reproducir si pasaron al menos 2 segundos desde el último sonido
+      const ahora = Date.now();
+      const tiempoDesdeUltimoSonido = ahora - ultimaVezSonidoRef.current;
+      const DEBOUNCE_TIEMPO = 2000; // 2 segundos
+
+      if (tiempoDesdeUltimoSonido < DEBOUNCE_TIEMPO) {
+        return; // Ignorar si es muy cercano al último sonido
+      }
+
+      ultimaVezSonidoRef.current = ahora;
+
+      // Usar HTML5 Audio con archivo de sonido
+      const audio = new Audio('/sounds/alerta-popup.mp3');
+      audio.volume = 0.7; // 70% de volumen
+
+      // Reproducir el sonido
+      audio.play().catch(error => {
+        // Si falla (permisos del navegador, archivo no encontrado, etc.)
+        if (import.meta.env.DEV) {
+          console.warn('No se pudo reproducir el sonido de alerta:', error);
+          if (error.name === 'NotAllowedError') {
+            console.info('Permisos de audio bloqueados. El usuario debe interactuar primero con la página.');
+          }
+        }
+      });
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Error al reproducir sonido de alerta:', error);
+      }
+    }
+  }, []);
+
   // Función para cerrar la notificación de suscripción
   const closeSubscriptionNotification = () => {
     setShowSubscriptionNotification(false);
@@ -938,6 +1000,14 @@ const NavBar = () => {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMenuOpen]);
+
+  // Reproducir sonido cuando el menú se abre (las notificaciones siempre están visibles cuando el menú está abierto)
+  useEffect(() => {
+    if (isMenuOpen) {
+      // Las notificaciones están visibles cuando el menú está abierto (rating siempre visible, nuevas funcionalidades condicional)
+      playNotificationSound();
+    }
+  }, [isMenuOpen, playNotificationSound]);
 
   // No mostrar NavBar en la página de login
   if (location.pathname === '/login') {

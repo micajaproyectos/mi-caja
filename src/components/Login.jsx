@@ -11,6 +11,24 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // Función para reproducir sonido de alerta cuando se inicia sesión
+  const playLoginSound = () => {
+    try {
+      const audio = new Audio('/sounds/aleta-micaja.wav');
+      audio.volume = 0.7; // 70% de volumen
+      audio.play().catch(error => {
+        // Si falla, ignorar silenciosamente (no afectar el flujo de login)
+        if (import.meta.env.DEV) {
+          console.warn('No se pudo reproducir el sonido de login:', error);
+        }
+      });
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Error al reproducir sonido de login:', error);
+      }
+    }
+  };
+
   // Verificar si ya existe un usuario logueado
   useEffect(() => {
     const checkAuth = async () => {
@@ -34,6 +52,9 @@ function Login() {
         if (userData) {
           // Usuario autenticado correctamente
           console.log('✅ Login exitoso, marcando datos para recargar...');
+          
+          // Reproducir sonido de alerta
+          playLoginSound();
           
           // Marcar que los datos necesitan ser recargados en todos los componentes
           sessionManager.invalidateUserData(userData.id);
