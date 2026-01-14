@@ -34,12 +34,17 @@ const NavBar = () => {
   const [mostrarQRPreviewGoogle, setMostrarQRPreviewGoogle] = useState(true);
   const [mostrarSeccionGoogle, setMostrarSeccionGoogle] = useState(false);
   const [logoLink, setLogoLink] = useState('');
+  const [soundsEnabled, setSoundsEnabled] = useState(true); // Estado para activar/desactivar sonidos
   const menuRef = useRef(null);
   const ultimaVezSonidoRef = useRef(0);
 
   // Función para reproducir sonido de alerta cuando se cierra sesión
   const playLogoutSound = React.useCallback(() => {
     try {
+      // Verificar si los sonidos están habilitados
+      const soundsPref = localStorage.getItem('soundsEnabled');
+      if (soundsPref === 'false') return;
+      
       const audio = new Audio('/sounds/aleta-micaja.wav');
       audio.volume = 0.7; // 70% de volumen
       audio.play().catch(error => {
@@ -74,6 +79,10 @@ const NavBar = () => {
   const openProfile = async () => {
     setIsProfileOpen(true);
     closeMenu();
+    
+    // Cargar preferencia de sonidos desde localStorage
+    const soundsPref = localStorage.getItem('soundsEnabled');
+    setSoundsEnabled(soundsPref !== 'false'); // Default: true
     
     // Solo cargar datos si no los tenemos ya
     if (!userInfo.nombre && !userInfo.email) {
@@ -561,9 +570,24 @@ const NavBar = () => {
 
   const closeProfile = () => setIsProfileOpen(false);
 
+  // Función para cambiar la preferencia de sonidos
+  const toggleSounds = () => {
+    const newValue = !soundsEnabled;
+    setSoundsEnabled(newValue);
+    localStorage.setItem('soundsEnabled', newValue.toString());
+    
+    if (import.meta.env.DEV) {
+      console.log(`🔊 Sonidos ${newValue ? 'activados' : 'desactivados'}`);
+    }
+  };
+
   // Función para reproducir sonido de alerta cuando se abren las notificaciones
   const playNotificationSound = React.useCallback(() => {
     try {
+      // Verificar si los sonidos están habilitados
+      const soundsPref = localStorage.getItem('soundsEnabled');
+      if (soundsPref === 'false') return;
+      
       // Verificar que la página esté visible
       if (document.visibilityState !== 'visible') {
         return;
@@ -1089,7 +1113,7 @@ const NavBar = () => {
                         <div>
                           <p className="text-white text-xs font-medium">✨ Nuevas Actualizaciones</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            🔊 Sonidos en Pedidos y Cocina • 📊 Cierre de Caja en Registro de Venta
+                            🔊 Sonidos en Pedidos/Cocina • 📊 Cierre de Caja • ⚙️ Config. en Perfil
                           </p>
                         </div>
                       </div>
@@ -1200,6 +1224,34 @@ const NavBar = () => {
                   <div>
                     <p className="text-xs text-gray-300">Correo electrónico</p>
                     <p className="font-medium break-all">{userInfo.email || '—'}</p>
+                  </div>
+
+                  {/* Sección de Configuración de Sonidos */}
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">🔊</span>
+                          <h4 className="text-sm font-semibold text-white">Notificaciones Sonoras</h4>
+                        </div>
+                        <p className="text-xs text-gray-300">
+                          Sonidos en Pedidos, Cocina, Login y Logout
+                        </p>
+                      </div>
+                      <button
+                        onClick={toggleSounds}
+                        className={`relative inline-flex items-center h-7 w-14 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-transparent ${
+                          soundsEnabled ? 'bg-green-500' : 'bg-gray-600'
+                        }`}
+                        aria-label={soundsEnabled ? 'Desactivar sonidos' : 'Activar sonidos'}
+                      >
+                        <span
+                          className={`inline-block w-5 h-5 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${
+                            soundsEnabled ? 'translate-x-8' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Sección de Instagram QR */}

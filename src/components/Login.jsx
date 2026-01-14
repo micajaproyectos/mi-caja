@@ -14,6 +14,10 @@ function Login() {
   // Función para reproducir sonido de alerta cuando se inicia sesión
   const playLoginSound = () => {
     try {
+      // Verificar si los sonidos están habilitados
+      const soundsPref = localStorage.getItem('soundsEnabled');
+      if (soundsPref === 'false') return;
+      
       const audio = new Audio('/sounds/aleta-micaja.wav');
       audio.volume = 0.7; // 70% de volumen
       audio.play().catch(error => {

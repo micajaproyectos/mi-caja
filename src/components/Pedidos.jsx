@@ -2414,6 +2414,10 @@ export default function Pedidos() {
   // Con debounce para evitar múltiples sonidos simultáneos cuando hay varias notificaciones juntas
   const playAlarmSoundPedidos = useCallback(() => {
     try {
+      // Verificar si los sonidos están habilitados
+      const soundsPref = localStorage.getItem('soundsEnabled');
+      if (soundsPref === 'false') return;
+      
       // Verificar que la página esté visible
       if (document.visibilityState !== 'visible') {
         return;

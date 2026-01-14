@@ -93,6 +93,10 @@ export default function GestionCocina() {
   // Función para reproducir sonido de alarma cuando llega un nuevo pedido
   const playAlarmSound = () => {
     try {
+      // Verificar si los sonidos están habilitados
+      const soundsPref = localStorage.getItem('soundsEnabled');
+      if (soundsPref === 'false') return;
+      
       // Verificar que la página esté visible
       if (document.visibilityState !== 'visible') {
         return;

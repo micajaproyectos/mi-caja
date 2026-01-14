@@ -121,6 +121,9 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
                   <p className="text-gray-300 text-sm leading-relaxed">
                     📊 <strong className="text-green-300">Cierre de Caja:</strong> Ahora puedes registrar y verificar el cierre de jornada directamente desde <strong>Registro de Venta</strong>, permitiéndote comparar los valores físicos con los registrados en el sistema de manera rápida y eficiente.
                   </p>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    ⚙️ <strong className="text-green-300">Configuración de Sonidos:</strong> ¿Los sonidos te molestan? Ahora puedes activarlos o desactivarlos fácilmente desde tu <strong>Perfil</strong> en la sección "Notificaciones Sonoras".
+                  </p>
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed">
                   Estas mejoras están diseñadas para hacer tu gestión más fácil y eficiente. ¡Gracias por confiar en nosotros! 🚀
