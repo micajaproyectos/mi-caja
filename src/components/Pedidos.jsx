@@ -2731,29 +2731,55 @@ export default function Pedidos() {
           </div>
 
           {/* Formulario de Pedido */}
-          <div className="relative z-40 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Nuevo Pedido
-            </h2>
+          <div className="relative z-40 p-2 md:p-3 mb-3">
+            {/* Título con Fecha */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 mb-4">
+              {/* Fecha clickeable */}
+              <div className="relative group">
+                <button
+                  onClick={() => document.getElementById('fecha-pedido-hidden').showPicker?.()}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/20 hover:border-green-400/50 transition-all text-white text-sm cursor-pointer"
+                  title="Clic para cambiar fecha"
+                >
+                  <span>📅</span>
+                  <span className="font-medium">{formatearFechaCortaChile(pedido.fecha)}</span>
+                </button>
+                <input
+                  id="fecha-pedido-hidden"
+                  type="date"
+                  name="fecha"
+                  value={pedido.fecha}
+                  onChange={handleChange}
+                  className="absolute opacity-0 pointer-events-none"
+                />
+              </div>
+              
+              {/* Título */}
+              <h2 className="text-xl md:text-2xl font-bold text-green-400" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                Nuevo Pedido
+              </h2>
+            </div>
 
-            {/* Fecha y Búsqueda en la misma fila */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-               {/* Fecha */}
-               <div>
-                 <label className="block text-white font-medium mb-2 text-sm">Fecha</label>
-                 <input
-                   type="date"
-                   name="fecha"
-                   value={pedido.fecha}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                 />
-               </div>
-
-              {/* Búsqueda de Producto */}
-              <div className="relative">
-                <label className="block text-white font-medium mb-2 text-sm">Buscar Producto</label>
-                <div className="flex gap-2">
+            {/* Búsqueda de Producto y Controles en una línea */}
+            <div className="mb-4">
+              {/* Label con botón de escanear */}
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-white font-medium text-sm">Buscar Producto</label>
+                <button
+                  type="button"
+                  onClick={() => setMostrarScannerPedidos(true)}
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs"
+                  title="Escanear código de barras"
+                >
+                  <span>📷</span>
+                  <span>Escanear</span>
+                </button>
+              </div>
+              
+              {/* Input, Cantidad y Botón Agregar en una línea */}
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end relative">
+                {/* Input de búsqueda */}
+                <div className="flex-1 relative">
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -2761,134 +2787,92 @@ export default function Pedidos() {
                     autoComplete="off"
                     value={busquedaProducto}
                     onChange={handleBusquedaProducto}
-                    className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                    className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
                     placeholder="🔍 Escribe el nombre del producto..."
                   />
-                  <button
-                    type="button"
-                    onClick={() => setMostrarScannerPedidos(true)}
-                    className="flex items-center justify-center gap-1 px-3 md:px-4 py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs md:text-sm"
-                    title="Escanear código de barras"
-                  >
-                    <span className="text-sm md:text-base">📷</span>
-                    <span className="hidden sm:inline">Escanear</span>
-                  </button>
+                  
+                  {/* Dropdown de productos filtrados */}
+                  {mostrarDropdown && productosFiltrados.length > 0 && (
+                    <div
+                      data-dropdown-productos
+                      className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
+                    >
+                      {productosFiltrados.map((producto, index) => (
+                        <div
+                          key={producto.id || index}
+                          onClick={() => seleccionarProducto(producto)}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            seleccionarProducto(producto);
+                          }}
+                          className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 active:bg-blue-600/50 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation"
+                          style={{ WebkitTapHighlightColor: 'transparent' }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
+                              <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
+                                <span className="text-green-300 font-medium">
+                                  ${parseFloat(producto.precio_venta).toLocaleString()}
+                                </span>
+                                <span className="text-blue-300 font-medium">
+                                  {producto.unidad}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 
-                {/* Dropdown de productos filtrados - FIJO bajo el input */}
-                {mostrarDropdown && productosFiltrados.length > 0 && (
-                  <div
-                    data-dropdown-productos
-                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
-                  >
-                    {productosFiltrados.map((producto, index) => (
-                      <div
-                        key={producto.id || index}
-                        onClick={() => seleccionarProducto(producto)}
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          seleccionarProducto(producto);
-                        }}
-                        className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 active:bg-blue-600/50 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation"
-                        style={{ WebkitTapHighlightColor: 'transparent' }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-white font-bold text-sm sm:text-lg mb-1 truncate">{producto.producto}</div>
-                            <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
-                              <span className="text-green-300 font-medium">
-                                ${parseFloat(producto.precio_venta).toLocaleString()}
-                              </span>
-                              <span className="text-blue-300 font-medium">
-                                {producto.unidad}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-blue-400 text-lg sm:text-xl ml-2">→</div>
-                        </div>
-                      </div>
-                    ))}
+                {/* Control de Cantidad y Botón Agregar juntos en móvil */}
+                <div className="flex gap-2 items-center">
+                  {/* Control de Cantidad */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nuevaCantidad = Math.max(0, (parseInt(productoActual.cantidad) || 0) - 1);
+                        handleChange({ target: { name: 'cantidad', value: nuevaCantidad.toString() } });
+                      }}
+                      className="px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors text-xs sm:text-sm font-bold min-w-[28px] sm:min-w-[32px]"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      name="cantidad"
+                      value={productoActual.cantidad}
+                      onChange={handleChange}
+                      readOnly
+                      className="w-10 sm:w-12 px-1 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs sm:text-sm text-center"
+                      placeholder="0"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nuevaCantidad = (parseInt(productoActual.cantidad) || 0) + 1;
+                        handleChange({ target: { name: 'cantidad', value: nuevaCantidad.toString() } });
+                      }}
+                      className="px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors text-xs sm:text-sm font-bold min-w-[28px] sm:min-w-[32px]"
+                    >
+                      +
+                    </button>
                   </div>
-                )}
+
+                  {/* Botón Agregar */}
+                  <button
+                    onClick={agregarProductoAMesa}
+                    className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm whitespace-nowrap"
+                  >
+                    ➕ Agregar
+                  </button>
+                </div>
               </div>
-             </div>
-               
-             {/* Campos del producto */}
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-               <div>
-                 <label className="block text-white font-medium mb-2 text-sm">Unidad</label>
-                 <select
-                   name="unidad"
-                   value={productoActual.unidad}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                 >
-                   <option value="">Seleccione unidad</option>
-                   {opcionesUnidad.map(opcion => (
-                     <option key={opcion.value} value={opcion.value}>
-                       {opcion.icon} {opcion.label}
-                     </option>
-                   ))}
-                 </select>
-               </div>
-
-               <div>
-                 <label className="block text-white font-medium mb-2 text-sm">Cantidad</label>
-                 <div className="flex items-center gap-1.5">
-                   <button
-                     type="button"
-                     onClick={() => {
-                       const nuevaCantidad = Math.max(0, (parseInt(productoActual.cantidad) || 0) - 1);
-                       handleChange({ target: { name: 'cantidad', value: nuevaCantidad.toString() } });
-                     }}
-                     className="px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors text-sm font-bold min-w-[32px]"
-                   >
-                     −
-                   </button>
-                 <input
-                   type="number"
-                   name="cantidad"
-                   value={productoActual.cantidad}
-                   onChange={handleChange}
-                     readOnly
-                     className="w-16 px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-center"
-                     placeholder="0"
-                   />
-                   <button
-                     type="button"
-                     onClick={() => {
-                       const nuevaCantidad = (parseInt(productoActual.cantidad) || 0) + 1;
-                       handleChange({ target: { name: 'cantidad', value: nuevaCantidad.toString() } });
-                     }}
-                     className="px-2 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors text-sm font-bold min-w-[32px]"
-                   >
-                     +
-                   </button>
-                 </div>
-               </div>
-
-               <div>
-                 <label className="block text-white font-medium mb-2 text-sm">Precio</label>
-                 <input
-                   type="number"
-                   step="0.01"
-                   name="precio_unitario"
-                   value={productoActual.precio_unitario}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                   placeholder="0.00"
-                 />
-               </div>
-
-               <div className="flex items-end">
-                 <button
-                   onClick={agregarProductoAMesa}
-                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg transition-colors text-sm"
-                 >
-                   ➕ Agregar a Mesa
-                 </button>
-               </div>
-             </div>
+            </div>
 
 
           </div>
@@ -2896,52 +2880,27 @@ export default function Pedidos() {
           {/* Sección de Gestión de Mesas y Productos */}
           <section className="relative z-10">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 sm:p-4 md:p-8 border border-white/20">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-green-400 text-center mb-4 sm:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Gestión de Mesas y Productos
-            </h2>
             
             {/* Gestión de Mesas */}
             <>
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 md:p-4 mb-6 border border-white/10">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start">
-                      <label className="text-white text-xs sm:text-sm">Cantidad:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={cantidadMesas}
-                        onChange={(e) => setCantidadMesas(parseInt(e.target.value) || 1)}
-                        className="w-12 sm:w-16 px-1 sm:px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-xs sm:text-sm"
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={agregarMesas}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm w-full sm:w-auto"
-                    >
-                      ➕ Agregar
-                    </button>
-                    
-                    <span className="text-gray-300 text-xs sm:text-sm">
-                      Total: {mesas.length} mesas
-                    </span>
-                  </div>
-                </div>
-
-                {/* Pestañas de Mesas */}
+                <h2 className="text-base sm:text-lg font-bold text-green-400 mb-3" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  🪑 Gestión de Mesas
+                </h2>
+                
+                {/* Pestañas de Mesas con botón + */}
                 <div className="mb-4 sm:mb-6">
-                  <div className="flex flex-wrap gap-2 justify-center">
+                  <div className="flex items-center gap-1">
+                    <div className="flex overflow-x-auto gap-1 pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent flex-1" style={{ scrollbarWidth: 'thin' }}>
                     {mesas.map((mesa, indice) => (
                       <div
                         key={mesa}
                         data-mesa-indice={indice}
                         onMouseDown={(e) => iniciarArrastre(e, mesa, indice)}
                         onTouchStart={(e) => iniciarArrastre(e, mesa, indice)}
-                        className={`relative group flex items-center gap-1.5 sm:gap-2.5 lg:gap-2 px-3 sm:px-5 lg:px-4 py-2 sm:py-2.5 lg:py-2 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base lg:text-sm ${
+                        className={`relative group flex items-center gap-1.5 px-3 py-1.5 rounded-t-lg font-medium transition-all duration-200 text-xs whitespace-nowrap flex-shrink-0 border-b-2 ${
                           mesaSeleccionada === mesa
-                            ? 'bg-green-600 text-white shadow-lg'
-                            : 'bg-white/10 text-white hover:bg-white/20'
+                            ? 'bg-white/20 text-white border-green-400 shadow-md'
+                            : 'bg-white/5 text-white/80 hover:bg-white/10 border-transparent'
                         } ${
                           mesaArrastrando === mesa
                             ? esArrastrando
@@ -2982,16 +2941,9 @@ export default function Pedidos() {
                             <button
                               onClick={() => guardarNombreMesa(mesa)}
                               className="text-green-300 hover:text-green-200 text-sm"
-                              title="Guardar"
+                              title="Guardar (Enter)"
                             >
                               ✅
-                            </button>
-                            <button
-                              onClick={cancelarEdicionNombreMesa}
-                              className="text-red-300 hover:text-red-200 text-sm"
-                              title="Cancelar"
-                            >
-                              ❌
                             </button>
                             {/* Botón de eliminar mesa - solo visible en modo edición */}
                             <button
@@ -2999,14 +2951,10 @@ export default function Pedidos() {
                                 e.stopPropagation();
                                 eliminarMesa(mesa);
                               }}
-                              className={`ml-1 text-lg sm:text-xl lg:text-xs hover:scale-110 transition-all duration-200 ${
-                                mesaSeleccionada === mesa
-                                  ? 'text-red-200 hover:text-red-100'
-                                  : 'text-red-400 hover:text-red-300'
-                              }`}
+                              className="text-red-400 hover:text-red-300 text-sm hover:scale-110 transition-all duration-200"
                               title="Eliminar mesa"
                             >
-                              ❌
+                              🗑️
                             </button>
                           </div>
                         ) : (
@@ -3033,9 +2981,9 @@ export default function Pedidos() {
                                 e.stopPropagation();
                                 iniciarEdicionNombreMesa(mesa);
                               }}
-                              className={`text-lg sm:text-xl lg:text-xs hover:scale-110 transition-all duration-200 ${
+                              className={`text-sm hover:scale-110 transition-all duration-200 ${
                                 mesaSeleccionada === mesa
-                                  ? 'text-blue-200 hover:text-blue-100'
+                                  ? 'text-blue-300 hover:text-blue-200'
                                   : 'text-blue-400 hover:text-blue-300'
                               }`}
                               title="Editar nombre de mesa"
@@ -3046,13 +2994,33 @@ export default function Pedidos() {
                         )}
                       </div>
                     ))}
+                    
+                    {/* Botón para agregar nueva mesa */}
+                    <button
+                      onClick={async () => {
+                        const nuevaMesa = `Mesa ${mesas.length + 1}`;
+                        const mesasActualizadas = [...mesas, nuevaMesa];
+                        setMesas(mesasActualizadas);
+                        
+                        // Guardar en Supabase usando la función existente
+                        await guardarMesasEnSupabase([nuevaMesa]);
+                        
+                        // Guardar en localStorage como backup
+                        localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+                      }}
+                      className="flex items-center justify-center px-3 py-1.5 rounded-t-lg font-medium transition-all duration-200 text-xs whitespace-nowrap flex-shrink-0 border-b-2 border-transparent bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 hover:text-blue-200"
+                      title="Agregar nueva mesa"
+                    >
+                      ➕
+                    </button>
+                  </div>
                   </div>
                 </div>
 
                 {/* Contenido de la Mesa Seleccionada */}
                 {mesaSeleccionada && (
-                  <div className="bg-green-900/30 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-green-500/30">
-                    <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 text-center">
+                  <div className="p-3 sm:p-4 border-t border-white/10">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">
                       🪑 {mesaSeleccionada}
                     </h3>
                     
@@ -3524,8 +3492,8 @@ export default function Pedidos() {
                 </h2>
                 
                 {/* Filtros */}
-                <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                  <h3 className="text-green-400 font-medium mb-3 text-center">Filtros</h3>
+                <div className="mb-4">
+                  <h3 className="text-green-400 font-medium mb-3">Filtros</h3>
                                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                      {/* Filtro por Fecha Específica */}
                      <div>

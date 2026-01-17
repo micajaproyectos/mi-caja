@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import { obtenerFechaHoyChile, formatearFechaCortaChile } from '../lib/dateUtils.js';
@@ -257,7 +257,9 @@ const VentaRapida = () => {
     
     // Prevenir doble clic - si ya se está registrando, no hacer nada
     if (registrandoRef.current) {
-      console.log('⚠️ Intento de doble clic detectado y prevenido.');
+      if (import.meta.env.DEV) {
+        console.log('⚠️ Intento de doble clic detectado y prevenido.');
+      }
       return;
     }
 
@@ -380,8 +382,8 @@ const VentaRapida = () => {
     return tipos[tipo] || tipo;
   };
 
-  // Función para filtrar ventas según los filtros aplicados
-  const filtrarVentas = useCallback(() => {
+  // Función para filtrar ventas según los filtros aplicados (MEMOIZADO)
+  const ventasFiltradas = useMemo(() => {
     let ventasFiltradas = [...ventasRegistradas];
     const fechaActual = obtenerFechaHoyChile();
 
@@ -447,13 +449,8 @@ const VentaRapida = () => {
     return ventasFiltradas;
   }, [ventasRegistradas, filtroDia, filtroMes, filtroAnio, filtroTipoPago]);
 
-  const ventasFiltradas = filtrarVentas();
-
-  // Calcular el total de ventas filtradas
-  const totalVentas = ventasFiltradas.reduce((sum, venta) => sum + parseFloat(venta.monto || 0), 0);
-
-  // Calcular sumatorias por tipo de pago (usando ventas filtradas)
-  const calcularSumatoriasPorTipoPago = () => {
+  // Calcular sumatorias por tipo de pago (MEMOIZADO)
+  const sumatorias = useMemo(() => {
     const sumatorias = {
       total: {
         cantidad: ventasFiltradas.length,
@@ -497,12 +494,10 @@ const VentaRapida = () => {
     });
 
     return sumatorias;
-  };
+  }, [ventasFiltradas]);
 
-  const sumatorias = calcularSumatoriasPorTipoPago();
-
-  // Función para obtener meses disponibles según el año seleccionado
-  const obtenerMesesDisponibles = () => {
+  // Función para obtener meses disponibles según el año seleccionado (MEMOIZADO)
+  const mesesDisponibles = useMemo(() => {
     const nombresMeses = [
       { valor: '1', nombre: 'Enero' },
       { valor: '2', nombre: 'Febrero' },
@@ -538,10 +533,10 @@ const VentaRapida = () => {
     const mesesUnicos = Array.from(new Set(mesesConRegistros)).sort((a, b) => a - b);
     
     return nombresMeses.filter(mes => mesesUnicos.includes(parseInt(mes.valor)));
-  };
+  }, [ventasRegistradas, filtroAnio]);
 
-  // Función para obtener años únicos de las ventas registradas (solo años con datos)
-  const obtenerAniosConRegistros = () => {
+  // Función para obtener años únicos de las ventas registradas (MEMOIZADO)
+  const aniosDisponibles = useMemo(() => {
     const anios = ventasRegistradas.map(venta => {
       if (!venta.fecha_cl) return null;
       const [year] = venta.fecha_cl.split('-');
@@ -550,7 +545,7 @@ const VentaRapida = () => {
 
     // Retornar años únicos ordenados de mayor a menor (más reciente primero)
     return Array.from(new Set(anios)).sort((a, b) => b - a);
-  };
+  }, [ventasRegistradas]);
 
   // Función para limpiar todos los filtros
   const limpiarFiltros = () => {
@@ -566,8 +561,37 @@ const VentaRapida = () => {
     
     // Si hay un mes seleccionado, verificar si existe para el nuevo año
     if (filtroMes && nuevoAnio) {
-      const mesesDisponibles = obtenerMesesDisponibles();
-      const mesExiste = mesesDisponibles.some(mes => mes.valor === filtroMes);
+      // Calcular meses disponibles para el nuevo año
+      const nombresMeses = [
+        { valor: '1', nombre: 'Enero' },
+        { valor: '2', nombre: 'Febrero' },
+        { valor: '3', nombre: 'Marzo' },
+        { valor: '4', nombre: 'Abril' },
+        { valor: '5', nombre: 'Mayo' },
+        { valor: '6', nombre: 'Junio' },
+        { valor: '7', nombre: 'Julio' },
+        { valor: '8', nombre: 'Agosto' },
+        { valor: '9', nombre: 'Septiembre' },
+        { valor: '10', nombre: 'Octubre' },
+        { valor: '11', nombre: 'Noviembre' },
+        { valor: '12', nombre: 'Diciembre' }
+      ];
+
+      const mesesConRegistros = ventasRegistradas
+        .filter(venta => {
+          if (!venta.fecha_cl) return false;
+          const [year] = venta.fecha_cl.split('-');
+          return parseInt(year) === parseInt(nuevoAnio);
+        })
+        .map(venta => {
+          const [, month] = venta.fecha_cl.split('-');
+          return parseInt(month);
+        });
+
+      const mesesUnicos = Array.from(new Set(mesesConRegistros));
+      const mesesDisponiblesParaAnio = nombresMeses.filter(mes => mesesUnicos.includes(parseInt(mes.valor)));
+      
+      const mesExiste = mesesDisponiblesParaAnio.some(mes => mes.valor === filtroMes);
       
       if (!mesExiste) {
         setFiltroMes(''); // Limpiar mes si no existe para el año seleccionado
@@ -1105,7 +1129,7 @@ const VentaRapida = () => {
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los meses</option>
-                    {obtenerMesesDisponibles().map(mes => (
+                    {mesesDisponibles.map(mes => (
                       <option key={mes.valor} value={mes.valor} className="bg-gray-800 text-white">
                         {mes.nombre}
                       </option>
@@ -1125,7 +1149,7 @@ const VentaRapida = () => {
                     style={{ colorScheme: 'dark' }}
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los años</option>
-                    {obtenerAniosConRegistros().map(anio => (
+                    {aniosDisponibles.map(anio => (
                       <option key={anio} value={anio} className="bg-gray-800 text-white">
                         {anio}
                       </option>

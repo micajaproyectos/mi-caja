@@ -1113,7 +1113,7 @@ const NavBar = () => {
                         <div>
                           <p className="text-white text-xs font-medium">✨ Nuevas Actualizaciones</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            🔊 Sonidos en Pedidos/Cocina • 📊 Cierre de Caja • ⚙️ Config. en Perfil
+                            📅 Calendario • 🔊 Sonidos • 📊 Cierre • 🪑 Pedidos
                           </p>
                         </div>
                       </div>

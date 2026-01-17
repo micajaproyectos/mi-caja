@@ -22,6 +22,8 @@ import Auditoria from './components/Auditoria';
 import Autoservicio from './components/Autoservicio';
 import GestionCocina from './components/GestionCocina';
 import Transporte from './components/Transporte';
+import AlarmaNotification from './components/AlarmaNotification';
+import { AlarmasProvider } from './contexts/AlarmasContext';
 
 // Componentes placeholder para las otras secciones
 const Inventario = () => {
@@ -41,9 +43,12 @@ function App() {
   const showOffset = location.pathname !== '/login';
 
   return (
-    <>
+    <AlarmasProvider>
       {/* Portal container para mensajes y modales */}
       <div id="portal-root" />
+      
+      {/* Componente global de alarmas */}
+      <AlarmaNotification />
       
       <NavBar />
       <div className={showOffset ? 'pt-16' : ''}>
@@ -151,7 +156,7 @@ function App() {
           } />
         </Routes>
       </div>
-    </>
+    </AlarmasProvider>
   );
 }
 

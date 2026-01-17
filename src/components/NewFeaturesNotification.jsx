@@ -105,29 +105,26 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
             Nuevas Actualizaciones
           </h3>
           
-          <div className="text-left space-y-4">
+          <div className="text-left space-y-3">
             {/* Nuevas actualizaciones */}
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-2xl">🎉</span>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-xl">🎉</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-lg mb-2">Nuevas Actualizaciones</h4>
-                <p className="text-gray-300 text-sm leading-relaxed mb-3">
-                  Estamos emocionados de compartir contigo las nuevas funcionalidades que hemos agregado a <strong className="text-green-300">Mi Caja</strong>:
-                </p>
-                <div className="space-y-2 mb-3">
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                    🔊 <strong className="text-green-300">Nuevos sonidos:</strong> Hemos agregado notificaciones sonoras en las secciones de <strong>Pedidos</strong> y <strong>Cocina</strong> para mejorar tu experiencia y mantenerte alerta de los cambios importantes.
+                <h4 className="text-green-300 font-semibold text-base mb-2">Nuevas Actualizaciones</h4>
+                <div className="space-y-2">
+                  <p className="text-gray-300 text-xs leading-relaxed">
+                    📅 <strong className="text-green-300">Calendario:</strong> Crea recordatorios con alarmas automáticas. Configura fecha, hora y prioridad.
                   </p>
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                    📊 <strong className="text-green-300">Cierre de Caja:</strong> Ahora puedes registrar y verificar el cierre de jornada directamente desde <strong>Registro de Venta</strong>, permitiéndote comparar los valores físicos con los registrados en el sistema de manera rápida y eficiente.
+                  <p className="text-gray-300 text-xs leading-relaxed">
+                    🔊 <strong className="text-green-300">Sonidos:</strong> Notificaciones sonoras en Pedidos, Cocina y Calendario. Activa/desactiva desde tu Perfil.
                   </p>
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                    ⚙️ <strong className="text-green-300">Configuración de Sonidos:</strong> ¿Los sonidos te molestan? Ahora puedes activarlos o desactivarlos fácilmente desde tu <strong>Perfil</strong> en la sección "Notificaciones Sonoras".
+                  <p className="text-gray-300 text-xs leading-relaxed">
+                    📊 <strong className="text-green-300">Cierre de Caja:</strong> Registra y compara valores físicos vs sistema desde Registro de Venta.
+                  </p>
+                  <p className="text-gray-300 text-xs leading-relaxed">
+                    🪑 <strong className="text-green-300">Pedidos Mejorado:</strong> Interfaz compacta tipo Chrome. Pestañas con scroll, botón "+" para agregar mesas, formulario simplificado.
                   </p>
                 </div>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  Estas mejoras están diseñadas para hacer tu gestión más fácil y eficiente. ¡Gracias por confiar en nosotros! 🚀
-                </p>
               </div>
             </div>
           </div>
@@ -144,7 +141,7 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
               border: '1px solid rgba(34, 197, 94, 0.3)' 
             }}
           >
-            ¡Gracias! Continuar
+            ¡OK! Continuar
           </button>
         </div>
       </div>
