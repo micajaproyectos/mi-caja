@@ -136,6 +136,17 @@ export default function Pedidos() {
   // Estado para productos enviados a cocina (información para mostrar)
   const [productosEnviadosACocina, setProductosEnviadosACocina] = useState({});
   
+  // Estado para notificación toast (cierre automático)
+  const [notificacionToast, setNotificacionToast] = useState({ visible: false, mensaje: '', tipo: 'success' });
+  
+  // Función helper para mostrar notificaciones toast
+  const mostrarToast = (mensaje, tipo = 'success', duracion = 3000) => {
+    setNotificacionToast({ visible: true, mensaje, tipo });
+    setTimeout(() => {
+      setNotificacionToast(prev => ({ ...prev, visible: false }));
+    }, duracion);
+  };
+  
   // Estados para propina
   const [propinaActiva, setPropinaActiva] = useState(false);
   const [porcentajePropina, setPorcentajePropina] = useState(10);
@@ -210,9 +221,6 @@ export default function Pedidos() {
   
   // Estado para notificación de dispositivos táctiles
   const [notificacionTactil, setNotificacionTactil] = useState(false);
-  
-  // Estado para notificaciones automáticas
-  const [notificacion, setNotificacion] = useState(null);
   
   // Estado para notificaciones de pedidos terminados desde cocina
   const [notificacionesPedidosTerminados, setNotificacionesPedidosTerminados] = useState([]);
@@ -1845,18 +1853,19 @@ export default function Pedidos() {
 
       if (error) {
         console.error('❌ Error al eliminar pedido:', error);
-        alert('❌ Error al eliminar el pedido: ' + error.message);
+        mostrarToast('❌ Error al eliminar el pedido: ' + error.message, 'error', 4000);
         return;
       }
 
-      // Pedido eliminado exitosamente - sin popup redundante
+      // Pedido eliminado exitosamente
+      mostrarToast('✅ Pedido eliminado exitosamente', 'success');
       
       // Recargar la lista de pedidos
       await cargarPedidosRegistrados();
       
     } catch (error) {
       console.error('❌ Error general al eliminar pedido:', error);
-      alert('❌ Error al eliminar pedido: ' + error.message);
+      mostrarToast('❌ Error al eliminar pedido: ' + error.message, 'error', 4000);
     } finally {
       setLoadingPedidos(false);
     }
@@ -1983,17 +1992,17 @@ export default function Pedidos() {
 
       if (error) {
         console.error('❌ Error al actualizar pedido:', error);
-        alert('❌ Error al actualizar el pedido: ' + error.message);
+        mostrarToast('❌ Error al actualizar el pedido: ' + error.message, 'error', 4000);
         return;
       }
 
-      alert('Pedido actualizado exitosamente');
+      mostrarToast('✅ Pedido actualizado exitosamente', 'success');
       cancelarEdicion();
       await cargarPedidosRegistrados();
 
     } catch (error) {
       console.error('❌ Error inesperado al actualizar pedido:', error);
-      alert('❌ Error inesperado al actualizar el pedido');
+      mostrarToast('❌ Error inesperado al actualizar el pedido', 'error', 4000);
     } finally {
       setLoadingPedidos(false);
     }
@@ -2072,7 +2081,15 @@ export default function Pedidos() {
         }
       }
 
-      alert(`✅ ${productosAEnviar.length} producto(s) de ${mesa} enviados a cocina exitosamente`);
+      // Mostrar notificación toast que se cierra automáticamente
+      const mensajeExito = `✅ ${productosAEnviar.length} producto(s) de ${mesa} enviados a cocina`;
+      setNotificacionToast({ visible: true, mensaje: mensajeExito, tipo: 'success' });
+      
+      // Cerrar automáticamente después de 3 segundos
+      setTimeout(() => {
+        setNotificacionToast(prev => ({ ...prev, visible: false }));
+      }, 3000);
+      
       console.log(`🍳 ${productosAEnviar.length} productos enviados a cocina`);
 
       // Guardar productos enviados para mostrar en la lista informativa
@@ -2223,16 +2240,8 @@ export default function Pedidos() {
         return;
       }
 
-      // Mostrar notificación automática que desaparece sola
-      setNotificacion({
-        mensaje: `✅ ${productosAPagar.length} producto(s) de ${mesa} registrado(s) correctamente. Total: $${totalFinal.toLocaleString()}`,
-        tipo: 'exito'
-      });
-      
-      // Ocultar la notificación automáticamente después de 3 segundos
-      setTimeout(() => {
-        setNotificacion(null);
-      }, 3000);
+      // Mostrar notificación toast que desaparece automáticamente
+      mostrarToast(`✅ ${productosAPagar.length} producto(s) de ${mesa} registrado(s). Total: $${totalFinal.toLocaleString()}`, 'success');
        
        // Limpiar solo los productos PAGADOS, dejar los pendientes en la mesa
        const productosPendientes = productosPorMesa[mesa].filter(p => !productosSeleccionados.includes(p.id));
@@ -2606,19 +2615,6 @@ export default function Pedidos() {
         </div>
       )}
       
-      {/* Notificación automática para acciones exitosas */}
-      {notificacion && (
-        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg max-w-sm text-center animate-fade-in ${
-          notificacion.tipo === 'exito' 
-            ? 'bg-green-600/95 border border-green-400/30' 
-            : 'bg-red-600/95 border border-red-400/30'
-        }`}>
-          <div className="text-sm font-medium">
-            {notificacion.mensaje}
-          </div>
-        </div>
-      )}
-
       {/* Notificaciones tipo banda de pedidos terminados desde cocina */}
       {notificacionesPedidosTerminados.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-[70] bg-green-600/95 backdrop-blur-md border-b-2 border-green-400/50 animate-slide-down py-1.5">
@@ -4050,6 +4046,39 @@ export default function Pedidos() {
         onClose={() => setMostrarScannerPedidos(false)}
         title="Escanear Código de Producto"
       />
+
+      {/* Notificación Toast (cierre automático) */}
+      {notificacionToast.visible && (
+        <div className="fixed top-20 right-4 z-50 animate-[slideIn_0.3s_ease-out]">
+          <div className={`rounded-lg shadow-2xl p-4 border ${
+            notificacionToast.tipo === 'success' 
+              ? 'bg-green-600 border-green-400' 
+              : 'bg-red-600 border-red-400'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">
+                {notificacionToast.tipo === 'success' ? '✅' : '❌'}
+              </span>
+              <p className="text-white font-medium text-sm">
+                {notificacionToast.mensaje}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

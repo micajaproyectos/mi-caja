@@ -468,8 +468,16 @@ export default function RegistroVenta() {
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
-  // Estado para notificaciones personalizadas en pantalla completa
-  const [notificacionPersonalizada, setNotificacionPersonalizada] = useState(null);
+  // Estado para notificación toast (cierre automático) - Sistema elegante
+  const [notificacionToast, setNotificacionToast] = useState({ visible: false, mensaje: '', tipo: 'success' });
+  
+  // Función helper para mostrar notificaciones toast elegantes
+  const mostrarToast = (mensaje, tipo = 'success', duracion = 3000) => {
+    setNotificacionToast({ visible: true, mensaje, tipo });
+    setTimeout(() => {
+      setNotificacionToast(prev => ({ ...prev, visible: false }));
+    }, duracion);
+  };
   
   // Estado para confirmaciones personalizadas en pantalla completa
   const [confirmacionPersonalizada, setConfirmacionPersonalizada] = useState(null);
@@ -1542,12 +1550,10 @@ export default function RegistroVenta() {
     }
   }, [productoActual.unidad]);
 
-  // Función para mostrar notificaciones (inteligente según modo pantalla completa)
+  // Función para mostrar notificaciones toast elegantes
   const mostrarNotificacion = (mensaje, tipo = 'info') => {
-    // Siempre usar notificación personalizada que se cierra automáticamente
-    setNotificacionPersonalizada({ mensaje, tipo });
-    // Auto-ocultar después de 3 segundos (más rápido para no interrumpir el flujo)
-    setTimeout(() => setNotificacionPersonalizada(null), 3000);
+    // Usar el sistema de toast elegante
+    mostrarToast(mensaje, tipo);
   };
 
   // Función para mostrar confirmaciones (inteligente según modo pantalla completa)
@@ -2094,34 +2100,6 @@ export default function RegistroVenta() {
               <div className="font-semibold">{obtenerInfoDispositivo().navegador} en {obtenerInfoDispositivo().tipo}</div>
               <div className="text-xs opacity-90">La pantalla completa puede cerrarse al usar campos de texto</div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notificaciones personalizadas para pantalla completa */}
-      {notificacionPersonalizada && (
-        <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-[70] backdrop-blur-md text-white px-6 py-4 rounded-xl shadow-2xl border max-w-md text-center animate-bounce ${
-          notificacionPersonalizada.tipo === 'success' ? 'bg-green-600/95 border-green-400/30' :
-          notificacionPersonalizada.tipo === 'error' ? 'bg-red-600/95 border-red-400/30' :
-          'bg-blue-600/95 border-blue-400/30'
-        }`}>
-          <div className="flex items-start gap-3">
-            <span className="text-xl">
-              {notificacionPersonalizada.tipo === 'success' ? '✅' :
-               notificacionPersonalizada.tipo === 'error' ? '❌' : 'ℹ️'}
-            </span>
-            <div className="flex-1">
-              <div className="text-sm font-medium leading-relaxed">
-                {notificacionPersonalizada.mensaje}
-              </div>
-            </div>
-            <button
-              onClick={() => setNotificacionPersonalizada(null)}
-              className="text-white/70 hover:text-white text-lg leading-none"
-              title="Cerrar"
-            >
-              ×
-            </button>
           </div>
         </div>
       )}
@@ -3806,6 +3784,42 @@ export default function RegistroVenta() {
         onClose={() => setMostrarScannerVenta(false)}
         title="Escanear Código de Producto"
       />
+
+      {/* Notificación Toast Elegante (cierre automático) */}
+      {notificacionToast.visible && (
+        <div className="fixed top-20 right-4 z-50 animate-[slideIn_0.3s_ease-out]">
+          <div className={`rounded-lg shadow-2xl p-4 border ${
+            notificacionToast.tipo === 'success' 
+              ? 'bg-green-600 border-green-400' 
+              : notificacionToast.tipo === 'error'
+              ? 'bg-red-600 border-red-400'
+              : 'bg-blue-600 border-blue-400'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">
+                {notificacionToast.tipo === 'success' ? '✅' : 
+                 notificacionToast.tipo === 'error' ? '❌' : 'ℹ️'}
+              </span>
+              <p className="text-white font-medium text-sm">
+                {notificacionToast.mensaje}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 } 
