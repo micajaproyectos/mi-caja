@@ -116,6 +116,16 @@ export default function Pedidos() {
   const [esArrastrando, setEsArrastrando] = useState(false);
   const posicionInicialRef = useRef({ x: 0, y: 0 });
   
+  // Estado para bloquear/desbloquear el movimiento de pestañas
+  const [mesasBloqueadas, setMesasBloqueadas] = useState(() => {
+    try {
+      const cached = localStorage.getItem('mesasBloqueadas');
+      return cached === 'true';
+    } catch (error) {
+      return false;
+    }
+  });
+  
   // Estados para selección de productos para enviar a cocina
   // Inicializar desde cache para carga instantánea
   const [productosSeleccionadosParaCocina, setProductosSeleccionadosParaCocina] = useState(() => {
@@ -1390,6 +1400,9 @@ export default function Pedidos() {
 
   // Funciones para drag and drop de mesas
   const iniciarArrastre = useCallback((e, mesa, indice) => {
+    // No iniciar drag si las mesas están bloqueadas
+    if (mesasBloqueadas) return;
+    
     // No iniciar drag si se está editando
     if (mesaEditando === mesa) return;
     
@@ -1406,7 +1419,7 @@ export default function Pedidos() {
     posicionInicialRef.current = { x: clientX, y: clientY };
     setPosicionActual({ x: clientX, y: clientY });
     setEsArrastrando(false); // Se activará después de un threshold de movimiento
-  }, [mesaEditando]);
+  }, [mesaEditando, mesasBloqueadas]);
 
   const moverArrastre = useCallback((e) => {
     if (!mesaArrastrando || indiceArrastrando === null) return;
@@ -2879,9 +2892,36 @@ export default function Pedidos() {
             
             {/* Gestión de Mesas */}
             <>
-                <h2 className="text-base sm:text-lg font-bold text-green-400 mb-3" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  🪑 Gestión de Mesas
-                </h2>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-base sm:text-lg font-bold text-green-400" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    🪑 Gestión de Mesas
+                  </h2>
+                  
+                  {/* Botón de bloqueo/desbloqueo */}
+                  <button
+                    onClick={() => {
+                      const nuevoEstado = !mesasBloqueadas;
+                      setMesasBloqueadas(nuevoEstado);
+                      localStorage.setItem('mesasBloqueadas', nuevoEstado.toString());
+                      mostrarToast(
+                        nuevoEstado 
+                          ? '🔒 Pestañas bloqueadas - No se pueden mover' 
+                          : '🔓 Pestañas desbloqueadas - Puedes reorganizarlas',
+                        'success',
+                        2000
+                      );
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-200 text-xs font-medium ${
+                      mesasBloqueadas
+                        ? 'bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30'
+                        : 'bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30'
+                    }`}
+                    title={mesasBloqueadas ? 'Clic para desbloquear y reorganizar pestañas' : 'Clic para bloquear pestañas'}
+                  >
+                    <span className="text-base">{mesasBloqueadas ? '🔒' : '🔓'}</span>
+                    <span className="hidden sm:inline">{mesasBloqueadas ? 'Bloqueado' : 'Desbloqueado'}</span>
+                  </button>
+                </div>
                 
                 {/* Pestañas de Mesas con botón + */}
                 <div className="mb-4 sm:mb-6">
@@ -2898,7 +2938,9 @@ export default function Pedidos() {
                             ? 'bg-white/20 text-white border-green-400 shadow-md'
                             : 'bg-white/5 text-white/80 hover:bg-white/10 border-transparent'
                         } ${
-                          mesaArrastrando === mesa
+                          mesasBloqueadas
+                            ? 'cursor-default'
+                            : mesaArrastrando === mesa
                             ? esArrastrando
                               ? 'opacity-50 cursor-grabbing z-50'
                               : 'cursor-grabbing z-50'
