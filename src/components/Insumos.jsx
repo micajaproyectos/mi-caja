@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
@@ -27,6 +27,22 @@ function Insumos() {
   // Estados para gestión de recetas
   const [recetas, setRecetas] = useState([]);
   const [loadingRecetas, setLoadingRecetas] = useState(false);
+  
+  // Obtener ingredientes únicos de las recetas para el dropdown de compras
+  const ingredientesDisponibles = useMemo(() => {
+    const ingredientesSet = new Set();
+    recetas.forEach(receta => {
+      receta.ingredientes?.forEach(ing => {
+        if (ing.nombre) {
+          ingredientesSet.add(JSON.stringify({
+            nombre: ing.nombre,
+            unidad: ing.unidad
+          }));
+        }
+      });
+    });
+    return Array.from(ingredientesSet).map(str => JSON.parse(str));
+  }, [recetas]);
   
   // Estados para crear nueva receta
   const [productosInventario, setProductosInventario] = useState([]);
@@ -57,7 +73,7 @@ function Insumos() {
       if (!usuarioId) return;
 
       const { data, error } = await supabase
-        .from('insumos_stock_global')
+        .from('vista_stock_insumos')
         .select('*')
         .eq('usuario_id', usuarioId)
         .order('nombre_insumo', { ascending: true });
@@ -248,14 +264,14 @@ function Insumos() {
                     📦 Stock de Ingredientes
                   </h2>
                   <p className="text-gray-300 text-sm">
-                    Los ingredientes se crean automáticamente al guardar recetas. El <strong className="text-orange-300">Consumo Actual</strong> se calcula según las ventas. El <strong className="text-white">Stock Manual</strong> lo actualizas tú cuando reabastezcas.
+                    Los ingredientes aparecen cuando registras tu primera compra. El <strong className="text-blue-300">Stock Comprado</strong> suma todas tus compras, el <strong className="text-orange-300">Stock Consumido</strong> se calcula automáticamente según las ventas, y el <strong className="text-green-300">Stock Disponible</strong> es la diferencia entre ambos.
                   </p>
                 </div>
                 
-                {/* Alertas de stock */}
+                {/* Estadísticas de stock */}
                 {insumos.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    {/* Total insumos */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    {/* Total ingredientes */}
                     <div className="bg-blue-600/10 border border-blue-400/30 rounded-lg p-4">
                       <div className="flex items-center gap-3">
                         <span className="text-blue-400 text-3xl">📦</span>
@@ -266,40 +282,27 @@ function Insumos() {
                       </div>
                     </div>
                     
-                    {/* Consumo acumulado */}
+                    {/* Con consumo activo */}
                     <div className="bg-orange-600/10 border border-orange-400/30 rounded-lg p-4">
                       <div className="flex items-center gap-3">
                         <span className="text-orange-400 text-3xl">📊</span>
                         <div>
-                          <p className="text-orange-200 text-xs">Consumo Activo</p>
+                          <p className="text-orange-200 text-xs">Con Consumo</p>
                           <p className="text-white text-2xl font-bold">
-                            {insumos.filter(i => i.consumo_actual > 0).length}
+                            {insumos.filter(i => parseFloat(i.stock_consumido) > 0).length}
                           </p>
                         </div>
                       </div>
                     </div>
                     
-                    {/* Insumos bajos */}
-                    <div className="bg-yellow-600/10 border border-yellow-400/30 rounded-lg p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-yellow-400 text-3xl">⚠️</span>
-                        <div>
-                          <p className="text-yellow-200 text-xs">Stock Bajo</p>
-                          <p className="text-white text-2xl font-bold">
-                            {insumos.filter(i => i.estado === 'Bajo').length}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Insumos agotados */}
+                    {/* Stock bajo o agotado */}
                     <div className="bg-red-600/10 border border-red-400/30 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-red-400 text-3xl">❌</span>
+                        <span className="text-red-400 text-3xl">⚠️</span>
                         <div>
-                          <p className="text-red-200 text-xs">Agotados</p>
+                          <p className="text-red-200 text-xs">Stock Bajo/Crítico</p>
                           <p className="text-white text-2xl font-bold">
-                            {insumos.filter(i => i.estado === 'Agotado').length}
+                            {insumos.filter(i => parseFloat(i.stock_disponible) <= 10).length}
                           </p>
                         </div>
                       </div>
@@ -321,8 +324,8 @@ function Insumos() {
                 {insumos.length === 0 ? (
                   <div className="text-center text-gray-400 py-12">
                     <div className="text-5xl mb-4">📦</div>
-                    <p className="text-lg mb-2">No hay ingredientes registrados aún</p>
-                    <p className="text-sm">Los ingredientes aparecerán automáticamente cuando crees recetas en la pestaña "Recetas de Productos"</p>
+                    <p className="text-lg mb-2">No hay stock de ingredientes registrado</p>
+                    <p className="text-sm">Los ingredientes aparecerán cuando registres tu primera compra usando el botón "➕ Ingresar Compra"</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -330,44 +333,43 @@ function Insumos() {
                       <thead>
                         <tr className="bg-white/5 border-b border-white/20">
                           <th className="text-left py-3 px-4 text-white font-semibold text-sm">Ingrediente</th>
-                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Consumo Actual</th>
                           <th className="text-center py-3 px-4 text-white font-semibold text-sm">Unidad</th>
-                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Umbral Mínimo</th>
-                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Estado</th>
-                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Stock Manual</th>
+                          <th className="text-center py-3 px-4 text-blue-300 font-semibold text-sm">Stock Comprado</th>
+                          <th className="text-center py-3 px-4 text-orange-300 font-semibold text-sm">Stock Consumido</th>
+                          <th className="text-center py-3 px-4 text-green-300 font-semibold text-sm">Stock Disponible</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {insumos.map((insumo, index) => (
-                          <tr key={index} className="border-b border-white/10 hover:bg-white/5">
-                            <td className="py-3 px-4 text-white font-medium">{insumo.nombre_insumo}</td>
-                            <td className="py-3 px-4 text-center">
-                              <span className="text-orange-300 font-semibold text-base">
-                                {insumo.consumo_actual ? parseFloat(insumo.consumo_actual).toFixed(2) : '0.00'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-center text-gray-300">{insumo.unidad}</td>
-                            <td className="py-3 px-4 text-center text-gray-400 text-sm">
-                              {insumo.umbral_minimo}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                insumo.cantidad_total <= 0 
-                                  ? 'bg-red-600/30 text-red-300 border border-red-400/50' 
-                                  : insumo.cantidad_total <= insumo.umbral_minimo
-                                  ? 'bg-yellow-600/30 text-yellow-300 border border-yellow-400/50'
-                                  : 'bg-green-600/30 text-green-300 border border-green-400/50'
-                              }`}>
-                                {insumo.estado}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className="text-white font-bold text-lg">
-                                {insumo.cantidad_total}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {insumos.map((insumo, index) => {
+                          const stockDisponible = parseFloat(insumo.stock_disponible);
+                          return (
+                            <tr key={index} className="border-b border-white/10 hover:bg-white/5">
+                              <td className="py-3 px-4 text-white font-medium">{insumo.nombre_insumo}</td>
+                              <td className="py-3 px-4 text-center text-gray-300">{insumo.unidad}</td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="text-blue-300 font-semibold text-base">
+                                  {parseFloat(insumo.stock_comprado).toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className="text-orange-300 font-semibold text-base">
+                                  {parseFloat(insumo.stock_consumido).toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className={`font-bold text-lg ${
+                                  stockDisponible <= 0 
+                                    ? 'text-red-400' 
+                                    : stockDisponible <= 10
+                                    ? 'text-yellow-400'
+                                    : 'text-green-400'
+                                }`}>
+                                  {stockDisponible.toFixed(2)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -545,52 +547,41 @@ function Insumos() {
                         🛒 Registrar Compra de Insumos
                       </h3>
                       
-                      <p className="text-gray-300 text-sm mb-4">
-                        Las cantidades se <strong>sumarán</strong> al stock manual actual de cada ingrediente.
-                      </p>
+                      <div className="bg-blue-600/20 border border-blue-400/40 rounded-lg p-3 mb-4">
+                        <p className="text-blue-200 text-sm">
+                          💡 <strong>Importante:</strong> En tu primera compra de cada ingrediente, ingresa el <strong>stock total físico</strong> que tienes actualmente (lo que ya tenías + lo que acabas de comprar).
+                        </p>
+                        <p className="text-blue-200 text-sm mt-2">
+                          En las siguientes compras, el sistema sumará automáticamente las cantidades al stock actual.
+                        </p>
+                      </div>
                       
                       <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
                         {lineasCompra.map((linea, index) => (
                           <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-white/5 p-3 rounded-lg">
-                            {insumos.length > 0 ? (
-                              <select
-                                value={linea.ingrediente}
-                                onChange={(e) => {
-                                  const nuevasLineas = [...lineasCompra];
-                                  const insumoSeleccionado = insumos.find(i => i.nombre_insumo === e.target.value);
-                                  nuevasLineas[index].ingrediente = e.target.value;
-                                  nuevasLineas[index].unidad = insumoSeleccionado?.unidad || '';
-                                  setLineasCompra(nuevasLineas);
-                                }}
-                                style={{ fontSize: '14px' }}
-                                className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400"
-                              >
-                                <option value="" className="bg-gray-800">Seleccionar ingrediente</option>
-                                {insumos.map((insumo) => (
-                                  <option key={insumo.nombre_insumo} value={insumo.nombre_insumo} className="bg-gray-800">
-                                    {insumo.nombre_insumo} (Stock: {insumo.cantidad_total} {insumo.unidad})
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <input
-                                type="text"
-                                placeholder="Nombre ingrediente"
-                                value={linea.ingrediente}
-                                onChange={(e) => {
-                                  const nuevasLineas = [...lineasCompra];
-                                  // Normalizar: mayúsculas y sin acentos
-                                  const normalizado = e.target.value
-                                    .toUpperCase()
-                                    .normalize("NFD")
-                                    .replace(/[\u0300-\u036f]/g, "");
-                                  nuevasLineas[index].ingrediente = normalizado;
-                                  setLineasCompra(nuevasLineas);
-                                }}
-                                style={{ fontSize: '14px' }}
-                                className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
-                              />
-                            )}
+                            <select
+                              value={linea.ingrediente}
+                              onChange={(e) => {
+                                const nuevasLineas = [...lineasCompra];
+                                const ingredienteSeleccionado = ingredientesDisponibles.find(i => i.nombre === e.target.value);
+                                nuevasLineas[index].ingrediente = e.target.value;
+                                nuevasLineas[index].unidad = ingredienteSeleccionado?.unidad || '';
+                                setLineasCompra(nuevasLineas);
+                              }}
+                              style={{ fontSize: '14px' }}
+                              className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                            >
+                              <option value="" className="bg-gray-800">
+                                {ingredientesDisponibles.length > 0 
+                                  ? 'Seleccionar ingrediente' 
+                                  : 'Primero crea recetas en "Recetas de Productos"'}
+                              </option>
+                              {ingredientesDisponibles.map((ing) => (
+                                <option key={ing.nombre} value={ing.nombre} className="bg-gray-800">
+                                  {ing.nombre} ({ing.unidad})
+                                </option>
+                              ))}
+                            </select>
                             
                             <input
                               type="number"
@@ -606,31 +597,14 @@ function Insumos() {
                               className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
                             />
                             
-                            {insumos.length > 0 ? (
-                              <input
-                                type="text"
-                                value={linea.unidad}
-                                disabled
-                                style={{ fontSize: '14px' }}
-                                className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400"
-                              />
-                            ) : (
-                              <select
-                                value={linea.unidad}
-                                onChange={(e) => {
-                                  const nuevasLineas = [...lineasCompra];
-                                  nuevasLineas[index].unidad = e.target.value;
-                                  setLineasCompra(nuevasLineas);
-                                }}
-                                style={{ fontSize: '14px' }}
-                                className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400"
-                              >
-                                <option value="" className="bg-gray-800">Unidad</option>
-                                {unidades.map((u) => (
-                                  <option key={u} value={u} className="bg-gray-800">{u}</option>
-                                ))}
-                              </select>
-                            )}
+                            <input
+                              type="text"
+                              value={linea.unidad}
+                              disabled
+                              placeholder="Unidad"
+                              style={{ fontSize: '14px' }}
+                              className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400"
+                            />
                             
                             <button
                               onClick={() => {
@@ -668,6 +642,12 @@ function Insumos() {
                         <button
                           onClick={async () => {
                             try {
+                              // Validar que haya recetas creadas
+                              if (ingredientesDisponibles.length === 0) {
+                                alert('Primero debes crear recetas en la pestaña "Recetas de Productos".\n\nLos ingredientes de las recetas aparecerán aquí automáticamente.');
+                                return;
+                              }
+                              
                               const usuarioId = await authService.getCurrentUserId();
                               if (!usuarioId) {
                                 alert('Usuario no autenticado');
@@ -685,7 +665,7 @@ function Insumos() {
                               );
                               
                               if (lineasValidas.length === 0) {
-                                alert('Agrega al menos un ingrediente con nombre, cantidad y unidad válidos');
+                                alert('Selecciona al menos un ingrediente con cantidad válida');
                                 return;
                               }
                               
@@ -701,7 +681,7 @@ function Insumos() {
                               // Generar un timestamp único para toda la compra
                               const timestampCompra = new Date().toISOString();
                               
-                              // Actualizar/crear insumo y registrar compra
+                              // Registrar compras en compras_insumos
                               for (const linea of lineasValidas) {
                                 const nombreInsumo = linea.ingrediente
                                   .toUpperCase()
@@ -709,43 +689,7 @@ function Insumos() {
                                   .replace(/[\u0300-\u036f]/g, "")
                                   .trim();
                                 
-                                // Verificar si el insumo existe
-                                const { data: insumoExistente } = await supabase
-                                  .from('insumos')
-                                  .select('*')
-                                  .eq('nombre_insumo', nombreInsumo)
-                                  .eq('usuario_id', usuarioId)
-                                  .limit(1);
-                                
-                                if (!insumoExistente || insumoExistente.length === 0) {
-                                  // El insumo no existe, crear uno nuevo (sin producto asociado)
-                                  await supabase
-                                    .from('insumos')
-                                    .insert({
-                                      nombre_producto: 'COMPRA DIRECTA',
-                                      nombre_insumo: nombreInsumo,
-                                      cantidad_disponible: parseFloat(linea.cantidad),
-                                      unidad: linea.unidad,
-                                      umbral_minimo: 10,
-                                      usuario_id: usuarioId,
-                                      cliente_id: cliente_id
-                                    });
-                                } else {
-                                  // El insumo existe, sumar al stock actual
-                                  const stockActual = insumoExistente[0].cantidad_disponible || 0;
-                                  const cantidadNueva = stockActual + parseFloat(linea.cantidad);
-                                  
-                                  await supabase
-                                    .from('insumos')
-                                    .update({
-                                      cantidad_disponible: cantidadNueva,
-                                      updated_at: timestampCompra
-                                    })
-                                    .eq('nombre_insumo', nombreInsumo)
-                                    .eq('usuario_id', usuarioId);
-                                }
-                                
-                                // 2. Registrar en compras_insumos con el MISMO timestamp
+                                // Registrar en compras_insumos con el MISMO timestamp
                                 const { error: errorCompra } = await supabase
                                   .from('compras_insumos')
                                   .insert({
@@ -765,7 +709,6 @@ function Insumos() {
                               mostrarToast(`✅ Compra registrada: ${lineasValidas.length} ingrediente(s) actualizados`, 'success');
                               
                               // Recargar y cerrar
-                              await cargarInsumos();
                               await cargarCompras();
                               setModalCompraAbierto(false);
                               setLineasCompra([{ ingrediente: '', cantidad: '', unidad: '' }]);

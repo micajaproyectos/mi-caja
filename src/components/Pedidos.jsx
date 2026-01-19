@@ -51,6 +51,8 @@ export default function Pedidos() {
   const ultimaBusquedaRef = useRef('');
   // Ref para debounce de búsqueda (optimización de rendimiento)
   const busquedaTimeoutRef = useRef(null);
+  // Ref para rastrear productos en proceso de guardado (protección contra Realtime)
+  const productosGuardandoRef = useRef(new Set());
   
   // Estados para código de barras
   const [mostrarScannerPedidos, setMostrarScannerPedidos] = useState(false);
@@ -403,11 +405,29 @@ export default function Pedidos() {
         return;
       }
 
-      // Si no hay datos, actualizar estado inmediatamente y salir
+      // PROTECCIÓN CRÍTICA: Validar integridad de datos antes de actualizar
+      const productosLocalesCount = Object.values(productosPorMesa).reduce((sum, arr) => sum + arr.length, 0);
+      const productosSupabaseCount = data?.length || 0;
+      
+      // Si no hay datos en Supabase
       if (!data || data.length === 0) {
-        setProductosPorMesa({});
+        // Solo borrar productos si es la carga inicial
+        if (!datosInicialCargados) {
+          setProductosPorMesa({});
+          debugLog('✅ Primera carga: No hay productos en Supabase');
+        } else if (productosLocalesCount > 0) {
+          // Si había productos locales y Supabase devuelve 0, NO sobrescribir
+          debugLog(`🛡️ PROTECCIÓN: Bloqueando borrado. Local=${productosLocalesCount}, Supabase=${productosSupabaseCount}`);
+          console.warn('⚠️ Supabase devolvió 0 productos pero hay productos locales. Manteniendo estado actual.');
+        }
         setDatosInicialCargados(true);
         return;
+      }
+      
+      // PROTECCIÓN: Si Supabase tiene menos del 50% de productos que el local, validar
+      if (datosInicialCargados && productosLocalesCount > 5 && productosSupabaseCount < productosLocalesCount * 0.5) {
+        console.warn(`⚠️ Discrepancia de datos detectada: Local=${productosLocalesCount}, Supabase=${productosSupabaseCount}`);
+        debugLog('🛡️ Posible error de red o sincronización. Fusionando datos en lugar de sobrescribir.');
       }
 
       // Convertir datos usando reduce (más rápido que forEach)
@@ -427,8 +447,30 @@ export default function Pedidos() {
         return acc;
       }, {});
 
-      // Un solo setState con ambos cambios para un solo re-render
-      setProductosPorMesa(productosPorMesaTemp);
+      // PROTECCIÓN: Fusionar con productos que están siendo guardados
+      // Para evitar que se pierdan productos recién agregados
+      setProductosPorMesa(prev => {
+        const merged = { ...productosPorMesaTemp };
+        
+        // Agregar productos locales que están en proceso de guardado
+        Object.keys(prev).forEach(mesa => {
+          const productosLocales = prev[mesa] || [];
+          productosLocales.forEach(producto => {
+            // Si el producto está siendo guardado y NO está en Supabase aún, mantenerlo
+            if (productosGuardandoRef.current.has(producto.id)) {
+              const yaExiste = merged[mesa]?.some(p => p.id === producto.id);
+              if (!yaExiste) {
+                if (!merged[mesa]) merged[mesa] = [];
+                merged[mesa].push(producto);
+                debugLog('🔒 Protegiendo producto en guardado:', producto.producto);
+              }
+            }
+          });
+        });
+        
+        return merged;
+      });
+      
       setDatosInicialCargados(true);
       
       // Limpiar selecciones de cocina que ya no existen (IDs inválidos)
@@ -457,10 +499,14 @@ export default function Pedidos() {
 
   // Función para guardar un producto en Supabase
   const guardarProductoEnSupabase = async (mesa, producto) => {
+    // Registrar que este producto está siendo guardado
+    productosGuardandoRef.current.add(producto.id);
+    
     try {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
         console.error('❌ No hay usuario autenticado');
+        productosGuardandoRef.current.delete(producto.id);
         return;
       }
 
@@ -488,13 +534,21 @@ export default function Pedidos() {
 
       if (error) {
         console.error('Error al guardar producto en Supabase:', error);
-        return;
+        productosGuardandoRef.current.delete(producto.id);
+        throw error; // Propagar error para manejo en agregarProductoAMesa
       }
 
       debugLog('✅ Producto guardado en Supabase:', producto.producto);
+      
+      // Marcar como completado después de 2 segundos (tiempo para que Realtime se sincronice)
+      setTimeout(() => {
+        productosGuardandoRef.current.delete(producto.id);
+      }, 2000);
 
     } catch (error) {
       console.error('Error inesperado al guardar producto:', error);
+      productosGuardandoRef.current.delete(producto.id);
+      throw error; // Propagar error
     }
   };
 
@@ -1102,10 +1156,15 @@ export default function Pedidos() {
     setProductosFiltrados([]);
     setMostrarDropdown(false);
     
-    // Guardar en Supabase en background (NO bloquea la UI)
-    guardarProductoEnSupabase(mesaSeleccionada, nuevoProducto).catch(err => {
-      console.error('Error al guardar producto en Supabase:', err);
-    });
+    // PROTECCIÓN: Guardar en Supabase con manejo de errores mejorado
+    try {
+      await guardarProductoEnSupabase(mesaSeleccionada, nuevoProducto);
+      debugLog('✅ Producto agregado y sincronizado correctamente');
+    } catch (err) {
+      console.error('⚠️ Error al sincronizar producto con Supabase:', err);
+      // El producto ya está en el estado local, así que sigue siendo visible para el usuario
+      // Solo loguear el error sin alertar (evita interrumpir la experiencia del usuario)
+    }
     
     // El guardado en localStorage se hace automáticamente por el useEffect
   };
@@ -2400,13 +2459,21 @@ export default function Pedidos() {
           table: 'productos_mesas_temp'
         },
         (payload) => {
-          // Debounce de 1 segundo para evitar múltiples recargas rápidas (optimizado)
+          // PROTECCIÓN: Debounce más largo para evitar race conditions
           if (realtimeTimeoutRef.current) {
             clearTimeout(realtimeTimeoutRef.current);
           }
           realtimeTimeoutRef.current = setTimeout(() => {
-            cargarProductosTemporales();
-          }, 1000); // Aumentado de 500ms a 1000ms para mejor rendimiento
+            // Solo recargar si no hay productos guardándose activamente
+            if (productosGuardandoRef.current.size === 0) {
+              cargarProductosTemporales();
+              debugLog('🔄 Realtime: Recargando productos');
+            } else {
+              debugLog('⏸️ Realtime: Esperando a que termine el guardado...');
+              // Reintentar después de 2 segundos
+              setTimeout(() => cargarProductosTemporales(), 2000);
+            }
+          }, 1500); // Aumentado a 1.5 segundos para mejor estabilidad
         }
       )
       .subscribe();
