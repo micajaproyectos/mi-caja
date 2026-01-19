@@ -737,37 +737,43 @@ function Insumos() {
                               // Generar un timestamp único para toda la compra
                               const timestampCompra = new Date().toISOString();
                               
-                              // Registrar compras en compras_insumos
-                              for (const linea of lineasValidas) {
+                              // OPTIMIZACIÓN: Preparar todos los registros para insert en batch
+                              const registrosCompras = lineasValidas.map(linea => {
                                 const nombreInsumo = linea.ingrediente
                                   .toUpperCase()
                                   .normalize("NFD")
                                   .replace(/[\u0300-\u036f]/g, "")
                                   .trim();
                                 
-                                // Registrar en compras_insumos con el MISMO timestamp
-                                const { error: errorCompra } = await supabase
-                                  .from('compras_insumos')
-                                  .insert({
-                                    fecha_hora: timestampCompra,
-                                    nombre_insumo: nombreInsumo,
-                                    cantidad: parseFloat(linea.cantidad),
-                                    unidad: linea.unidad,
-                                    usuario_id: usuarioId,
-                                    cliente_id: cliente_id
-                                  });
-                                
-                                if (errorCompra) {
-                                  console.error('Error al registrar compra:', errorCompra);
-                                }
+                                return {
+                                  fecha_hora: timestampCompra,
+                                  nombre_insumo: nombreInsumo,
+                                  cantidad: parseFloat(linea.cantidad),
+                                  unidad: linea.unidad,
+                                  usuario_id: usuarioId,
+                                  cliente_id: cliente_id
+                                };
+                              });
+                              
+                              // OPTIMIZACIÓN: Insertar todos los registros en UNA sola query
+                              const { error: errorCompra } = await supabase
+                                .from('compras_insumos')
+                                .insert(registrosCompras);
+                              
+                              if (errorCompra) {
+                                console.error('Error al registrar compra:', errorCompra);
+                                alert('Error al registrar compra: ' + errorCompra.message);
+                                return;
                               }
                               
+                              // FEEDBACK INMEDIATO: Toast y cierre antes de recargar
                               mostrarToast(`✅ Compra registrada: ${lineasValidas.length} ingrediente(s) actualizados`, 'success');
-                              
-                              // Recargar y cerrar
-                              await cargarCompras();
                               setModalCompraAbierto(false);
                               setLineasCompra([{ ingrediente: '', cantidad: '', unidad: '' }]);
+                              
+                              // CRÍTICO: Recargar AMBAS vistas en background
+                              cargarCompras().catch(err => console.error('Error al recargar compras:', err));
+                              cargarInsumos().catch(err => console.error('Error al recargar insumos:', err));
                               
                             } catch (error) {
                               console.error('Error inesperado:', error);
@@ -1037,25 +1043,32 @@ function Insumos() {
                               }
                               
                               // OPTIMIZACIÓN: Crear/actualizar insumos EN PARALELO con Promise.all()
-                              const upsertPromises = ingredientesValidos.map(ing => {
+                              const upsertPromises = ingredientesValidos.map(async (ing) => {
                                 const nombreInsumoNormalizado = ing.nombre_ingrediente
                                   .toUpperCase()
                                   .normalize("NFD")
                                   .replace(/[\u0300-\u036f]/g, "")
                                   .trim();
                                 
-                                return supabase
-                                  .from('insumos')
-                                  .upsert({
-                                    nombre_producto: productoSeleccionado,
-                                    nombre_insumo: nombreInsumoNormalizado,
-                                    unidad: ing.unidad,
-                                    usuario_id: usuarioId,
-                                    cliente_id: cliente_id
-                                  }, {
-                                    onConflict: 'nombre_producto,nombre_insumo,usuario_id'
-                                  })
-                                  .catch(error => console.error('Error al crear insumo:', error));
+                                try {
+                                  const { error } = await supabase
+                                    .from('insumos')
+                                    .upsert({
+                                      nombre_producto: productoSeleccionado,
+                                      nombre_insumo: nombreInsumoNormalizado,
+                                      unidad: ing.unidad,
+                                      usuario_id: usuarioId,
+                                      cliente_id: cliente_id
+                                    }, {
+                                      onConflict: 'nombre_producto,nombre_insumo,usuario_id'
+                                    });
+                                  
+                                  if (error) {
+                                    console.error('Error al crear insumo:', error);
+                                  }
+                                } catch (error) {
+                                  console.error('Error inesperado en upsert:', error);
+                                }
                               });
                               
                               // Ejecutar todos los upserts en paralelo (no bloquea UI)
