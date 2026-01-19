@@ -119,10 +119,7 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
                     🔊 <strong className="text-green-300">Sonidos:</strong> Notificaciones sonoras en Pedidos, Cocina y Calendario. Activa/desactiva desde tu Perfil.
                   </p>
                   <p className="text-gray-300 text-xs leading-relaxed">
-                    📊 <strong className="text-green-300">Cierre de Caja:</strong> Registra y compara valores físicos vs sistema desde Registro de Venta.
-                  </p>
-                  <p className="text-gray-300 text-xs leading-relaxed">
-                    🪑 <strong className="text-green-300">Pedidos Mejorado:</strong> Interfaz compacta tipo Chrome. Pestañas con scroll, botón "+" para agregar mesas, formulario simplificado.
+                    🍳 <strong className="text-green-300">Insumos:</strong> Crea recetas con ingredientes, registra compras de insumos y controla stock automáticamente. Alertas cuando el stock esté bajo.
                   </p>
                 </div>
               </div>

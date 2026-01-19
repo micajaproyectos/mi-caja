@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
 import Footer from './Footer';
+import { useAlertasStock } from '../contexts/AlertasStockContext';
 
 function Insumos() {
   const navigate = useNavigate();
+  const { verificarInmediatamente } = useAlertasStock();
   
   // Estados principales
   const [vistaActual, setVistaActual] = useState('stock'); // 'stock' o 'recetas'
@@ -775,6 +777,12 @@ function Insumos() {
                               cargarCompras().catch(err => console.error('Error al recargar compras:', err));
                               cargarInsumos().catch(err => console.error('Error al recargar insumos:', err));
                               
+                              // IMPORTANTE: Verificar alertas de stock inmediatamente después de comprar
+                              // Esto actualizará o limpiará la alerta si el stock ya no es crítico
+                              setTimeout(() => {
+                                verificarInmediatamente();
+                              }, 1000);
+                              
                             } catch (error) {
                               console.error('Error inesperado:', error);
                               alert('Error al registrar compra');
@@ -1112,8 +1120,8 @@ function Insumos() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {recetas.map((receta, index) => (
-                        <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all">
+                      {recetas.map((receta) => (
+                        <div key={receta.id} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-white font-bold text-base">{receta.nombre_producto}</h4>
                             <button
