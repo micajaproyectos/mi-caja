@@ -106,9 +106,19 @@ export default function Stock() {
       setLoading(true);
       setError(null);
 
+      // Obtener el usuario_id para filtrar solo el stock del usuario actual
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setStockData([]);
+        setError('Usuario no autenticado');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('stock_view_new')
         .select('*')
+        .eq('usuario_id', usuarioId)
         .order('producto', { ascending: true });
 
       if (error) {
@@ -212,10 +222,20 @@ export default function Stock() {
 
       console.log('🔄 Cargando producto más vendido desde stock_view_new...');
 
+      // Obtener el usuario_id para filtrar solo productos del usuario actual
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        console.error('❌ No hay usuario autenticado');
+        setProductoMasVendido(null);
+        setErrorMasVendido('Usuario no autenticado');
+        return;
+      }
+
       // Consultar la vista stock_view_new y ordenar por total_vendido descendente
       const { data, error } = await supabase
         .from('stock_view_new')
         .select('producto, total_vendido, total_ingresado, stock_restante, estado')
+        .eq('usuario_id', usuarioId)
         .order('total_vendido', { ascending: false })
         .limit(1);
 

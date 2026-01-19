@@ -1,785 +1,1240 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { authService } from '../lib/authService.js';
 import Footer from './Footer';
 
 function Insumos() {
   const navigate = useNavigate();
-  const [nombreProducto, setNombreProducto] = useState('');
-  const [cantidadDeseada, setCantidadDeseada] = useState('');
-  const [cantidadBase, setCantidadBase] = useState('1');
-  const [ingredientes, setIngredientes] = useState([
-    { nombre: '', unidad: 'kg', cantidad: '' },
-    { nombre: '', unidad: 'kg', cantidad: '' },
-    { nombre: '', unidad: 'kg', cantidad: '' }
+  
+  // Estados principales
+  const [vistaActual, setVistaActual] = useState('stock'); // 'stock' o 'recetas'
+  
+  // Estados para gestión de stock de insumos
+  const [insumos, setInsumos] = useState([]);
+  const [loadingInsumos, setLoadingInsumos] = useState(false);
+  
+  // Estados para historial de compras
+  const [compras, setCompras] = useState([]);
+  const [loadingCompras, setLoadingCompras] = useState(false);
+  
+  // Estados para registrar compras de insumos
+  const [modalCompraAbierto, setModalCompraAbierto] = useState(false);
+  const [lineasCompra, setLineasCompra] = useState([
+    { ingrediente: '', cantidad: '', unidad: '' }
   ]);
-  const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
-  const [guardando, setGuardando] = useState(false);
-  const [recetasGuardadas, setRecetasGuardadas] = useState([]);
-  const [cargandoRecetas, setCargandoRecetas] = useState(false);
-  const [mostrarRecetas, setMostrarRecetas] = useState(false);
-
-  const unidades = ['kg', 'gr', 'ml', 'Lt', 'pz', 'unidad', 'tazas', 'cucharadas', 'cucharaditas'];
-
-  // Función para convertir unidades
-  const convertirUnidad = (cantidad, unidadOrigen, unidadDestino) => {
-    const conversiones = {
-      // Peso
-      'kg': { 'gr': 1000, 'kg': 1 },
-      'gr': { 'kg': 0.001, 'gr': 1 },
-      // Volumen
-      'Lt': { 'ml': 1000, 'Lt': 1 },
-      'ml': { 'Lt': 0.001, 'ml': 1 },
-      // Unidades
-      'pz': { 'pz': 1, 'unidad': 1 },
-      'unidad': { 'pz': 1, 'unidad': 1 },
-      // Tazas (aproximado)
-      'tazas': { 'ml': 250, 'Lt': 0.25, 'tazas': 1 },
-      'cucharadas': { 'ml': 15, 'Lt': 0.015, 'cucharadas': 1 },
-      'cucharaditas': { 'ml': 5, 'Lt': 0.005, 'cucharaditas': 1 }
-    };
-
-    if (unidadOrigen === unidadDestino) return cantidad;
-    
-    const factor = conversiones[unidadOrigen]?.[unidadDestino];
-    if (factor) {
-      return cantidad * factor;
-    }
-    
-    // Si no hay conversión directa, devolver la cantidad original
-    return cantidad;
+  
+  // Estados para gestión de recetas
+  const [recetas, setRecetas] = useState([]);
+  const [loadingRecetas, setLoadingRecetas] = useState(false);
+  
+  // Estados para crear nueva receta
+  const [productosInventario, setProductosInventario] = useState([]);
+  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [cantidadBaseLote, setCantidadBaseLote] = useState('1'); // Para cuántas unidades es esta receta
+  const [ingredientesReceta, setIngredientesReceta] = useState([
+    { nombre_ingrediente: '', cantidad_necesaria: '', unidad: 'kg' }
+  ]);
+  
+  // Estado para notificación toast
+  const [notificacionToast, setNotificacionToast] = useState({ visible: false, mensaje: '', tipo: 'success' });
+  
+  const unidades = ['kg', 'gr', 'ml', 'Lt', 'unidad', 'pz'];
+  
+  // Función helper para mostrar notificaciones toast
+  const mostrarToast = (mensaje, tipo = 'success', duracion = 3000) => {
+    setNotificacionToast({ visible: true, mensaje, tipo });
+    setTimeout(() => {
+      setNotificacionToast(prev => ({ ...prev, visible: false }));
+    }, duracion);
   };
 
-  // Sincronizar ingredientes disponibles con la receta
-  useEffect(() => {
-    const ingredientesConNombre = ingredientes.filter(ing => ing.nombre.trim() !== '');
-    
-    if (ingredientesConNombre.length > 0) {
-      const nuevosIngredientesDisponibles = ingredientesConNombre.map(ing => {
-        const existente = ingredientesDisponibles.find(disp => 
-          disp.nombre.toLowerCase() === ing.nombre.toLowerCase()
-        );
-        
-        return {
-          nombre: ing.nombre,
-          unidad: ing.unidad,
-          cantidadDisponible: existente ? existente.cantidadDisponible : ''
-        };
-      });
-      
-      setIngredientesDisponibles(nuevosIngredientesDisponibles);
-    } else {
-      setIngredientesDisponibles([]);
-    }
-  }, [ingredientes]);
-
-  const handleIngredienteChange = (index, field, value) => {
-    const nuevosIngredientes = [...ingredientes];
-    nuevosIngredientes[index][field] = value;
-    setIngredientes(nuevosIngredientes);
-  };
-
-  const agregarIngrediente = () => {
-    setIngredientes([...ingredientes, { nombre: '', unidad: 'kg', cantidad: '' }]);
-  };
-
-  const eliminarIngrediente = (index) => {
-    if (ingredientes.length > 1) {
-      const nuevosIngredientes = ingredientes.filter((_, i) => i !== index);
-      setIngredientes(nuevosIngredientes);
-    }
-  };
-
-  const handleIngredienteDisponibleChange = (index, field, value) => {
-    const nuevosIngredientes = [...ingredientesDisponibles];
-    
-    if (field === 'unidad') {
-      // Convertir la cantidad cuando cambia la unidad
-      const cantidadActual = parseFloat(nuevosIngredientes[index].cantidadDisponible) || 0;
-      const unidadAnterior = nuevosIngredientes[index].unidad;
-      const cantidadConvertida = convertirUnidad(cantidadActual, unidadAnterior, value);
-      
-      nuevosIngredientes[index].unidad = value;
-      nuevosIngredientes[index].cantidadDisponible = cantidadConvertida.toString();
-    } else {
-      nuevosIngredientes[index][field] = value;
-    }
-    
-    setIngredientesDisponibles(nuevosIngredientes);
-  };
-
-  // Calcular ingredientes necesarios
-  const calcularIngredientesNecesarios = () => {
-    const cantidadDeseadaNum = parseFloat(cantidadDeseada) || 0;
-    const cantidadBaseNum = parseFloat(cantidadBase) || 1;
-    
-    if (cantidadDeseadaNum === 0 || cantidadBaseNum === 0) {
-      return ingredientes.map(ing => ({ ...ing, cantidadNecesaria: 0 }));
-    }
-
-    const factor = cantidadDeseadaNum / cantidadBaseNum;
-    
-    return ingredientes.map(ing => ({
-      ...ing,
-      cantidadNecesaria: parseFloat(ing.cantidad) * factor || 0
-    }));
-  };
-
-  const ingredientesCalculados = calcularIngredientesNecesarios();
-
-  // Calcular productos posibles con ingredientes disponibles
-  const calcularProductosPosibles = () => {
-    const cantidadBaseNum = parseFloat(cantidadBase) || 1;
-    
-    if (cantidadBaseNum === 0 || ingredientesDisponibles.length === 0) return 0;
-
-    let productosPosibles = Infinity;
-
-    ingredientesDisponibles.forEach((ingredienteDisponible, index) => {
-      const ingredienteReceta = ingredientes[index];
-      
-      if (ingredienteReceta && ingredienteReceta.nombre && ingredienteReceta.cantidad && 
-          ingredienteDisponible.cantidadDisponible) {
-        const cantidadDisponible = parseFloat(ingredienteDisponible.cantidadDisponible) || 0;
-        const cantidadNecesaria = parseFloat(ingredienteReceta.cantidad) || 0;
-        
-        if (cantidadNecesaria > 0) {
-          // Convertir la cantidad disponible a la unidad de la receta
-          const cantidadDisponibleConvertida = convertirUnidad(
-            cantidadDisponible, 
-            ingredienteDisponible.unidad, 
-            ingredienteReceta.unidad
-          );
-          
-          const productosConEsteIngrediente = Math.floor(cantidadDisponibleConvertida / cantidadNecesaria);
-          productosPosibles = Math.min(productosPosibles, productosConEsteIngrediente);
-        }
-      } else {
-        // Si no hay ingrediente disponible o no está en la receta, no se puede hacer ningún producto
-        productosPosibles = 0;
-      }
-    });
-
-    return productosPosibles === Infinity ? 0 : productosPosibles;
-  };
-
-  const productosPosibles = calcularProductosPosibles();
-
-  // Función para guardar la receta en Supabase
-  const guardarReceta = async () => {
-    // Validar que los campos obligatorios estén completos
-    if (!nombreProducto.trim()) {
-      alert('Por favor ingresa el nombre del producto');
-      return;
-    }
-
-    const ingredientesConDatos = ingredientes.filter(ing => 
-      ing.nombre.trim() !== '' && ing.cantidad !== ''
-    );
-
-    if (ingredientesConDatos.length === 0) {
-      alert('Por favor agrega al menos un ingrediente con nombre y cantidad');
-      return;
-    }
-
-    setGuardando(true);
-
+  // Función para cargar insumos desde la vista global
+  const cargarInsumos = async () => {
     try {
-      // Obtener el usuario autenticado
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        alert('No hay usuario autenticado. Por favor inicia sesión.');
-        setGuardando(false);
+      setLoadingInsumos(true);
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { data, error } = await supabase
+        .from('insumos_stock_global')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('nombre_insumo', { ascending: true });
+
+      if (error) {
+        console.error('Error al cargar insumos:', error);
         return;
       }
 
-      const recetaData = {
-        nombre_producto: nombreProducto.trim(),
-        cantidad_deseada: parseFloat(cantidadDeseada) || 0,
-        cantidad_base: parseFloat(cantidadBase) || 1,
-        ingredientes: ingredientesConDatos.map(ing => ({
-          nombre: ing.nombre.trim(),
-          unidad: ing.unidad,
-          cantidad: parseFloat(ing.cantidad) || 0
-        })),
-        fecha_cl: new Date().toISOString(),
-        usuario_id: user.id, // ID del usuario autenticado
-        cliente_id: user.id  // Por ahora usar el mismo ID, se puede ajustar según tu lógica
-      };
-
-      const { data, error } = await supabase
-        .from('recetas')
-        .insert([recetaData]);
-
-      if (error) {
-        console.error('Error al guardar la receta:', error);
-        alert('Error al guardar la receta. Por favor intenta de nuevo.');
-      } else {
-        alert('¡Receta guardada exitosamente!');
-        console.log('Receta guardada:', data);
-      }
+      setInsumos(data || []);
     } catch (error) {
       console.error('Error inesperado:', error);
-      alert('Error inesperado al guardar la receta.');
     } finally {
-      setGuardando(false);
+      setLoadingInsumos(false);
     }
   };
 
-  // Función para cargar recetas guardadas desde Supabase
-  const cargarRecetas = async () => {
-    setCargandoRecetas(true);
+  // Función para cargar historial de compras
+  const cargarCompras = async () => {
     try {
+      setLoadingCompras(true);
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
       const { data, error } = await supabase
-        .from('recetas')
+        .from('compras_insumos')
         .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('fecha_hora', { ascending: false })
+        .limit(50); // Últimas 50 compras
+
+      if (error) {
+        console.error('Error al cargar compras:', error);
+        return;
+      }
+
+      setCompras(data || []);
+    } catch (error) {
+      console.error('Error inesperado:', error);
+    } finally {
+      setLoadingCompras(false);
+    }
+  };
+
+  // Función para cargar recetas
+  const cargarRecetas = async () => {
+    try {
+      setLoadingRecetas(true);
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      // Cargar filas de productos (encabezados)
+      const { data: productos, error: errorProductos } = await supabase
+        .from('recetas_productos')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .not('nombre_producto', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error al cargar recetas:', error);
-        alert('Error al cargar las recetas guardadas.');
-      } else {
-        setRecetasGuardadas(data || []);
-        setMostrarRecetas(true);
+      if (errorProductos) {
+        console.error('Error al cargar productos:', errorProductos);
+        return;
       }
+
+      // Para cada producto, cargar sus ingredientes
+      const recetasCompletas = await Promise.all(
+        productos.map(async (producto) => {
+          const { data: ingredientes, error: errorIng } = await supabase
+            .from('recetas_productos')
+            .select('*')
+            .eq('usuario_id', usuarioId)
+            .eq('producto_receta_id', producto.id)
+            .not('nombre_ingrediente', 'is', null);
+
+          if (errorIng) {
+            console.error('Error al cargar ingredientes:', errorIng);
+            return null;
+          }
+
+          return {
+            id: producto.id,
+            nombre_producto: producto.nombre_producto,
+            cantidad_base: producto.cantidad_base,
+            unidad: producto.unidad_producto,
+            ingredientes: ingredientes.map(ing => ({
+              nombre: ing.nombre_ingrediente,
+              cantidad: ing.cantidad_ingrediente,
+              unidad: ing.unidad_ingrediente
+            }))
+          };
+        })
+      );
+
+      setRecetas(recetasCompletas.filter(r => r !== null));
     } catch (error) {
       console.error('Error inesperado:', error);
-      alert('Error inesperado al cargar las recetas.');
     } finally {
-      setCargandoRecetas(false);
+      setLoadingRecetas(false);
     }
   };
 
-  // Función para cargar una receta seleccionada
-  const cargarReceta = (receta) => {
-    setNombreProducto(receta.nombre_producto);
-    setCantidadDeseada(receta.cantidad_deseada.toString());
-    setCantidadBase(receta.cantidad_base.toString());
-    
-    // Cargar ingredientes
-    const ingredientesCargados = receta.ingredientes.map(ing => ({
-      nombre: ing.nombre,
-      unidad: ing.unidad,
-      cantidad: ing.cantidad.toString()
-    }));
-    
-    // Asegurar que hay al menos 3 filas de ingredientes
-    while (ingredientesCargados.length < 3) {
-      ingredientesCargados.push({ nombre: '', unidad: 'kg', cantidad: '' });
-    }
-    
-    setIngredientes(ingredientesCargados);
-    setMostrarRecetas(false);
-    
-    alert(`Receta "${receta.nombre_producto}" cargada exitosamente.`);
-  };
-
-  // Función para eliminar una receta
-  const eliminarReceta = async (recetaId, nombreReceta) => {
-    const confirmar = window.confirm(`¿Estás seguro de que quieres eliminar la receta "${nombreReceta}"?\n\nEsta acción no se puede deshacer.`);
-    
-    if (!confirmar) return;
-
+  // Cargar productos del inventario para las recetas
+  const cargarProductosInventario = async () => {
     try {
-      const { error } = await supabase
-        .from('recetas')
-        .delete()
-        .eq('id', recetaId);
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { data, error } = await supabase
+        .from('inventario')
+        .select('producto')
+        .eq('usuario_id', usuarioId)
+        .order('producto', { ascending: true });
 
       if (error) {
-        console.error('Error al eliminar la receta:', error);
-        alert('Error al eliminar la receta. Por favor intenta de nuevo.');
-      } else {
-        alert('Receta eliminada exitosamente.');
-        // Actualizar la lista de recetas
-        const recetasActualizadas = recetasGuardadas.filter(receta => receta.id !== recetaId);
-        setRecetasGuardadas(recetasActualizadas);
+        console.error('Error al cargar productos:', error);
+        return;
       }
+
+      // Obtener productos únicos
+      const productosUnicos = [...new Set(data.map(p => p.producto))];
+      setProductosInventario(productosUnicos);
     } catch (error) {
       console.error('Error inesperado:', error);
-      alert('Error inesperado al eliminar la receta.');
     }
   };
 
-  // Función para limpiar el formulario
-  const limpiarFormulario = () => {
-    setNombreProducto('');
-    setCantidadDeseada('');
-    setCantidadBase('1');
-    setIngredientes([
-      { nombre: '', unidad: 'kg', cantidad: '' },
-      { nombre: '', unidad: 'kg', cantidad: '' },
-      { nombre: '', unidad: 'kg', cantidad: '' }
-    ]);
-    setIngredientesDisponibles([]);
-  };
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    cargarProductosInventario();
+    cargarInsumos();
+    cargarRecetas();
+    cargarCompras();
+  }, []);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a3d1a' }}>
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Botón Volver al Inicio */}
-          <div className="mb-4 md:mb-6">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-            >
-              <span className="text-lg md:text-xl">←</span>
-              <span>Volver al Inicio</span>
-            </button>
-          </div>
+      <div className="pt-16">
+        <div className="relative z-10 p-3 sm:p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm"
+              >
+                <span className="text-lg">←</span>
+                <span>Volver al Inicio</span>
+              </button>
+              
+              <h1 className="text-2xl md:text-3xl font-bold text-green-400" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                🍳 Gestión de Insumos
+              </h1>
+              
+              <div className="w-24"></div>
+            </div>
 
-          {/* Header */}
-          <div className="text-center mb-8 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Insumos
-            </h1>
-            <p className="text-green-200 text-lg md:text-xl italic animate-fade-in-delayed">
-              Gestiona y controla los insumos de tu negocio
-            </p>
-          </div>
+            {/* Pestañas de navegación */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setVistaActual('stock')}
+                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+                  vistaActual === 'stock'
+                    ? 'bg-green-600 text-white shadow-lg'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                📦 Stock de Insumos
+              </button>
+              
+              <button
+                onClick={() => setVistaActual('recetas')}
+                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+                  vistaActual === 'recetas'
+                    ? 'bg-green-600 text-white shadow-lg'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                📝 Recetas de Productos
+              </button>
+            </div>
 
-          {/* Formulario de Insumos */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 border border-white/20">
-            <div className="space-y-8">
-              {/* Nombre del Producto */}
-              <div className="space-y-2">
-                <label className="block text-white font-semibold text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Nombre del Producto
-                </label>
-                <input
-                  type="text"
-                  value={nombreProducto}
-                  onChange={(e) => setNombreProducto(e.target.value)}
-                  placeholder="Ej: Café en grano"
-                  className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
-                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                />
-              </div>
-
-              {/* Configuración de Cantidades */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-white font-semibold text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    Cantidad Deseada
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={cantidadDeseada}
-                      onChange={(e) => setCantidadDeseada(e.target.value)}
-                      placeholder="500"
-                      className="flex-1 px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
-                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                    />
-                    <span className="text-white font-medium">unidades</span>
-                  </div>
+            {/* Contenido según vista actual */}
+            {vistaActual === 'stock' ? (
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-green-400 mb-2">
+                    📦 Stock de Ingredientes
+                  </h2>
+                  <p className="text-gray-300 text-sm">
+                    Los ingredientes se crean automáticamente al guardar recetas. El <strong className="text-orange-300">Consumo Actual</strong> se calcula según las ventas. El <strong className="text-white">Stock Manual</strong> lo actualizas tú cuando reabastezcas.
+                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="block text-white font-semibold text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    Receta Base (por)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={cantidadBase}
-                      onChange={(e) => setCantidadBase(e.target.value)}
-                      placeholder="1"
-                      className="flex-1 px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200"
-                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                    />
-                    <span className="text-white font-medium">unidad</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sección de Ingredientes */}
-              <div className="space-y-4">
-                <h3 className="text-white font-semibold text-xl" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Ingredientes
-                </h3>
                 
-                {/* Tabla de Ingredientes */}
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-white/20">
-                        <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Nombre Ingrediente</th>
-                        <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Unidad</th>
-                        <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Cantidad Base</th>
-                        <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Necesario</th>
-                        <th className="text-center py-3 px-2 text-white font-semibold text-sm md:text-base">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ingredientes.map((ingrediente, index) => (
-                        <tr key={index} className="border-b border-white/10">
-                          <td className="py-3 px-2">
-                            <input
-                              type="text"
-                              value={ingrediente.nombre}
-                              onChange={(e) => handleIngredienteChange(index, 'nombre', e.target.value)}
-                              placeholder="Nombre del ingrediente"
-                              className="w-full px-3 py-2 rounded-md bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm"
-                              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                            />
-                          </td>
-                          <td className="py-3 px-2">
-                            <select
-                              value={ingrediente.unidad}
-                              onChange={(e) => handleIngredienteChange(index, 'unidad', e.target.value)}
-                              className="w-full px-3 py-2 rounded-md bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm"
-                              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                            >
-                              {unidades.map((unidad) => (
-                                <option key={unidad} value={unidad} className="bg-gray-800 text-white">
-                                  {unidad}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-3 px-2">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={ingrediente.cantidad}
-                              onChange={(e) => handleIngredienteChange(index, 'cantidad', e.target.value)}
-                              placeholder="0.00"
-                              className="w-full px-3 py-2 rounded-md bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm"
-                              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                            />
-                          </td>
-                          <td className="py-3 px-2">
-                            <div className="px-3 py-2 bg-green-600/30 border border-green-400/50 rounded-md text-green-100 font-semibold text-sm text-center">
-                              {ingredientesCalculados[index]?.cantidadNecesaria?.toFixed(2) || '0.00'}
-                            </div>
-                          </td>
-                          <td className="py-3 px-2 text-center">
-                            {ingredientes.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => eliminarIngrediente(index)}
-                                className="text-red-400 hover:text-red-300 transition-colors duration-200 p-1"
-                                title="Eliminar ingrediente"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Botones de Acción */}
-                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={agregarIngrediente}
-                    className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Agregar ingrediente
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={cargarRecetas}
-                    disabled={cargandoRecetas}
-                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    {cargandoRecetas ? (
-                      <>
-                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Cargando...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        Cargar recetas
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={guardarReceta}
-                    disabled={guardando || !nombreProducto.trim()}
-                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    {guardando ? (
-                      <>
-                        <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Guardar receta
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={limpiarFormulario}
-                    className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Limpiar
-                  </button>
-                </div>
-              </div>
-
-              {/* Modal de Recetas Guardadas */}
-              {mostrarRecetas && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-                    <div className="p-6">
-                      <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                          📚 Recetas Guardadas
-                        </h3>
-                        <button
-                          onClick={() => setMostrarRecetas(false)}
-                          className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
-                        >
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                {/* Alertas de stock */}
+                {insumos.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {/* Total insumos */}
+                    <div className="bg-blue-600/10 border border-blue-400/30 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-blue-400 text-3xl">📦</span>
+                        <div>
+                          <p className="text-blue-200 text-xs">Total Ingredientes</p>
+                          <p className="text-white text-2xl font-bold">{insumos.length}</p>
+                        </div>
                       </div>
-
-                      {recetasGuardadas.length === 0 ? (
-                        <div className="text-center py-8">
-                          <div className="text-6xl mb-4">📝</div>
-                          <p className="text-gray-600 text-lg">No hay recetas guardadas</p>
-                          <p className="text-gray-500">Crea y guarda tu primera receta para verla aquí.</p>
+                    </div>
+                    
+                    {/* Consumo acumulado */}
+                    <div className="bg-orange-600/10 border border-orange-400/30 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-orange-400 text-3xl">📊</span>
+                        <div>
+                          <p className="text-orange-200 text-xs">Consumo Activo</p>
+                          <p className="text-white text-2xl font-bold">
+                            {insumos.filter(i => i.consumo_actual > 0).length}
+                          </p>
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                          {recetasGuardadas.map((receta) => (
-                            <div
-                              key={receta.id}
-                              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200 relative group"
-                            >
-                              {/* Botón de eliminar */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Evitar que se active el onClick del contenedor
-                                  eliminarReceta(receta.id, receta.nombre_producto);
-                                }}
-                                className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
-                                title="Eliminar receta"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-
-                              {/* Contenido de la receta */}
-                              <div 
-                                className="cursor-pointer"
-                                onClick={() => cargarReceta(receta)}
-                              >
-                                <h4 className="font-bold text-gray-800 mb-2 truncate pr-8" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                  {receta.nombre_producto}
-                                </h4>
-                                <div className="space-y-1 text-sm text-gray-600">
-                                  <p><span className="font-semibold">Base:</span> {receta.cantidad_base} unidad</p>
-                                  <p><span className="font-semibold">Ingredientes:</span> {receta.ingredientes.length}</p>
-                                  <p><span className="font-semibold">Creada:</span> {new Date(receta.created_at).toLocaleDateString()}</p>
-                                </div>
-                                <div className="mt-3 flex items-center justify-between">
-                                  <span className="text-xs text-gray-500">Haz clic para cargar</span>
-                                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                      </div>
+                    </div>
+                    
+                    {/* Insumos bajos */}
+                    <div className="bg-yellow-600/10 border border-yellow-400/30 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-yellow-400 text-3xl">⚠️</span>
+                        <div>
+                          <p className="text-yellow-200 text-xs">Stock Bajo</p>
+                          <p className="text-white text-2xl font-bold">
+                            {insumos.filter(i => i.estado === 'Bajo').length}
+                          </p>
                         </div>
-                      )}
+                      </div>
+                    </div>
+                    
+                    {/* Insumos agotados */}
+                    <div className="bg-red-600/10 border border-red-400/30 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-red-400 text-3xl">❌</span>
+                        <div>
+                          <p className="text-red-200 text-xs">Agotados</p>
+                          <p className="text-white text-2xl font-bold">
+                            {insumos.filter(i => i.estado === 'Agotado').length}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
+                
+                {/* Botón para ingresar compras - Siempre visible */}
+                <div className="mb-4 flex justify-end">
+                  <button
+                    onClick={() => setModalCompraAbierto(true)}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-lg"
+                  >
+                    ➕ Ingresar Compra
+                  </button>
                 </div>
-              )}
-
-              {/* Resumen de Ingredientes Necesarios */}
-              {cantidadDeseada && parseFloat(cantidadDeseada) > 0 && (
-                <div className="mt-8 p-6 bg-green-600/20 border border-green-400/30 rounded-xl">
-                  <h4 className="text-white font-bold text-xl mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    📋 Resumen de Ingredientes Necesarios
-                  </h4>
-                  <div className="text-center mb-4">
-                    <span className="text-green-200 text-lg">
-                      Para producir <span className="font-bold text-white">{cantidadDeseada}</span> unidades de{' '}
-                      <span className="font-bold text-white">{nombreProducto || 'tu producto'}</span>
-                    </span>
+                
+                {/* Lista de insumos */}
+                {insumos.length === 0 ? (
+                  <div className="text-center text-gray-400 py-12">
+                    <div className="text-5xl mb-4">📦</div>
+                    <p className="text-lg mb-2">No hay ingredientes registrados aún</p>
+                    <p className="text-sm">Los ingredientes aparecerán automáticamente cuando crees recetas en la pestaña "Recetas de Productos"</p>
                   </div>
-                  <div className="space-y-2">
-                    {ingredientesCalculados
-                      .filter(ing => ing.nombre && ing.cantidadNecesaria > 0)
-                      .map((ingrediente, index) => {
-                        // Redondear hacia arriba para cantidades realistas de compra
-                        const cantidadRealista = Math.ceil(ingrediente.cantidadNecesaria);
-                        return (
-                          <div key={index} className="flex justify-between items-center py-2 px-4 bg-white/10 rounded-lg">
-                            <span className="text-white font-medium">{ingrediente.nombre}</span>
-                            <span className="text-green-200 font-bold">
-                              {cantidadRealista} {ingrediente.unidad}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    {ingredientesCalculados.filter(ing => ing.nombre && ing.cantidadNecesaria > 0).length === 0 && (
-                      <div className="text-center text-gray-300 py-4">
-                        Completa los ingredientes para ver el resumen
-                      </div>
-                    )}
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-white/5 border-b border-white/20">
+                          <th className="text-left py-3 px-4 text-white font-semibold text-sm">Ingrediente</th>
+                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Consumo Actual</th>
+                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Unidad</th>
+                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Umbral Mínimo</th>
+                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Estado</th>
+                          <th className="text-center py-3 px-4 text-white font-semibold text-sm">Stock Manual</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {insumos.map((insumo, index) => (
+                          <tr key={index} className="border-b border-white/10 hover:bg-white/5">
+                            <td className="py-3 px-4 text-white font-medium">{insumo.nombre_insumo}</td>
+                            <td className="py-3 px-4 text-center">
+                              <span className="text-orange-300 font-semibold text-base">
+                                {insumo.consumo_actual ? parseFloat(insumo.consumo_actual).toFixed(2) : '0.00'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center text-gray-300">{insumo.unidad}</td>
+                            <td className="py-3 px-4 text-center text-gray-400 text-sm">
+                              {insumo.umbral_minimo}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                insumo.cantidad_total <= 0 
+                                  ? 'bg-red-600/30 text-red-300 border border-red-400/50' 
+                                  : insumo.cantidad_total <= insumo.umbral_minimo
+                                  ? 'bg-yellow-600/30 text-yellow-300 border border-yellow-400/50'
+                                  : 'bg-green-600/30 text-green-300 border border-green-400/50'
+                              }`}>
+                                {insumo.estado}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <span className="text-white font-bold text-lg">
+                                {insumo.cantidad_total}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                </div>
-              )}
-
-              {/* Calculadora Reversa - Ingredientes Disponibles */}
-              {ingredientesDisponibles.length > 0 && (
-                <div className="mt-12 p-6 bg-blue-600/20 border border-blue-400/30 rounded-xl">
-                  <h3 className="text-white font-bold text-2xl mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    🔄 Calculadora Reversa
-                  </h3>
-                  <p className="text-blue-200 text-center mb-6">
-                    ¿Cuántos productos puedes hacer con los ingredientes que tienes?
-                  </p>
-
-                  {/* Ingredientes Disponibles */}
-                  <div className="space-y-4">
-                    <h4 className="text-white font-semibold text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                      Ingredientes Disponibles
-                    </h4>
+                )}
+                
+                {/* Historial de Compras */}
+                {compras.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-bold text-green-400 mb-4">
+                      📋 Historial de Compras
+                    </h3>
                     
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
-                          <tr className="border-b border-white/20">
-                            <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Nombre Ingrediente</th>
-                            <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Unidad</th>
-                            <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Cantidad Disponible</th>
-                            <th className="text-left py-3 px-2 text-white font-semibold text-sm md:text-base">Necesario por Producto</th>
+                          <tr className="bg-white/5 border-b border-white/20">
+                            <th className="text-left py-3 px-4 text-white font-semibold text-sm">Fecha</th>
+                            <th className="text-left py-3 px-4 text-white font-semibold text-sm">Ingrediente</th>
+                            <th className="text-center py-3 px-4 text-white font-semibold text-sm">Cantidad</th>
+                            <th className="text-center py-3 px-4 text-white font-semibold text-sm">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {ingredientesDisponibles.map((ingrediente, index) => (
-                            <tr key={index} className="border-b border-white/10">
-                              <td className="py-3 px-2">
-                                <div className="px-3 py-2 bg-blue-600/30 border border-blue-400/50 rounded-md text-blue-100 font-semibold text-sm text-center">
-                                  {ingrediente.nombre}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2">
-                                <select
-                                  value={ingrediente.unidad}
-                                  onChange={(e) => handleIngredienteDisponibleChange(index, 'unidad', e.target.value)}
-                                  className="w-full px-3 py-2 rounded-md bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 text-sm"
-                                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                                >
-                                  {unidades.map((unidad) => (
-                                    <option key={unidad} value={unidad} className="bg-gray-800 text-white">
-                                      {unidad}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="py-3 px-2">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={ingrediente.cantidadDisponible}
-                                  onChange={(e) => handleIngredienteDisponibleChange(index, 'cantidadDisponible', e.target.value)}
-                                  placeholder="0.00"
-                                  className="w-full px-3 py-2 rounded-md bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 text-sm"
-                                  style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                                />
-                              </td>
-                              <td className="py-3 px-2">
-                                <div className="px-3 py-2 bg-green-600/30 border border-green-400/50 rounded-md text-green-100 font-semibold text-sm text-center">
-                                  {ingredientes[index]?.cantidad || '0.00'}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                          {(() => {
+                            // Agrupar compras por fecha_hora
+                            const comprasAgrupadas = compras.reduce((acc, compra) => {
+                              const key = compra.fecha_hora;
+                              if (!acc[key]) {
+                                acc[key] = {
+                                  fecha_hora: compra.fecha_hora,
+                                  ingredientes: []
+                                };
+                              }
+                              acc[key].ingredientes.push({
+                                id: compra.id,
+                                nombre: compra.nombre_insumo,
+                                cantidad: compra.cantidad,
+                                unidad: compra.unidad
+                              });
+                              return acc;
+                            }, {});
+                            
+                            const filas = [];
+                            Object.values(comprasAgrupadas).forEach((grupo, grupoIndex) => {
+                              grupo.ingredientes.forEach((ing, ingIndex) => {
+                                filas.push(
+                                  <tr key={`${grupoIndex}-${ingIndex}`} className="border-b border-white/10 hover:bg-white/5">
+                                    <td className="py-3 px-4 text-white">
+                                      {ingIndex === 0 ? new Date(grupo.fecha_hora).toLocaleDateString('es-CL') : ''}
+                                    </td>
+                                    <td className="py-3 px-4 text-white font-medium">{ing.nombre}</td>
+                                    <td className="py-3 px-4 text-center text-green-300 font-semibold">
+                                      +{ing.cantidad} {ing.unidad}
+                                    </td>
+                                    <td className="py-3 px-4 text-center">
+                                      <div className="flex items-center justify-center gap-2">
+                                        <button
+                                          onClick={async () => {
+                                            const nuevaCantidad = prompt(`Nueva cantidad para ${ing.nombre}:`, ing.cantidad);
+                                            if (nuevaCantidad && !isNaN(parseFloat(nuevaCantidad)) && parseFloat(nuevaCantidad) > 0) {
+                                              try {
+                                                const diferencia = parseFloat(nuevaCantidad) - ing.cantidad;
+                                                const usuarioId = await authService.getCurrentUserId();
+                                                
+                                                // Actualizar registro de compra
+                                                const { error: errorCompra } = await supabase
+                                                  .from('compras_insumos')
+                                                  .update({ cantidad: parseFloat(nuevaCantidad) })
+                                                  .eq('id', ing.id);
+                                                
+                                                if (errorCompra) {
+                                                  alert('Error al actualizar compra');
+                                                  return;
+                                                }
+                                                
+                                                // Ajustar stock en insumos
+                                                const { data: stockActual } = await supabase
+                                                  .from('insumos')
+                                                  .select('cantidad_disponible')
+                                                  .eq('nombre_insumo', ing.nombre)
+                                                  .eq('usuario_id', usuarioId)
+                                                  .limit(1)
+                                                  .single();
+                                                
+                                                const nuevoStock = (stockActual?.cantidad_disponible || 0) + diferencia;
+                                                
+                                                await supabase
+                                                  .from('insumos')
+                                                  .update({ cantidad_disponible: nuevoStock })
+                                                  .eq('nombre_insumo', ing.nombre)
+                                                  .eq('usuario_id', usuarioId);
+                                                
+                                                mostrarToast('✅ Compra actualizada', 'success');
+                                                await cargarCompras();
+                                                await cargarInsumos();
+                                              } catch (error) {
+                                                console.error('Error:', error);
+                                                alert('Error al actualizar');
+                                              }
+                                            }
+                                          }}
+                                          className="text-blue-400 hover:text-blue-300 text-sm"
+                                          title="Editar cantidad"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            if (!confirm(`¿Eliminar compra de ${ing.cantidad} ${ing.unidad} de ${ing.nombre}?`)) return;
+                                            
+                                            try {
+                                              const usuarioId = await authService.getCurrentUserId();
+                                              
+                                              // Eliminar registro de compra
+                                              const { error: errorCompra } = await supabase
+                                                .from('compras_insumos')
+                                                .delete()
+                                                .eq('id', ing.id);
+                                              
+                                              if (errorCompra) {
+                                                alert('Error al eliminar compra');
+                                                return;
+                                              }
+                                              
+                                              // Restar del stock en insumos
+                                              const { data: stockActual } = await supabase
+                                                .from('insumos')
+                                                .select('cantidad_disponible')
+                                                .eq('nombre_insumo', ing.nombre)
+                                                .eq('usuario_id', usuarioId)
+                                                .limit(1)
+                                                .single();
+                                              
+                                              const nuevoStock = Math.max(0, (stockActual?.cantidad_disponible || 0) - ing.cantidad);
+                                              
+                                              await supabase
+                                                .from('insumos')
+                                                .update({ cantidad_disponible: nuevoStock })
+                                                .eq('nombre_insumo', ing.nombre)
+                                                .eq('usuario_id', usuarioId);
+                                              
+                                              mostrarToast('✅ Compra eliminada', 'success');
+                                              await cargarCompras();
+                                              await cargarInsumos();
+                                            } catch (error) {
+                                              console.error('Error:', error);
+                                              alert('Error al eliminar');
+                                            }
+                                          }}
+                                          className="text-red-400 hover:text-red-300 text-sm"
+                                          title="Eliminar compra"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            });
+                            
+                            return filas;
+                          })()}
                         </tbody>
                       </table>
                     </div>
                   </div>
-
-                {/* Resultado de Productos Posibles */}
-                {productosPosibles > 0 && (
-                  <div className="mt-6 p-4 bg-green-600/30 border border-green-400/50 rounded-lg text-center">
-                    <div className="text-4xl mb-2">🎉</div>
-                    <h4 className="text-white font-bold text-xl mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                      ¡Puedes hacer {productosPosibles} {productosPosibles === 1 ? 'producto' : 'productos'}!
-                    </h4>
-                    <p className="text-green-200">
-                      Con los ingredientes disponibles puedes producir <span className="font-bold text-white">{productosPosibles}</span> preparaciones de{' '}
-                      <span className="font-bold text-white">{nombreProducto || 'tu producto'}</span>
-                    </p>
-                    <p className="text-green-200 mt-2">
-                      Esto equivale a <span className="font-bold text-white">{productosPosibles * parseFloat(cantidadBase || 1)}</span> unidades de{' '}
-                      <span className="font-bold text-white">{nombreProducto || 'tu producto'}</span>
-                    </p>
+                )}
+                
+                {/* Modal para ingresar compras */}
+                {modalCompraAbierto && (
+                  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl max-w-3xl w-full p-6" style={{ backgroundColor: 'rgba(31, 74, 31, 0.95)' }}>
+                      <h3 className="text-xl font-bold text-white mb-4">
+                        🛒 Registrar Compra de Insumos
+                      </h3>
+                      
+                      <p className="text-gray-300 text-sm mb-4">
+                        Las cantidades se <strong>sumarán</strong> al stock manual actual de cada ingrediente.
+                      </p>
+                      
+                      <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                        {lineasCompra.map((linea, index) => (
+                          <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-white/5 p-3 rounded-lg">
+                            {insumos.length > 0 ? (
+                              <select
+                                value={linea.ingrediente}
+                                onChange={(e) => {
+                                  const nuevasLineas = [...lineasCompra];
+                                  const insumoSeleccionado = insumos.find(i => i.nombre_insumo === e.target.value);
+                                  nuevasLineas[index].ingrediente = e.target.value;
+                                  nuevasLineas[index].unidad = insumoSeleccionado?.unidad || '';
+                                  setLineasCompra(nuevasLineas);
+                                }}
+                                style={{ fontSize: '14px' }}
+                                className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                              >
+                                <option value="" className="bg-gray-800">Seleccionar ingrediente</option>
+                                {insumos.map((insumo) => (
+                                  <option key={insumo.nombre_insumo} value={insumo.nombre_insumo} className="bg-gray-800">
+                                    {insumo.nombre_insumo} (Stock: {insumo.cantidad_total} {insumo.unidad})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                placeholder="Nombre ingrediente"
+                                value={linea.ingrediente}
+                                onChange={(e) => {
+                                  const nuevasLineas = [...lineasCompra];
+                                  // Normalizar: mayúsculas y sin acentos
+                                  const normalizado = e.target.value
+                                    .toUpperCase()
+                                    .normalize("NFD")
+                                    .replace(/[\u0300-\u036f]/g, "");
+                                  nuevasLineas[index].ingrediente = normalizado;
+                                  setLineasCompra(nuevasLineas);
+                                }}
+                                style={{ fontSize: '14px' }}
+                                className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+                              />
+                            )}
+                            
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Cantidad"
+                              value={linea.cantidad}
+                              onChange={(e) => {
+                                const nuevasLineas = [...lineasCompra];
+                                nuevasLineas[index].cantidad = e.target.value;
+                                setLineasCompra(nuevasLineas);
+                              }}
+                              style={{ fontSize: '14px' }}
+                              className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            />
+                            
+                            {insumos.length > 0 ? (
+                              <input
+                                type="text"
+                                value={linea.unidad}
+                                disabled
+                                style={{ fontSize: '14px' }}
+                                className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400"
+                              />
+                            ) : (
+                              <select
+                                value={linea.unidad}
+                                onChange={(e) => {
+                                  const nuevasLineas = [...lineasCompra];
+                                  nuevasLineas[index].unidad = e.target.value;
+                                  setLineasCompra(nuevasLineas);
+                                }}
+                                style={{ fontSize: '14px' }}
+                                className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                              >
+                                <option value="" className="bg-gray-800">Unidad</option>
+                                {unidades.map((u) => (
+                                  <option key={u} value={u} className="bg-gray-800">{u}</option>
+                                ))}
+                              </select>
+                            )}
+                            
+                            <button
+                              onClick={() => {
+                                if (lineasCompra.length > 1) {
+                                  setLineasCompra(lineasCompra.filter((_, i) => i !== index));
+                                }
+                              }}
+                              className="bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg text-sm"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="flex gap-3 mb-4">
+                        <button
+                          onClick={() => setLineasCompra([...lineasCompra, { ingrediente: '', cantidad: '', unidad: '' }])}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                        >
+                          ➕ Agregar línea
+                        </button>
+                      </div>
+                      
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setModalCompraAbierto(false);
+                            setLineasCompra([{ ingrediente: '', cantidad: '', unidad: '' }]);
+                          }}
+                          className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const usuarioId = await authService.getCurrentUserId();
+                              if (!usuarioId) {
+                                alert('Usuario no autenticado');
+                                return;
+                              }
+                              
+                              // Validar líneas
+                              const lineasValidas = lineasCompra.filter(l => 
+                                l.ingrediente && 
+                                l.ingrediente.trim() !== '' &&
+                                l.cantidad && 
+                                parseFloat(l.cantidad) > 0 &&
+                                l.unidad &&
+                                l.unidad.trim() !== ''
+                              );
+                              
+                              if (lineasValidas.length === 0) {
+                                alert('Agrega al menos un ingrediente con nombre, cantidad y unidad válidos');
+                                return;
+                              }
+                              
+                              // Obtener cliente_id
+                              const { data: usuarioData } = await supabase
+                                .from('usuarios')
+                                .select('cliente_id')
+                                .eq('usuario_id', usuarioId)
+                                .single();
+                              
+                              const cliente_id = usuarioData?.cliente_id || null;
+                              
+                              // Generar un timestamp único para toda la compra
+                              const timestampCompra = new Date().toISOString();
+                              
+                              // Actualizar/crear insumo y registrar compra
+                              for (const linea of lineasValidas) {
+                                const nombreInsumo = linea.ingrediente
+                                  .toUpperCase()
+                                  .normalize("NFD")
+                                  .replace(/[\u0300-\u036f]/g, "")
+                                  .trim();
+                                
+                                // Verificar si el insumo existe
+                                const { data: insumoExistente } = await supabase
+                                  .from('insumos')
+                                  .select('*')
+                                  .eq('nombre_insumo', nombreInsumo)
+                                  .eq('usuario_id', usuarioId)
+                                  .limit(1);
+                                
+                                if (!insumoExistente || insumoExistente.length === 0) {
+                                  // El insumo no existe, crear uno nuevo (sin producto asociado)
+                                  await supabase
+                                    .from('insumos')
+                                    .insert({
+                                      nombre_producto: 'COMPRA DIRECTA',
+                                      nombre_insumo: nombreInsumo,
+                                      cantidad_disponible: parseFloat(linea.cantidad),
+                                      unidad: linea.unidad,
+                                      umbral_minimo: 10,
+                                      usuario_id: usuarioId,
+                                      cliente_id: cliente_id
+                                    });
+                                } else {
+                                  // El insumo existe, sumar al stock actual
+                                  const stockActual = insumoExistente[0].cantidad_disponible || 0;
+                                  const cantidadNueva = stockActual + parseFloat(linea.cantidad);
+                                  
+                                  await supabase
+                                    .from('insumos')
+                                    .update({
+                                      cantidad_disponible: cantidadNueva,
+                                      updated_at: timestampCompra
+                                    })
+                                    .eq('nombre_insumo', nombreInsumo)
+                                    .eq('usuario_id', usuarioId);
+                                }
+                                
+                                // 2. Registrar en compras_insumos con el MISMO timestamp
+                                const { error: errorCompra } = await supabase
+                                  .from('compras_insumos')
+                                  .insert({
+                                    fecha_hora: timestampCompra,
+                                    nombre_insumo: nombreInsumo,
+                                    cantidad: parseFloat(linea.cantidad),
+                                    unidad: linea.unidad,
+                                    usuario_id: usuarioId,
+                                    cliente_id: cliente_id
+                                  });
+                                
+                                if (errorCompra) {
+                                  console.error('Error al registrar compra:', errorCompra);
+                                }
+                              }
+                              
+                              mostrarToast(`✅ Compra registrada: ${lineasValidas.length} ingrediente(s) actualizados`, 'success');
+                              
+                              // Recargar y cerrar
+                              await cargarInsumos();
+                              await cargarCompras();
+                              setModalCompraAbierto(false);
+                              setLineasCompra([{ ingrediente: '', cantidad: '', unidad: '' }]);
+                              
+                            } catch (error) {
+                              console.error('Error inesperado:', error);
+                              alert('Error al registrar compra');
+                            }
+                          }}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg"
+                        >
+                          💾 Guardar Compra
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
-
-                {productosPosibles === 0 && ingredientesDisponibles.some(ing => ing.cantidadDisponible) && (
-                  <div className="mt-6 p-4 bg-red-600/30 border border-red-400/50 rounded-lg text-center">
-                    <div className="text-4xl mb-2">⚠️</div>
-                    <h4 className="text-white font-bold text-xl mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                      No puedes hacer ningún producto
-                    </h4>
-                    <p className="text-red-200">
-                      Te faltan ingredientes o no tienes suficiente cantidad para hacer la receta
-                    </p>
+              </div>
+            ) : (
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+                <h2 className="text-xl font-bold text-green-400 mb-4">
+                  📝 Recetas de Productos
+                </h2>
+                <p className="text-gray-300 text-sm mb-6">
+                  Vincula cada producto de tu inventario con los ingredientes que necesita. Esto permitirá descontar automáticamente los insumos al vender.
+                </p>
+                
+                {/* Formulario para crear receta */}
+                <div className="bg-white/5 rounded-lg p-4 mb-6 border border-white/10">
+                  <h3 className="text-white font-semibold mb-3">Crear Nueva Receta</h3>
+                  
+                  {/* Buscar producto del inventario */}
+                  <div className="mb-4">
+                    <label className="block text-white text-sm mb-2">Producto del Inventario</label>
+                    <select
+                      value={productoSeleccionado}
+                      onChange={(e) => setProductoSeleccionado(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                    >
+                      <option value="" className="bg-gray-800">Selecciona un producto...</option>
+                      {productosInventario.map((producto, index) => (
+                        <option key={index} value={producto} className="bg-gray-800">
+                          {producto}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
+                  
+                  {productoSeleccionado && (
+                    <>
+                      {/* Campo para cantidad base del lote */}
+                      <div className="mb-4 bg-blue-600/10 border border-blue-400/30 rounded-lg p-3">
+                        <label className="block text-white text-sm mb-2">
+                          Esta receta es para producir cuántas unidades de {productoSeleccionado}?
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={cantidadBaseLote}
+                            onChange={(e) => setCantidadBaseLote(e.target.value)}
+                            placeholder="1"
+                            className="w-24 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm text-center"
+                          />
+                          <span className="text-white text-sm">
+                            unidades de {productoSeleccionado}
+                          </span>
+                        </div>
+                        <p className="text-blue-200 text-xs mt-2">
+                          Ejemplo: Si produces en lotes de 10, ingresa "10"
+                        </p>
+                      </div>
+                      
+                      <h4 className="text-white text-sm mb-2">
+                        Ingredientes necesarios para hacer {cantidadBaseLote} {productoSeleccionado}
+                      </h4>
+                      
+                      {/* Lista de ingredientes */}
+                      {ingredientesReceta.map((ing, index) => (
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+                          <input
+                            type="text"
+                            placeholder="Nombre ingrediente (ej: LECHE)"
+                            value={ing.nombre_ingrediente}
+                            onChange={(e) => {
+                              const nuevos = [...ingredientesReceta];
+                              // Normalizar: mayúsculas y sin acentos
+                              const normalizado = e.target.value
+                                .toUpperCase()
+                                .normalize("NFD")
+                                .replace(/[\u0300-\u036f]/g, "");
+                              nuevos[index].nombre_ingrediente = normalizado;
+                              setIngredientesReceta(nuevos);
+                            }}
+                            className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                          />
+                          
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Cantidad total"
+                            value={ing.cantidad_necesaria}
+                            onChange={(e) => {
+                              const nuevos = [...ingredientesReceta];
+                              nuevos[index].cantidad_necesaria = e.target.value;
+                              setIngredientesReceta(nuevos);
+                            }}
+                            className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                          />
+                          
+                          <select
+                            value={ing.unidad}
+                            onChange={(e) => {
+                              const nuevos = [...ingredientesReceta];
+                              nuevos[index].unidad = e.target.value;
+                              setIngredientesReceta(nuevos);
+                            }}
+                            className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                          >
+                            {unidades.map((u) => (
+                              <option key={u} value={u} className="bg-gray-800">{u}</option>
+                            ))}
+                          </select>
+                          
+                          <button
+                            onClick={() => {
+                              if (ingredientesReceta.length > 1) {
+                                setIngredientesReceta(ingredientesReceta.filter((_, i) => i !== index));
+                              }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={() => setIngredientesReceta([...ingredientesReceta, { nombre_ingrediente: '', cantidad_necesaria: '', unidad: 'kg' }])}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                        >
+                          ➕ Agregar ingrediente
+                        </button>
+                        
+                        <button
+                          onClick={async () => {
+                            // Validar campos
+                            if (!productoSeleccionado || !cantidadBaseLote) {
+                              alert('Por favor completa el producto y cantidad base');
+                              return;
+                            }
+                            
+                            const ingredientesValidos = ingredientesReceta.filter(
+                              ing => ing.nombre_ingrediente && ing.nombre_ingrediente.trim() !== '' && 
+                                     ing.cantidad_necesaria && parseFloat(ing.cantidad_necesaria) > 0
+                            );
+                            
+                            console.log('Ingredientes receta:', ingredientesReceta);
+                            console.log('Ingredientes válidos:', ingredientesValidos);
+                            
+                            if (ingredientesValidos.length === 0) {
+                              alert('Por favor agrega al menos un ingrediente con cantidad válida');
+                              return;
+                            }
+                            
+                            try {
+                              const usuarioId = await authService.getCurrentUserId();
+                              if (!usuarioId) {
+                                alert('Usuario no autenticado');
+                                return;
+                              }
+                              
+                              // Obtener cliente_id
+                              const { data: usuarioData } = await supabase
+                                .from('usuarios')
+                                .select('cliente_id')
+                                .eq('usuario_id', usuarioId)
+                                .single();
+                              
+                              const cliente_id = usuarioData?.cliente_id || null;
+                              
+                              // Verificar si ya existe una receta con este producto (para edición)
+                              const { data: recetaExistente } = await supabase
+                                .from('recetas_productos')
+                                .select('id')
+                                .eq('usuario_id', usuarioId)
+                                .eq('nombre_producto', productoSeleccionado)
+                                .is('nombre_ingrediente', null)
+                                .maybeSingle();
+                              
+                              // Si existe, eliminar la receta anterior completa
+                              if (recetaExistente) {
+                                // Eliminar ingredientes asociados
+                                await supabase
+                                  .from('recetas_productos')
+                                  .delete()
+                                  .eq('producto_receta_id', recetaExistente.id)
+                                  .eq('usuario_id', usuarioId);
+                                
+                                // Eliminar encabezado del producto
+                                await supabase
+                                  .from('recetas_productos')
+                                  .delete()
+                                  .eq('id', recetaExistente.id)
+                                  .eq('usuario_id', usuarioId);
+                              }
+                              
+                              // Paso 1: Insertar fila de encabezado del producto
+                              const { data: productoData, error: errorProducto } = await supabase
+                                .from('recetas_productos')
+                                .insert({
+                                  nombre_producto: productoSeleccionado,
+                                  cantidad_base: parseFloat(cantidadBaseLote),
+                                  unidad_producto: 'unidad',
+                                  nombre_ingrediente: null,
+                                  cantidad_ingrediente: null,
+                                  unidad_ingrediente: null,
+                                  producto_receta_id: null,
+                                  usuario_id: usuarioId,
+                                  cliente_id: cliente_id
+                                })
+                                .select()
+                                .single();
+                              
+                              if (errorProducto) {
+                                console.error('Error al guardar producto:', errorProducto);
+                                alert('Error al guardar receta: ' + errorProducto.message);
+                                return;
+                              }
+                              
+                              const productoRecetaId = productoData.id;
+                              
+                              // Paso 2: Insertar ingredientes vinculados al producto
+                              const filasIngredientes = ingredientesValidos.map(ing => {
+                                const nombreInsumoNormalizado = ing.nombre_ingrediente
+                                  .toUpperCase()
+                                  .normalize("NFD")
+                                  .replace(/[\u0300-\u036f]/g, "")
+                                  .trim();
+                                
+                                return {
+                                  nombre_producto: null,
+                                  cantidad_base: null,
+                                  unidad_producto: null,
+                                  nombre_ingrediente: nombreInsumoNormalizado,
+                                  cantidad_ingrediente: parseFloat(ing.cantidad_necesaria),
+                                  unidad_ingrediente: ing.unidad,
+                                  producto_receta_id: productoRecetaId,
+                                  usuario_id: usuarioId,
+                                  cliente_id: cliente_id
+                                };
+                              });
+                              
+                              console.log('Filas de ingredientes a insertar:', filasIngredientes);
+                              console.log('producto_receta_id:', productoRecetaId);
+                              
+                              const { data: dataIngredientes, error: errorRecetas } = await supabase
+                                .from('recetas_productos')
+                                .insert(filasIngredientes)
+                                .select();
+                              
+                              console.log('Ingredientes insertados:', dataIngredientes);
+                              
+                              if (errorRecetas) {
+                                console.error('Error al guardar ingredientes:', errorRecetas);
+                                alert('Error al guardar ingredientes: ' + errorRecetas.message);
+                                return;
+                              }
+                              
+                              // Crear/actualizar insumos en tabla insumos
+                              for (const ing of ingredientesValidos) {
+                                const nombreInsumoNormalizado = ing.nombre_ingrediente
+                                  .toUpperCase()
+                                  .normalize("NFD")
+                                  .replace(/[\u0300-\u036f]/g, "")
+                                  .trim();
+                                
+                                const { error: errorInsumo } = await supabase
+                                  .from('insumos')
+                                  .upsert({
+                                    nombre_producto: productoSeleccionado,
+                                    nombre_insumo: nombreInsumoNormalizado,
+                                    unidad: ing.unidad,
+                                    usuario_id: usuarioId,
+                                    cliente_id: cliente_id
+                                  }, {
+                                    onConflict: 'nombre_producto,nombre_insumo,usuario_id'
+                                  });
+                                
+                                if (errorInsumo) {
+                                  console.error('Error al crear insumo:', errorInsumo);
+                                }
+                              }
+                              
+                              mostrarToast(`✅ Receta de ${productoSeleccionado} guardada con ${ingredientesValidos.length} ingredientes`, 'success');
+                              
+                              // Limpiar formulario
+                              setProductoSeleccionado('');
+                              setCantidadBaseLote('1');
+                              setIngredientesReceta([{ nombre_ingrediente: '', cantidad_necesaria: '', unidad: 'kg' }]);
+                              
+                              // Recargar datos
+                              await cargarRecetas();
+                              await cargarInsumos();
+                              
+                            } catch (error) {
+                              console.error('Error inesperado:', error);
+                              alert('Error al guardar receta');
+                            }
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm"
+                        >
+                          💾 Guardar Receta
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
+                
+                {/* Lista de recetas guardadas */}
+                <div className="mt-8">
+                  <h3 className="text-white font-semibold text-lg mb-4">📚 Recetas Guardadas</h3>
+                  
+                  {recetas.length === 0 ? (
+                    <div className="text-center text-gray-400 py-8">
+                      <div className="text-4xl mb-3">📝</div>
+                      <p>No hay recetas registradas aún</p>
+                      <p className="text-sm mt-2">Crea tu primera receta seleccionando un producto arriba</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {recetas.map((receta, index) => (
+                        <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-white font-bold text-base">{receta.nombre_producto}</h4>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`¿Eliminar receta de ${receta.nombre_producto}?`)) {
+                                  return;
+                                }
+                                
+                                try {
+                                  const usuarioId = await authService.getCurrentUserId();
+                                  if (!usuarioId) return;
+                                  
+                                  // Eliminar fila de producto (los ingredientes se eliminan en CASCADE)
+                                  const { error } = await supabase
+                                    .from('recetas_productos')
+                                    .delete()
+                                    .eq('id', receta.id)
+                                    .eq('usuario_id', usuarioId);
+                                  
+                                  if (error) {
+                                    console.error('Error al eliminar:', error);
+                                    alert('Error al eliminar receta');
+                                    return;
+                                  }
+                                  
+                                  // Eliminar ingredientes vinculados
+                                  await supabase
+                                    .from('recetas_productos')
+                                    .delete()
+                                    .eq('producto_receta_id', receta.id)
+                                    .eq('usuario_id', usuarioId);
+                                  
+                                  mostrarToast(`✅ Receta de ${receta.nombre_producto} eliminada`, 'success');
+                                  
+                                  // Recargar recetas
+                                  await cargarRecetas();
+                                } catch (error) {
+                                  console.error('Error:', error);
+                                }
+                              }}
+                              className="text-red-400 hover:text-red-300 text-sm"
+                              title="Eliminar receta"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                          
+                          <div className="bg-blue-600/10 border border-blue-400/30 rounded px-2 py-1 mb-3 inline-block">
+                            <span className="text-blue-200 text-xs">
+                              Por cada <span className="font-bold text-white">{receta.cantidad_base}</span> unidades
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <div className="text-xs text-gray-400 font-semibold mb-1">Ingredientes:</div>
+                            {receta.ingredientes.map((ing, i) => (
+                              <div key={i} className="flex items-center justify-between text-xs bg-white/5 px-2 py-1.5 rounded">
+                                <span className="text-gray-300">{ing.nombre}</span>
+                                <span className="text-white font-medium">{ing.cantidad} {ing.unidad}</span>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => {
+                              // Solo cargar datos en el formulario, NO eliminar de DB
+                              setProductoSeleccionado(receta.nombre_producto);
+                              setCantidadBaseLote(receta.cantidad_base.toString());
+                              setIngredientesReceta(receta.ingredientes.map(ing => ({
+                                nombre_ingrediente: ing.nombre,
+                                cantidad_necesaria: ing.cantidad.toString(),
+                                unidad: ing.unidad
+                              })));
+                              
+                              // Scroll al formulario
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                              
+                              mostrarToast('✏️ Receta cargada para edición. Modifica y guarda', 'success');
+                            }}
+                            className="w-full mt-3 bg-green-600/20 hover:bg-green-600/30 text-green-300 px-3 py-2 rounded text-xs font-medium border border-green-400/30 transition-all"
+                          >
+                            ✏️ Editar Receta
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </div>
+      
+      {/* Notificación Toast */}
+      {notificacionToast.visible && (
+        <div className="fixed top-20 right-4 z-50 animate-[slideIn_0.3s_ease-out]">
+          <div className={`rounded-lg shadow-2xl p-4 border ${
+            notificacionToast.tipo === 'success' 
+              ? 'bg-green-600 border-green-400' 
+              : notificacionToast.tipo === 'error'
+              ? 'bg-red-600 border-red-400'
+              : 'bg-blue-600 border-blue-400'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">
+                {notificacionToast.tipo === 'success' ? '✅' : 
+                 notificacionToast.tipo === 'error' ? '❌' : 'ℹ️'}
+              </span>
+              <p className="text-white font-medium text-sm">
+                {notificacionToast.mensaje}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+      
       <Footer />
     </div>
   );
 }
 
 export default Insumos;
-

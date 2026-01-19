@@ -650,13 +650,38 @@ export default function Pedidos() {
           console.error('Error al leer orden de localStorage:', error);
         }
         
+        // 🛡️ VALIDACIÓN CRÍTICA: Protección contra pérdida de mesas
+        const cantidadActual = mesas.length;
+        const cantidadNueva = mesasOrdenadas.length;
+        
         // Actualizar silenciosamente solo si hay cambios
         const mesasActualesStr = JSON.stringify(mesas);
         const mesasNuevasStr = JSON.stringify(mesasOrdenadas);
         
         if (mesasActualesStr !== mesasNuevasStr) {
-          setMesas(mesasOrdenadas);
-          localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
+          // 🛡️ PROTECCIÓN: Validar antes de sobrescribir
+          if (!mesasInicialCargadas) {
+            // Primera carga: aceptar lo que venga de Supabase
+            console.log(`✅ Primera carga de mesas: ${cantidadNueva} mesas desde Supabase`);
+            setMesas(mesasOrdenadas);
+            localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
+          } else if (cantidadNueva >= cantidadActual) {
+            // Actualización válida: misma cantidad o más mesas
+            console.log(`✅ Actualización válida: ${cantidadActual} → ${cantidadNueva} mesas`);
+            setMesas(mesasOrdenadas);
+            localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
+          } else if (fromRealtime) {
+            // Viene de Realtime y hay MENOS mesas: probablemente una eliminación legítima
+            console.log(`⚠️ Eliminación Realtime: ${cantidadActual} → ${cantidadNueva} mesas`);
+            setMesas(mesasOrdenadas);
+            localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
+          } else {
+            // 🚨 BLOQUEO: Supabase tiene menos mesas y no viene de Realtime
+            console.error(`🛑 BLOQUEADO: No actualizar mesas. Supabase=${cantidadNueva}, Local=${cantidadActual}`);
+            console.error('Posible error de red o query incompleto. Manteniendo mesas locales.');
+            // NO actualizar estado, mantener las mesas actuales
+            return; // Salir sin actualizar
+          }
           
           // Solo cambiar la mesa seleccionada si ya no existe en el nuevo array
           if (!mesasOrdenadas.includes(mesaSeleccionada)) {
@@ -667,10 +692,23 @@ export default function Pedidos() {
         
         setMesasInicialCargadas(true);
       } else {
-        // Si no hay mesas en Supabase, crear las por defecto
-        debugLog('📝 No hay mesas en Supabase, inicializando...');
-        setMesasInicialCargadas(true);
-        inicializarMesasPorDefecto();
+        // Supabase devolvió 0 mesas
+        if (!mesasInicialCargadas && mesas.length === 0) {
+          // Primera carga y no hay mesas locales: inicializar por defecto
+          debugLog('📝 No hay mesas en Supabase ni local. Inicializando por defecto...');
+          setMesasInicialCargadas(true);
+          inicializarMesasPorDefecto();
+        } else if (mesas.length > 0) {
+          // 🚨 Ya tenemos mesas locales: NO borrarlas
+          console.error('🛑 BLOQUEADO: Supabase devolvió 0 mesas pero tenemos ' + mesas.length + ' mesas locales.');
+          console.error('Posible error de red. Manteniendo mesas locales para evitar pérdida de datos.');
+          setMesasInicialCargadas(true);
+          // NO llamar a inicializarMesasPorDefecto ni limpiar mesas
+        } else {
+          // No hay mesas en ningún lado
+          setMesasInicialCargadas(true);
+          inicializarMesasPorDefecto();
+        }
       }
 
     } catch (error) {
@@ -1292,6 +1330,10 @@ export default function Pedidos() {
 
   // Función para eliminar una mesa
   const eliminarMesa = async (mesaAEliminar) => {
+    // 📋 LOG DE AUDITORÍA
+    console.log(`🗑️ Eliminando mesa: "${mesaAEliminar}" a las ${new Date().toLocaleString('es-CL')}`);
+    console.log(`📊 Estado antes: ${mesas.length} mesas totales`);
+    
     // No permitir eliminar si solo queda una mesa
     if (mesas.length <= 1) {
       alert('Debe mantener al menos una mesa');
@@ -1325,6 +1367,10 @@ export default function Pedidos() {
 
     // Actualizar localStorage de mesas (cache secundario)
     localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+    
+    // 📋 LOG DE AUDITORÍA - CONFIRMACIÓN
+    console.log(`✅ Mesa "${mesaAEliminar}" eliminada exitosamente`);
+    console.log(`📊 Estado después: ${mesasActualizadas.length} mesas restantes`);
     
     // El guardado de productos en localStorage se hace automáticamente por el useEffect
   };
@@ -2987,7 +3033,10 @@ export default function Pedidos() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                eliminarMesa(mesa);
+                                // 🛡️ Confirmación doble para evitar eliminaciones accidentales
+                                if (confirm(`¿Eliminar "${mesa}" y todos sus productos?\n\nEsta acción no se puede deshacer.`)) {
+                                  eliminarMesa(mesa);
+                                }
                               }}
                               className="text-red-400 hover:text-red-300 text-sm hover:scale-110 transition-all duration-200"
                               title="Eliminar mesa"
