@@ -10,12 +10,26 @@ function Insumos() {
   // Estados principales
   const [vistaActual, setVistaActual] = useState('stock'); // 'stock' o 'recetas'
   
-  // Estados para gestión de stock de insumos
-  const [insumos, setInsumos] = useState([]);
+  // Estados para gestión de stock de insumos (con cache inicial)
+  const [insumos, setInsumos] = useState(() => {
+    try {
+      const cached = localStorage.getItem('insumos_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [loadingInsumos, setLoadingInsumos] = useState(false);
   
-  // Estados para historial de compras
-  const [compras, setCompras] = useState([]);
+  // Estados para historial de compras (con cache inicial)
+  const [compras, setCompras] = useState(() => {
+    try {
+      const cached = localStorage.getItem('compras_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [loadingCompras, setLoadingCompras] = useState(false);
   
   // Estados para registrar compras de insumos
@@ -24,9 +38,17 @@ function Insumos() {
     { ingrediente: '', cantidad: '', unidad: '' }
   ]);
   
-  // Estados para gestión de recetas
-  const [recetas, setRecetas] = useState([]);
+  // Estados para gestión de recetas (con cache inicial)
+  const [recetas, setRecetas] = useState(() => {
+    try {
+      const cached = localStorage.getItem('recetas_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [loadingRecetas, setLoadingRecetas] = useState(false);
+  const [recetasCargadas, setRecetasCargadas] = useState(false);
   
   // Obtener ingredientes únicos de las recetas para el dropdown de compras
   const ingredientesDisponibles = useMemo(() => {
@@ -65,7 +87,7 @@ function Insumos() {
     }, duracion);
   };
 
-  // Función para cargar insumos desde la vista global
+  // Función para cargar insumos desde la vista global (OPTIMIZADA con cache)
   const cargarInsumos = async () => {
     try {
       setLoadingInsumos(true);
@@ -84,6 +106,13 @@ function Insumos() {
       }
 
       setInsumos(data || []);
+      
+      // Cache para carga instantánea
+      try {
+        localStorage.setItem('insumos_cache', JSON.stringify(data || []));
+      } catch (e) {
+        console.warn('No se pudo cachear insumos:', e);
+      }
     } catch (error) {
       console.error('Error inesperado:', error);
     } finally {
@@ -91,7 +120,7 @@ function Insumos() {
     }
   };
 
-  // Función para cargar historial de compras
+  // Función para cargar historial de compras (OPTIMIZADA con cache)
   const cargarCompras = async () => {
     try {
       setLoadingCompras(true);
@@ -111,6 +140,13 @@ function Insumos() {
       }
 
       setCompras(data || []);
+      
+      // Cache para carga instantánea
+      try {
+        localStorage.setItem('compras_cache', JSON.stringify(data || []));
+      } catch (e) {
+        console.warn('No se pudo cachear compras:', e);
+      }
     } catch (error) {
       console.error('Error inesperado:', error);
     } finally {
@@ -118,56 +154,60 @@ function Insumos() {
     }
   };
 
-  // Función para cargar recetas
+  // Función para cargar recetas (OPTIMIZADA - 1 sola query)
   const cargarRecetas = async () => {
     try {
       setLoadingRecetas(true);
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
 
-      // Cargar filas de productos (encabezados)
-      const { data: productos, error: errorProductos } = await supabase
+      // OPTIMIZACIÓN: Una sola query para TODO (productos + ingredientes)
+      const { data: todasLasFilas, error } = await supabase
         .from('recetas_productos')
         .select('*')
         .eq('usuario_id', usuarioId)
-        .not('nombre_producto', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (errorProductos) {
-        console.error('Error al cargar productos:', errorProductos);
+      if (error) {
+        console.error('Error al cargar recetas:', error);
         return;
       }
 
-      // Para cada producto, cargar sus ingredientes
-      const recetasCompletas = await Promise.all(
-        productos.map(async (producto) => {
-          const { data: ingredientes, error: errorIng } = await supabase
-            .from('recetas_productos')
-            .select('*')
-            .eq('usuario_id', usuarioId)
-            .eq('producto_receta_id', producto.id)
-            .not('nombre_ingrediente', 'is', null);
-
-          if (errorIng) {
-            console.error('Error al cargar ingredientes:', errorIng);
-            return null;
+      // Separar productos (headers) de ingredientes en memoria (mucho más rápido)
+      const productos = todasLasFilas.filter(fila => fila.nombre_producto !== null);
+      const ingredientesPorProducto = {};
+      
+      todasLasFilas.forEach(fila => {
+        if (fila.nombre_ingrediente !== null && fila.producto_receta_id) {
+          if (!ingredientesPorProducto[fila.producto_receta_id]) {
+            ingredientesPorProducto[fila.producto_receta_id] = [];
           }
+          ingredientesPorProducto[fila.producto_receta_id].push({
+            nombre: fila.nombre_ingrediente,
+            cantidad: fila.cantidad_ingrediente,
+            unidad: fila.unidad_ingrediente
+          });
+        }
+      });
 
-          return {
-            id: producto.id,
-            nombre_producto: producto.nombre_producto,
-            cantidad_base: producto.cantidad_base,
-            unidad: producto.unidad_producto,
-            ingredientes: ingredientes.map(ing => ({
-              nombre: ing.nombre_ingrediente,
-              cantidad: ing.cantidad_ingrediente,
-              unidad: ing.unidad_ingrediente
-            }))
-          };
-        })
-      );
+      // Construir recetas completas
+      const recetasCompletas = productos.map(producto => ({
+        id: producto.id,
+        nombre_producto: producto.nombre_producto,
+        cantidad_base: producto.cantidad_base,
+        unidad: producto.unidad_producto,
+        ingredientes: ingredientesPorProducto[producto.id] || []
+      }));
 
-      setRecetas(recetasCompletas.filter(r => r !== null));
+      setRecetas(recetasCompletas);
+      
+      // Cache en localStorage para carga instantánea
+      try {
+        localStorage.setItem('recetas_cache', JSON.stringify(recetasCompletas));
+      } catch (e) {
+        console.warn('No se pudo cachear recetas:', e);
+      }
+      
     } catch (error) {
       console.error('Error inesperado:', error);
     } finally {
@@ -200,12 +240,28 @@ function Insumos() {
     }
   };
 
-  // Cargar datos al montar el componente
+  // OPTIMIZACIÓN: Lazy loading - Solo cargar datos de la pestaña activa
   useEffect(() => {
-    cargarProductosInventario();
-    cargarInsumos();
-    cargarRecetas();
-    cargarCompras();
+    if (vistaActual === 'stock') {
+      // Vista Stock: Cargar insumos y compras
+      cargarInsumos();
+      cargarCompras();
+    } else if (vistaActual === 'recetas') {
+      // Vista Recetas: Cargar productos de inventario y recetas
+      cargarProductosInventario();
+      if (!recetasCargadas) {
+        cargarRecetas();
+        setRecetasCargadas(true);
+      }
+    }
+  }, [vistaActual]); // Se ejecuta al cambiar de pestaña
+  
+  // Cargar recetas al inicio solo si no hay cache
+  useEffect(() => {
+    if (recetas.length === 0 && !recetasCargadas) {
+      cargarRecetas();
+      setRecetasCargadas(true);
+    }
   }, []);
 
   return (
@@ -980,15 +1036,15 @@ function Insumos() {
                                 return;
                               }
                               
-                              // Crear/actualizar insumos en tabla insumos
-                              for (const ing of ingredientesValidos) {
+                              // OPTIMIZACIÓN: Crear/actualizar insumos EN PARALELO con Promise.all()
+                              const upsertPromises = ingredientesValidos.map(ing => {
                                 const nombreInsumoNormalizado = ing.nombre_ingrediente
                                   .toUpperCase()
                                   .normalize("NFD")
                                   .replace(/[\u0300-\u036f]/g, "")
                                   .trim();
                                 
-                                const { error: errorInsumo } = await supabase
+                                return supabase
                                   .from('insumos')
                                   .upsert({
                                     nombre_producto: productoSeleccionado,
@@ -998,23 +1054,24 @@ function Insumos() {
                                     cliente_id: cliente_id
                                   }, {
                                     onConflict: 'nombre_producto,nombre_insumo,usuario_id'
-                                  });
-                                
-                                if (errorInsumo) {
-                                  console.error('Error al crear insumo:', errorInsumo);
-                                }
-                              }
+                                  })
+                                  .catch(error => console.error('Error al crear insumo:', error));
+                              });
                               
+                              // Ejecutar todos los upserts en paralelo (no bloquea UI)
+                              await Promise.all(upsertPromises);
+                              
+                              // FEEDBACK INMEDIATO: Mostrar toast ANTES de recargar
                               mostrarToast(`✅ Receta de ${productoSeleccionado} guardada con ${ingredientesValidos.length} ingredientes`, 'success');
                               
-                              // Limpiar formulario
+                              // Limpiar formulario INMEDIATAMENTE
                               setProductoSeleccionado('');
                               setCantidadBaseLote('1');
                               setIngredientesReceta([{ nombre_ingrediente: '', cantidad_necesaria: '', unidad: 'kg' }]);
                               
-                              // Recargar datos
-                              await cargarRecetas();
-                              await cargarInsumos();
+                              // OPTIMIZACIÓN: Recargar en background (no await = no bloquea)
+                              cargarRecetas().catch(err => console.error('Error al recargar recetas:', err));
+                              cargarInsumos().catch(err => console.error('Error al recargar insumos:', err));
                               
                             } catch (error) {
                               console.error('Error inesperado:', error);
