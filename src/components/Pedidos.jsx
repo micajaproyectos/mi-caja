@@ -53,6 +53,12 @@ export default function Pedidos() {
   const busquedaTimeoutRef = useRef(null);
   // Ref para rastrear productos en proceso de guardado (protección contra Realtime)
   const productosGuardandoRef = useRef(new Set());
+  // Ref para rastrear cambios recientes en mesas (protección contra Realtime)
+  const ultimoCambioMesasRef = useRef(null);
+  // Ref para timeout de Realtime de mesas
+  const realtimeMesasTimeoutRef = useRef(null);
+  // Ref para rastrear comentarios que están siendo editados (protección contra Realtime)
+  const comentariosEnEdicionRef = useRef({});
   
   // Estados para código de barras
   const [mostrarScannerPedidos, setMostrarScannerPedidos] = useState(false);
@@ -468,6 +474,23 @@ export default function Pedidos() {
           });
         });
         
+        // 🛡️ PROTECCIÓN: Preservar comentarios que están siendo editados
+        Object.keys(merged).forEach(mesa => {
+          if (merged[mesa]) {
+            merged[mesa] = merged[mesa].map(producto => {
+              // Si este producto tiene un comentario siendo editado, usar ese en lugar del de Supabase
+              if (comentariosEnEdicionRef.current.hasOwnProperty(producto.id)) {
+                debugLog('🔒 Protegiendo comentario en edición:', producto.producto);
+                return {
+                  ...producto,
+                  comentarios: comentariosEnEdicionRef.current[producto.id]
+                };
+              }
+              return producto;
+            });
+          }
+        });
+        
         return merged;
       });
       
@@ -650,6 +673,17 @@ export default function Pedidos() {
   // Función para cargar mesas desde Supabase (sin bloquear UI, actualización silenciosa)
   const cargarMesasDesdeSupabase = async (fromRealtime = false) => {
     try {
+      // 🛡️ PROTECCIÓN: Si viene de Realtime y hubo un cambio muy reciente (< 3 segundos), esperar
+      if (fromRealtime && ultimoCambioMesasRef.current) {
+        const tiempoDesdeUltimoCambio = Date.now() - ultimoCambioMesasRef.current;
+        if (tiempoDesdeUltimoCambio < 3000) { // 3 segundos de protección
+          debugLog(`⏸️ Realtime bloqueado: cambio reciente hace ${tiempoDesdeUltimoCambio}ms`);
+          // Reintentar después de que pase el tiempo de protección
+          setTimeout(() => cargarMesasDesdeSupabase(true), 3500);
+          return;
+        }
+      }
+      
       // Evitar carga múltiple (solo si no viene de Realtime)
       if (!fromRealtime && mesasInicialCargadas) {
         return;
@@ -1171,6 +1205,9 @@ export default function Pedidos() {
 
   // Función para actualizar comentarios de un producto (solo local - para onChange)
   const actualizarComentariosProducto = (mesa, productoId, comentarios) => {
+    // 🛡️ Registrar que este comentario está siendo editado
+    comentariosEnEdicionRef.current[productoId] = comentarios.toUpperCase();
+    
     setProductosPorMesa(prev => ({
       ...prev,
       [mesa]: prev[mesa].map(p => 
@@ -1184,6 +1221,11 @@ export default function Pedidos() {
   // Función para guardar comentarios en Supabase (solo cuando termina de escribir - para onBlur)
   const guardarComentariosEnSupabase = async (productoId, comentarios) => {
     await actualizarComentariosEnSupabase(productoId, comentarios.toUpperCase());
+    
+    // 🛡️ Limpiar el ref después de guardar (dar tiempo para la sincronización)
+    setTimeout(() => {
+      delete comentariosEnEdicionRef.current[productoId];
+    }, 2000); // 2 segundos de buffer
   };
 
   // Función para eliminar un producto de una mesa
@@ -1371,6 +1413,9 @@ export default function Pedidos() {
       return;
     }
 
+    // 🛡️ Marcar timestamp del cambio para protección contra Realtime
+    ultimoCambioMesasRef.current = Date.now();
+
     const nuevasMesas = [];
     for (let i = 1; i <= cantidadMesas; i++) {
       nuevasMesas.push(`Mesa ${mesas.length + i}`);
@@ -1380,11 +1425,11 @@ export default function Pedidos() {
     setMesas(mesasActualizadas);
     setCantidadMesas(4); // Resetear a 4
     
+    // Guardar en localStorage PRIMERO (cache secundario)
+    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+    
     // Guardar en Supabase (sincronización multi-dispositivo)
     await guardarMesasEnSupabase(nuevasMesas);
-    
-    // Guardar en localStorage (cache secundario)
-    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
   };
 
   // Función para eliminar una mesa
@@ -1398,6 +1443,9 @@ export default function Pedidos() {
       alert('Debe mantener al menos una mesa');
       return;
     }
+
+    // 🛡️ Marcar timestamp del cambio para protección contra Realtime
+    ultimoCambioMesasRef.current = Date.now();
 
     // Si la mesa a eliminar es la seleccionada, cambiar a otra mesa
     if (mesaSeleccionada === mesaAEliminar) {
@@ -1417,15 +1465,15 @@ export default function Pedidos() {
       return nuevosProductos;
     });
 
+    // Actualizar localStorage PRIMERO (cache secundario)
+    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+
     // Eliminar de Supabase (sincronización multi-dispositivo)
     await eliminarMesaDeSupabase(mesaAEliminar);
     await limpiarMesaEnSupabase(mesaAEliminar); // Eliminar también los productos de la mesa
 
     // Actualizar orden de las mesas restantes
     await actualizarOrdenMesasEnSupabase(mesasActualizadas);
-
-    // Actualizar localStorage de mesas (cache secundario)
-    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
     
     // 📋 LOG DE AUDITORÍA - CONFIRMACIÓN
     console.log(`✅ Mesa "${mesaAEliminar}" eliminada exitosamente`);
@@ -1446,6 +1494,9 @@ export default function Pedidos() {
       alert('El nombre de la mesa no puede estar vacío');
       return;
     }
+
+    // 🛡️ Marcar timestamp del cambio para protección contra Realtime
+    ultimoCambioMesasRef.current = Date.now();
 
     // Actualizar productosPorMesa con el nuevo nombre
     if (productosPorMesa[mesaAntigua]) {
@@ -1485,12 +1536,12 @@ export default function Pedidos() {
       setMesaSeleccionada(nombreMesaTemporal);
     }
 
-    // Renombrar en Supabase (sincronización multi-dispositivo)
-    await renombrarMesaEnSupabase(mesaAntigua, nombreMesaTemporal);
-
-    // Actualizar localStorage (cache secundario)
+    // Actualizar localStorage PRIMERO (cache secundario)
     const mesasActualizadas = mesas.map(m => m === mesaAntigua ? nombreMesaTemporal : m);
     localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+
+    // Renombrar en Supabase (sincronización multi-dispositivo)
+    await renombrarMesaEnSupabase(mesaAntigua, nombreMesaTemporal);
 
     // Limpiar estados de edición
     setMesaEditando(null);
@@ -1619,6 +1670,9 @@ export default function Pedidos() {
     
     // Reordenar mesas si el índice cambió
     if (nuevoIndice !== indiceArrastrando && nuevoIndice >= 0 && nuevoIndice < mesas.length) {
+      // 🛡️ Marcar timestamp del cambio para protección contra Realtime
+      ultimoCambioMesasRef.current = Date.now();
+      
       setMesas(prevMesas => {
         const mesasReordenadas = [...prevMesas];
         const [mesaMovida] = mesasReordenadas.splice(indiceArrastrando, 1);
@@ -2489,8 +2543,14 @@ export default function Pedidos() {
           table: 'mesas_config'
         },
         (payload) => {
-          // Recargar mesas inmediatamente cuando hay cambios
-          cargarMesasDesdeSupabase(true);
+          // 🛡️ PROTECCIÓN: Debounce para evitar race conditions
+          if (realtimeMesasTimeoutRef.current) {
+            clearTimeout(realtimeMesasTimeoutRef.current);
+          }
+          realtimeMesasTimeoutRef.current = setTimeout(() => {
+            cargarMesasDesdeSupabase(true);
+            debugLog('🔄 Realtime: Recargando mesas');
+          }, 2000); // 2 segundos de debounce para permitir que se propague el cambio
         }
       )
       .subscribe();
@@ -2499,6 +2559,9 @@ export default function Pedidos() {
     return () => {
       if (realtimeTimeoutRef.current) {
         clearTimeout(realtimeTimeoutRef.current);
+      }
+      if (realtimeMesasTimeoutRef.current) {
+        clearTimeout(realtimeMesasTimeoutRef.current);
       }
       supabase.removeChannel(channelProductos);
       supabase.removeChannel(channelMesas);
@@ -3152,15 +3215,20 @@ export default function Pedidos() {
                     {/* Botón para agregar nueva mesa */}
                     <button
                       onClick={async () => {
+                        // 🛡️ Marcar timestamp del cambio para protección contra Realtime
+                        ultimoCambioMesasRef.current = Date.now();
+                        
                         const nuevaMesa = `Mesa ${mesas.length + 1}`;
                         const mesasActualizadas = [...mesas, nuevaMesa];
                         setMesas(mesasActualizadas);
                         
+                        // Guardar en localStorage PRIMERO (backup instantáneo)
+                        localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+                        
                         // Guardar en Supabase usando la función existente
                         await guardarMesasEnSupabase([nuevaMesa]);
                         
-                        // Guardar en localStorage como backup
-                        localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
+                        debugLog('✅ Nueva mesa agregada:', nuevaMesa);
                       }}
                       className="flex items-center justify-center px-3 py-1.5 rounded-t-lg font-medium transition-all duration-200 text-xs whitespace-nowrap flex-shrink-0 border-b-2 border-transparent bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 hover:text-blue-200"
                       title="Agregar nueva mesa"
@@ -3227,6 +3295,10 @@ export default function Pedidos() {
                                   <input
                                     type="text"
                                     value={producto.comentarios || ''}
+                                    onFocus={(e) => {
+                                      // 🛡️ Registrar que este comentario está siendo editado
+                                      comentariosEnEdicionRef.current[producto.id] = e.target.value.toUpperCase();
+                                    }}
                                     onChange={(e) => actualizarComentariosProducto(mesaSeleccionada, producto.id, e.target.value)}
                                     onBlur={(e) => {
                                       // Guardar en Supabase solo cuando termina de escribir (sincronización multi-dispositivo)
