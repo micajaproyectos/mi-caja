@@ -709,25 +709,59 @@ export default function Seguimiento() {
       setLoadingPedidosDiarios(true);
       setErrorPedidosDiarios(null);
       
-      // Consultar la vista pedidos_diarias
+      // 🔧 FIX: Obtener el mes y año actual de Chile
+      const fechaChile = obtenerFechaHoyChile();
+      const [anioActual, mesActual, diaActual] = fechaChile.split('-').map(Number);
+      
+      // Calcular rango de fechas para el mes actual en Chile
+      const primerDiaMes = `${anioActual}-${String(mesActual).padStart(2, '0')}-01`;
+      const ultimoDiaMes = new Date(anioActual, mesActual, 0).getDate();
+      const ultimaFechaMes = `${anioActual}-${String(mesActual).padStart(2, '0')}-${String(ultimoDiaMes).padStart(2, '0')}`;
+      
+      console.log(`📅 Consultando pedidos del ${primerDiaMes} al ${ultimaFechaMes}`);
+      
+      // 🔧 NUEVO: Consultar directamente la tabla pedidos en lugar de la vista defectuosa
       const { data: pedidosData, error: pedidosError } = await supabase
-        .from('pedidos_diarias')
-        .select('dia, total_dia, fecha')
+        .from('pedidos')
+        .select('fecha_cl, total_final')
         .eq('usuario_id', usuarioId)
-        .order('dia', { ascending: true });
+        .not('total_final', 'is', null)
+        .gte('fecha_cl', primerDiaMes)
+        .lte('fecha_cl', ultimaFechaMes)
+        .or('estado.is.null,estado.neq.anulado');
 
       if (pedidosError) {
-        console.error('[chart] Error al consultar pedidos_diarias:', pedidosError);
+        console.error('[chart] Error al consultar pedidos:', pedidosError);
         setErrorPedidosDiarios('Error al cargar datos de pedidos diarios');
         return;
       }
 
-      // Mapear los datos recibidos
-      const datosMapeados = pedidosData?.map(d => ({
-        dia: d.dia,
-        totalDia: parseFloat(d.total_dia) || 0,
-        fecha: d.fecha
-      })) || [];
+      console.log(`📊 Pedidos encontrados en ${mesActual}/${anioActual}:`, pedidosData?.length || 0, 'pedidos');
+      
+      // Agrupar por día y sumar totales
+      const pedidosPorDia = {};
+      
+      // Inicializar todos los días del mes con $0
+      for (let dia = 1; dia <= ultimoDiaMes; dia++) {
+        pedidosPorDia[dia] = 0;
+      }
+      
+      // Sumar los pedidos por día
+      pedidosData?.forEach(pedido => {
+        if (pedido.fecha_cl) {
+          const dia = parseInt(pedido.fecha_cl.split('-')[2]);
+          pedidosPorDia[dia] = (pedidosPorDia[dia] || 0) + (parseFloat(pedido.total_final) || 0);
+        }
+      });
+      
+      // Convertir a array para el gráfico
+      const datosMapeados = Object.keys(pedidosPorDia).map(dia => ({
+        dia: parseInt(dia),
+        totalDia: pedidosPorDia[dia],
+        fecha: `${anioActual}-${String(mesActual).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+      }));
+      
+      console.log(`✅ Datos procesados: ${datosMapeados.length} días, Total: $${datosMapeados.reduce((sum, d) => sum + d.totalDia, 0).toLocaleString()}`);
 
       setDatosPedidosDiarios(datosMapeados);
 
