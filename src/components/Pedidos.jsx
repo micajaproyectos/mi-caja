@@ -197,6 +197,8 @@ export default function Pedidos() {
   const [filtroMes, setFiltroMes] = useState('');
   const [filtroAnio, setFiltroAnio] = useState('');
   const [filtroTipoPago, setFiltroTipoPago] = useState('');
+  const [filtroPersonalizadoInicio, setFiltroPersonalizadoInicio] = useState('');
+  const [filtroPersonalizadoFin, setFiltroPersonalizadoFin] = useState('');
   
   // Estado para años disponibles (se calcula automáticamente)
   const [aniosDisponibles, setAniosDisponibles] = useState([]);
@@ -1790,6 +1792,26 @@ export default function Pedidos() {
     let filtrados = [...pedidosRegistrados];
     const fechaActual = obtenerFechaHoyChile();
 
+    // FILTRO PERSONALIZADO (tiene prioridad sobre otros filtros)
+    if (filtroPersonalizadoInicio && filtroPersonalizadoFin) {
+      filtrados = filtrados.filter(pedido => {
+        if (!pedido.created_at) return false;
+        
+        const timestampPedido = new Date(pedido.created_at);
+        const timestampInicio = new Date(filtroPersonalizadoInicio);
+        const timestampFin = new Date(filtroPersonalizadoFin);
+        
+        return timestampPedido >= timestampInicio && timestampPedido <= timestampFin;
+      });
+      
+      // Si hay filtro de tipo de pago, aplicarlo también
+      if (filtroTipoPago) {
+        filtrados = filtrados.filter(pedido => pedido.tipo_pago === filtroTipoPago);
+      }
+      
+      return filtrados;
+    }
+
     // Si no hay filtros activos, mostrar solo los pedidos del día actual
     if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
       filtrados = filtrados.filter(pedido => {
@@ -1872,7 +1894,7 @@ export default function Pedidos() {
     }
 
     return filtrados;
-  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago]);
+  }, [pedidosRegistrados, filtroFecha, filtroMes, filtroAnio, filtroTipoPago, filtroPersonalizadoInicio, filtroPersonalizadoFin]);
 
   // Función para compatibilidad (mantiene la misma interfaz)
   const aplicarFiltros = useCallback(() => {
@@ -1885,6 +1907,8 @@ export default function Pedidos() {
     setFiltroMes('');
     setFiltroAnio('');
     setFiltroTipoPago('');
+    setFiltroPersonalizadoInicio('');
+    setFiltroPersonalizadoFin('');
     // No llamar setPedidosFiltrados directamente
     // Los efectos se encargarán de aplicar los filtros correctamente
   };
@@ -1944,6 +1968,25 @@ export default function Pedidos() {
 
   // Función para obtener el título dinámico del resumen
   const obtenerTituloResumenPedidos = () => {
+    // Si hay filtro personalizado, mostrarlo con prioridad
+    if (filtroPersonalizadoInicio && filtroPersonalizadoFin) {
+      const formatearFechaHora = (fechaISO) => {
+        const fecha = new Date(fechaISO);
+        const opciones = {
+          timeZone: 'America/Santiago',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        };
+        return fecha.toLocaleString('es-CL', opciones);
+      };
+      
+      return `Resumen de Pedidos - ${formatearFechaHora(filtroPersonalizadoInicio)} hasta ${formatearFechaHora(filtroPersonalizadoFin)}`;
+    }
+    
     if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
       return `Resumen de Pedidos - ${(() => {
         const fechaActual = obtenerFechaHoyChile();
@@ -3032,6 +3075,7 @@ export default function Pedidos() {
                       name="cantidad"
                       value={productoActual.cantidad}
                       onChange={handleChange}
+                      onWheel={(e) => e.target.blur()}
                       readOnly
                       className="w-10 sm:w-12 px-1 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-xs sm:text-sm text-center"
                       placeholder="0"
@@ -3449,6 +3493,7 @@ export default function Pedidos() {
                                max="50"
                                value={porcentajePropina}
                                onChange={(e) => setPorcentajePropina(parseFloat(e.target.value) || 0)}
+                               onWheel={(e) => e.target.blur()}
                                className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-xs"
                              />
                              <span className="text-white text-xs">%</span>
@@ -3526,6 +3571,7 @@ export default function Pedidos() {
                                     localStorage.setItem('cajaInicial', valor);
                                     localStorage.setItem('cajaInicialFecha', fechaActual);
                                   }}
+                                  onWheel={(e) => e.target.blur()}
                                   placeholder="Ej: 20000"
                                   step="100"
                                   min="0"
@@ -3545,6 +3591,7 @@ export default function Pedidos() {
                                     setMontoPagado(e.target.value);
                                     setMostrarVuelto(e.target.value !== '');
                                   }}
+                                  onWheel={(e) => e.target.blur()}
                                   placeholder="Ingresa el monto recibido"
                                   step="100"
                                   min="0"
@@ -3720,14 +3767,23 @@ export default function Pedidos() {
                 {/* Filtros */}
                 <div className="mb-4">
                   <h3 className="text-green-400 font-medium mb-3">Filtros</h3>
-                                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  
+                  {/* Filtros Estándar */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3">
                      {/* Filtro por Fecha Específica */}
                      <div>
                       <label className="block text-white text-xs mb-1">Fecha</label>
                        <input
                          type="date"
                          value={filtroFecha}
-                         onChange={(e) => setFiltroFecha(e.target.value)}
+                         onChange={(e) => {
+                           setFiltroFecha(e.target.value);
+                           // Limpiar filtro personalizado si se usa otro filtro
+                           if (e.target.value) {
+                             setFiltroPersonalizadoInicio('');
+                             setFiltroPersonalizadoFin('');
+                           }
+                         }}
                          className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                        />
                      </div>
@@ -3737,7 +3793,14 @@ export default function Pedidos() {
                      <label className="block text-white text-xs mb-1">Mes</label>
                       <select
                         value={filtroMes}
-                        onChange={(e) => setFiltroMes(e.target.value)}
+                        onChange={(e) => {
+                          setFiltroMes(e.target.value);
+                          // Limpiar filtro personalizado si se usa otro filtro
+                          if (e.target.value) {
+                            setFiltroPersonalizadoInicio('');
+                            setFiltroPersonalizadoFin('');
+                          }
+                        }}
                         className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                       >
                         <option value="">Todos</option>
@@ -3765,7 +3828,14 @@ export default function Pedidos() {
                       <label className="block text-white text-xs mb-1">Año</label>
                        <select
                          value={filtroAnio}
-                         onChange={(e) => setFiltroAnio(e.target.value)}
+                         onChange={(e) => {
+                           setFiltroAnio(e.target.value);
+                           // Limpiar filtro personalizado si se usa otro filtro
+                           if (e.target.value) {
+                             setFiltroPersonalizadoInicio('');
+                             setFiltroPersonalizadoFin('');
+                           }
+                         }}
                          className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                        >
                          {aniosDisponibles.map(anio => (
@@ -3798,6 +3868,53 @@ export default function Pedidos() {
                         🧹 Limpiar
                       </button>
                     </div>
+                  </div>
+                  
+                  {/* Filtro Personalizado - Rango de Fecha/Hora */}
+                  <div className="border-t border-white/10 pt-3">
+                    <h4 className="text-white text-sm mb-2 font-medium">🕐 Filtro Personalizado (Rango de Fecha y Hora)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-white text-xs mb-1">Desde (Fecha y Hora)</label>
+                        <input
+                          type="datetime-local"
+                          value={filtroPersonalizadoInicio}
+                          onChange={(e) => {
+                            setFiltroPersonalizadoInicio(e.target.value);
+                            // Limpiar otros filtros si se usa el personalizado
+                            if (e.target.value) {
+                              setFiltroFecha('');
+                              setFiltroMes('');
+                              setFiltroAnio('');
+                            }
+                          }}
+                          className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-white text-xs mb-1">Hasta (Fecha y Hora)</label>
+                        <input
+                          type="datetime-local"
+                          value={filtroPersonalizadoFin}
+                          onChange={(e) => {
+                            setFiltroPersonalizadoFin(e.target.value);
+                            // Limpiar otros filtros si se usa el personalizado
+                            if (e.target.value) {
+                              setFiltroFecha('');
+                              setFiltroMes('');
+                              setFiltroAnio('');
+                            }
+                          }}
+                          className="w-full px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+                        />
+                      </div>
+                    </div>
+                    {filtroPersonalizadoInicio && filtroPersonalizadoFin && (
+                      <p className="text-green-400 text-xs mt-2">
+                        ✓ Mostrando pedidos desde {new Date(filtroPersonalizadoInicio).toLocaleString('es-CL', { timeZone: 'America/Santiago' })} 
+                        {' '}hasta {new Date(filtroPersonalizadoFin).toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3973,6 +4090,7 @@ export default function Pedidos() {
                                     step="0.01"
                                     value={valoresEdicion.precio}
                                     onChange={(e) => handleEdicionChange('precio', e.target.value)}
+                                    onWheel={(e) => e.target.blur()}
                                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                                   />
                                 ) : (
@@ -3990,6 +4108,7 @@ export default function Pedidos() {
                                     step="0.01"
                                     value={valoresEdicion.total}
                                     onChange={(e) => handleEdicionChange('total', e.target.value)}
+                                    onWheel={(e) => e.target.blur()}
                                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                                   />
                                 ) : (
@@ -4007,6 +4126,7 @@ export default function Pedidos() {
                                     step="0.01"
                                     value={valoresEdicion.total_final || ''}
                                     onChange={(e) => handleEdicionChange('total_final', e.target.value)}
+                                    onWheel={(e) => e.target.blur()}
                                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                                     placeholder="Total final"
                                   />
@@ -4029,6 +4149,7 @@ export default function Pedidos() {
                                     step="0.01"
                                     value={valoresEdicion.propina || ''}
                                     onChange={(e) => handleEdicionChange('propina', e.target.value)}
+                                    onWheel={(e) => e.target.blur()}
                                     className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
                                     placeholder="Propina"
                                   />
