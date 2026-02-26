@@ -9,6 +9,7 @@ function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mostrarTerminos, setMostrarTerminos] = useState(false);
   const navigate = useNavigate();
 
   // Función para reproducir sonido de alerta cuando se inicia sesión
@@ -268,14 +269,189 @@ function Login() {
             </button>
           </form>
 
-          {/* Derechos Reservados */}
-          <div className="mt-6 text-center">
+          {/* Derechos Reservados y Términos */}
+          <div className="mt-6 text-center space-y-2">
             <p className="text-gray-300 text-xs font-medium drop-shadow-sm">
               Todos Los Derechos Reservados ®
+            </p>
+            <p className="text-gray-400 text-xs drop-shadow-sm">
+              Al iniciar sesión con Mi Caja, acepta los{' '}
+              <button
+                onClick={() => setMostrarTerminos(true)}
+                className="text-green-400 hover:text-green-300 underline transition-colors duration-200 font-medium"
+              >
+                Términos y Condiciones
+              </button>
             </p>
           </div>
         </div>
       </div>
+
+      {/* Modal de Términos y Condiciones */}
+      {mostrarTerminos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div 
+            className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            style={{
+              backgroundColor: 'rgba(31, 74, 31, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(74, 222, 128, 0.1)'
+            }}
+          >
+            {/* Header del Modal */}
+            <div 
+              className="border-b p-4 flex justify-between items-center"
+              style={{
+                backgroundColor: 'rgba(74, 222, 128, 0.15)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <h2 className="text-xl font-bold text-white drop-shadow-lg">
+                Términos y Condiciones
+              </h2>
+              <button
+                onClick={() => setMostrarTerminos(false)}
+                className="text-gray-300 hover:text-white transition-colors duration-200 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div 
+              className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(74, 222, 128, 0.5) rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div className="text-gray-200 space-y-5 text-sm leading-relaxed">
+                {/* Introducción */}
+                <div className="text-center pb-4 border-b border-white/10">
+                  <p className="text-base font-medium text-white">
+                    Mi Caja es una plataforma digital destinada exclusivamente al control de stock, inventario y apoyo a la gestión interna del negocio.
+                  </p>
+                </div>
+
+                <p className="text-gray-300 italic">
+                  Al iniciar sesión, el titular de la cuenta declara conocer y aceptar los siguientes términos:
+                </p>
+
+                {/* 1. Responsabilidad del Titular */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">1.</span>
+                    Responsabilidad del Titular
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    El titular de la cuenta es el único responsable legal y tributario de la información ingresada, registrada y gestionada dentro de la plataforma, incluyendo movimientos de stock, ventas, compras, ajustes y cualquier otro registro asociado a la operación de su negocio.
+                  </p>
+                </div>
+
+                {/* 2. Cumplimiento Tributario */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">2.</span>
+                    Cumplimiento Tributario
+                  </h3>
+                  <div className="text-gray-300 pl-6 space-y-2">
+                    <p>
+                      Mi Caja no reemplaza ni sustituye las obligaciones legales del contribuyente ante el Servicio de Impuestos Internos (SII) u otros organismos fiscalizadores.
+                    </p>
+                    <p>
+                      Es responsabilidad exclusiva del titular declarar, respaldar y reportar correctamente todas las operaciones comerciales según la normativa vigente.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Uso del Sistema */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">3.</span>
+                    Uso del Sistema
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    La plataforma actúa como una herramienta de apoyo para la gestión interna. Los datos, reportes y cálculos generados tienen carácter referencial, y deben ser revisados y validados por el usuario antes de su uso contable, tributario o legal.
+                  </p>
+                </div>
+
+                {/* 4. Exactitud de la Información */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">4.</span>
+                    Exactitud de la Información
+                  </h3>
+                  <p className="text-gray-300 pl-6 mb-2">
+                    Mi Caja no se hace responsable por errores derivados de:
+                  </p>
+                  <ul className="text-gray-300 pl-10 space-y-1 list-disc">
+                    <li>Ingreso incorrecto de datos</li>
+                    <li>Uso indebido del sistema</li>
+                    <li>Omisión de registros</li>
+                    <li>Configuraciones realizadas por el usuario</li>
+                  </ul>
+                </div>
+
+                {/* 5. Accesos y Seguridad */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">5.</span>
+                    Accesos y Seguridad
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    El titular es responsable de mantener la confidencialidad de sus credenciales y del uso que terceros autorizados realicen dentro de su cuenta.
+                  </p>
+                </div>
+
+                {/* 6. Limitación de Responsabilidad */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">6.</span>
+                    Limitación de Responsabilidad
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    Mi Caja no será responsable por pérdidas económicas, sanciones, multas o perjuicios derivados del uso de la plataforma o del incumplimiento de obligaciones legales por parte del titular.
+                  </p>
+                </div>
+
+                {/* 7. Aceptación */}
+                <div className="pt-4 border-t border-white/10">
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">7.</span>
+                    Aceptación
+                  </h3>
+                  <p className="text-gray-300 pl-6 font-medium">
+                    Al iniciar sesión en Mi Caja, el titular confirma que ha leído, entendido y aceptado estos términos y condiciones.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer del Modal */}
+            <div 
+              className="border-t p-4 flex justify-end"
+              style={{
+                backgroundColor: 'rgba(26, 61, 26, 0.6)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <button
+                onClick={() => setMostrarTerminos(false)}
+                className="px-6 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 font-medium"
+                style={{
+                  backgroundColor: '#4ade80',
+                  color: 'white',
+                  boxShadow: '0 4px 14px rgba(74, 222, 128, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

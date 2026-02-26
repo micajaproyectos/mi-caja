@@ -4,17 +4,47 @@ import logo from '../assets/logo.png';
 import Footer from './Footer';
 import { authService } from '../lib/authService.js';
 import InfoPopup from './InfoPopup.jsx';
+import { supabase } from '../lib/supabaseClient';
+import { obtenerFechaHoyChile, obtenerHoraActualChile } from '../lib/dateUtils.js';
 
 export default function Home() {
   const navigate = useNavigate();
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [activeInfoPopup, setActiveInfoPopup] = useState(null);
+  const [mostrarTerminosObligatorio, setMostrarTerminosObligatorio] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [procesandoAceptacion, setProcesandoAceptacion] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const userData = await authService.getCurrentUser();
-        setNombreUsuario(userData?.nombre || '');
+        // Optimizado: Una sola llamada para obtener TODOS los datos del usuario
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          setNombreUsuario('');
+          return;
+        }
+
+        // Una sola consulta a la tabla usuarios que trae nombre Y terminos_condiciones
+        const { data: userData, error: userError } = await supabase
+          .from('usuarios')
+          .select('usuario_id, nombre, rol, cliente_id, terminos_condiciones')
+          .eq('usuario_id', user.id)
+          .single();
+
+        if (userError || !userData) {
+          setNombreUsuario('');
+          return;
+        }
+
+        // Establecer nombre del usuario
+        setNombreUsuario(userData.nombre || '');
+
+        // Verificar si el usuario necesita aceptar términos
+        if (userData.terminos_condiciones === 'no') {
+          setMostrarTerminosObligatorio(true);
+        }
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
           console.error('Error al cargar datos del usuario:', error);
@@ -34,6 +64,101 @@ export default function Home() {
   // Función para cerrar el popup de información
   const closeInfoPopup = () => {
     setActiveInfoPopup(null);
+  };
+
+  // TAREA 2: Función para guardar la aceptación de términos
+  const guardarAceptacionTerminos = async () => {
+    try {
+      setProcesandoAceptacion(true);
+      
+      // Obtener datos del usuario actual
+      const userData = await authService.getCurrentUser();
+      if (!userData?.id) {
+        alert('Error: No se pudo identificar el usuario');
+        return;
+      }
+
+      // Obtener fecha y hora de Chile
+      const fecha = obtenerFechaHoyChile();
+      const hora = obtenerHoraActualChile();
+      
+      // Obtener timestamp completo
+      const timestamp = new Date().toLocaleString('es-CL', {
+        timeZone: 'America/Santiago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      // Obtener información del navegador y dispositivo
+      const userAgent = navigator.userAgent;
+      const navegador = navigator.userAgent.match(/(firefox|msie|chrome|safari|opera|edge|edg)/i)?.[0] || 'Desconocido';
+      const plataforma = navigator.platform || 'Desconocida';
+      
+      // Intentar obtener IP (esto es limitado en el navegador, podría estar vacío)
+      let ipAddress = 'No disponible';
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        ipAddress = data.ip;
+      } catch (error) {
+        console.log('No se pudo obtener IP:', error);
+      }
+
+      // Crear objeto con todos los datos de aceptación
+      const datosAceptacion = {
+        aceptado: true,
+        fecha: fecha,
+        hora: hora,
+        timestamp: timestamp,
+        usuario_id: userData.id,
+        email: userData.email || 'No disponible',
+        nombre: userData.nombre || 'No disponible',
+        ip_address: ipAddress,
+        navegador: navegador,
+        plataforma: plataforma,
+        user_agent: userAgent,
+        version_terminos: '1.0'
+      };
+
+      // Convertir a JSON string para guardar en la columna
+      const datosJSON = JSON.stringify(datosAceptacion, null, 2);
+
+      console.log('📝 Guardando aceptación de términos:', datosAceptacion);
+
+      // Actualizar en Supabase - tabla usuarios, columna terminos_condiciones
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ terminos_condiciones: datosJSON })
+        .eq('usuario_id', userData.id);
+
+      if (error) {
+        console.error('❌ Error al guardar aceptación:', error);
+        alert('Error al guardar la aceptación. Por favor intenta nuevamente.');
+        return;
+      }
+
+      console.log('✅ Aceptación de términos guardada exitosamente');
+
+      // Cerrar el modal
+      setMostrarTerminosObligatorio(false);
+      setAceptaTerminos(false);
+
+      // Mostrar mensaje de éxito
+      setTimeout(() => {
+        alert('✅ Términos y Condiciones aceptados correctamente');
+      }, 300);
+
+    } catch (error) {
+      console.error('❌ Error inesperado al guardar aceptación:', error);
+      alert('Error inesperado. Por favor intenta nuevamente.');
+    } finally {
+      setProcesandoAceptacion(false);
+    }
   };
 
   // Memoizar menuItems para evitar recreaciones innecesarias
@@ -634,6 +759,203 @@ export default function Home() {
           item={activeInfoPopup} 
           onClose={closeInfoPopup} 
         />
+      )}
+
+      {/* Modal OBLIGATORIO de Términos y Condiciones */}
+      {mostrarTerminosObligatorio && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div 
+            className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden"
+            style={{
+              backgroundColor: 'rgba(31, 74, 31, 0.98)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(74, 222, 128, 0.2)'
+            }}
+          >
+            {/* Header del Modal - SIN botón cerrar */}
+            <div 
+              className="border-b p-4 text-center"
+              style={{
+                backgroundColor: 'rgba(74, 222, 128, 0.15)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <h2 className="text-xl font-bold text-white drop-shadow-lg">
+                ⚠️ Términos y Condiciones
+              </h2>
+              <p className="text-sm text-gray-300 mt-2">
+                Debes aceptar los términos para continuar usando Mi Caja
+              </p>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div 
+              className="p-6 overflow-y-auto max-h-[calc(85vh-200px)]"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(74, 222, 128, 0.5) rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div className="text-gray-200 space-y-5 text-sm leading-relaxed">
+                {/* Introducción */}
+                <div className="text-center pb-4 border-b border-white/10">
+                  <p className="text-base font-medium text-white">
+                    Mi Caja es una plataforma digital destinada exclusivamente al control de stock, inventario y apoyo a la gestión interna del negocio.
+                  </p>
+                </div>
+
+                <p className="text-gray-300 italic">
+                  Al continuar usando Mi Caja, declaras conocer y aceptar los siguientes términos:
+                </p>
+
+                {/* 1. Responsabilidad del Titular */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">1.</span>
+                    Responsabilidad del Titular
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    El titular de la cuenta es el único responsable legal y tributario de la información ingresada, registrada y gestionada dentro de la plataforma, incluyendo movimientos de stock, ventas, compras, ajustes y cualquier otro registro asociado a la operación de su negocio.
+                  </p>
+                </div>
+
+                {/* 2. Cumplimiento Tributario */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">2.</span>
+                    Cumplimiento Tributario
+                  </h3>
+                  <div className="text-gray-300 pl-6 space-y-2">
+                    <p>
+                      Mi Caja no reemplaza ni sustituye las obligaciones legales del contribuyente ante el Servicio de Impuestos Internos (SII) u otros organismos fiscalizadores.
+                    </p>
+                    <p>
+                      Es responsabilidad exclusiva del titular declarar, respaldar y reportar correctamente todas las operaciones comerciales según la normativa vigente.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Uso del Sistema */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">3.</span>
+                    Uso del Sistema
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    La plataforma actúa como una herramienta de apoyo para la gestión interna. Los datos, reportes y cálculos generados tienen carácter referencial, y deben ser revisados y validados por el usuario antes de su uso contable, tributario o legal.
+                  </p>
+                </div>
+
+                {/* 4. Exactitud de la Información */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">4.</span>
+                    Exactitud de la Información
+                  </h3>
+                  <p className="text-gray-300 pl-6 mb-2">
+                    Mi Caja no se hace responsable por errores derivados de:
+                  </p>
+                  <ul className="text-gray-300 pl-10 space-y-1 list-disc">
+                    <li>Ingreso incorrecto de datos</li>
+                    <li>Uso indebido del sistema</li>
+                    <li>Omisión de registros</li>
+                    <li>Configuraciones realizadas por el usuario</li>
+                  </ul>
+                </div>
+
+                {/* 5. Accesos y Seguridad */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">5.</span>
+                    Accesos y Seguridad
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    El titular es responsable de mantener la confidencialidad de sus credenciales y del uso que terceros autorizados realicen dentro de su cuenta.
+                  </p>
+                </div>
+
+                {/* 6. Limitación de Responsabilidad */}
+                <div>
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">6.</span>
+                    Limitación de Responsabilidad
+                  </h3>
+                  <p className="text-gray-300 pl-6">
+                    Mi Caja no será responsable por pérdidas económicas, sanciones, multas o perjuicios derivados del uso de la plataforma o del incumplimiento de obligaciones legales por parte del titular.
+                  </p>
+                </div>
+
+                {/* 7. Aceptación */}
+                <div className="pt-4 border-t border-white/10">
+                  <h3 className="text-white font-bold text-base mb-2 flex items-center gap-2">
+                    <span className="text-green-400">7.</span>
+                    Aceptación
+                  </h3>
+                  <p className="text-gray-300 pl-6 font-medium">
+                    Al aceptar estos términos, confirmas que has leído, entendido y estás de acuerdo con todas las condiciones establecidas.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer del Modal con Checkbox */}
+            <div 
+              className="border-t p-4"
+              style={{
+                backgroundColor: 'rgba(26, 61, 26, 0.6)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              {/* Checkbox de aceptación */}
+              <div className="flex items-center justify-center mb-4">
+                <label className="flex items-center gap-3 cursor-pointer text-white hover:text-green-300 transition-colors duration-200">
+                  <input
+                    type="checkbox"
+                    checked={aceptaTerminos}
+                    onChange={(e) => setAceptaTerminos(e.target.checked)}
+                    className="w-5 h-5 rounded border-2 border-white/30 bg-white/10 checked:bg-green-500 checked:border-green-500 cursor-pointer transition-all duration-200"
+                  />
+                  <span className="text-sm font-medium">
+                    Acepto los Términos y Condiciones
+                  </span>
+                </label>
+              </div>
+
+              {/* Botón Aceptar */}
+              <div className="flex justify-center">
+                <button
+                  onClick={guardarAceptacionTerminos}
+                  disabled={!aceptaTerminos || procesandoAceptacion}
+                  className="px-8 py-3 rounded-lg transition-all duration-200 transform font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                  style={{
+                    backgroundColor: aceptaTerminos && !procesandoAceptacion ? '#4ade80' : '#6b7280',
+                    color: 'white',
+                    boxShadow: aceptaTerminos && !procesandoAceptacion ? '0 4px 14px rgba(74, 222, 128, 0.4)' : 'none',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    transform: aceptaTerminos && !procesandoAceptacion ? 'scale(1.05)' : 'scale(1)'
+                  }}
+                >
+                  {procesandoAceptacion ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Guardando...
+                    </div>
+                  ) : aceptaTerminos ? (
+                    '✅ Aceptar y Continuar'
+                  ) : (
+                    'Continuar'
+                  )}
+                </button>
+              </div>
+
+              {/* Nota informativa */}
+              <p className="text-center text-xs text-gray-400 mt-3">
+                No podrás usar Mi Caja hasta que aceptes los términos
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
