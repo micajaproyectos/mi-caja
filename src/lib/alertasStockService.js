@@ -190,14 +190,22 @@ export async function aplazarAlerta(alertaId, tipoAplazamiento) {
   
   try {
     const fechaAplazamiento = calcularFechaAplazamiento(tipoAplazamiento);
-    
+
+    const { data: alertaActual, error: errorLectura } = await supabase
+      .from('alertas_stock_bajo')
+      .select('veces_aplazada')
+      .eq('id', alertaId)
+      .single();
+
+    if (errorLectura) throw errorLectura;
+
     const { data, error } = await supabase
       .from('alertas_stock_bajo')
       .update({
         estado: 'aplazada',
         aplazada_hasta: fechaAplazamiento.toISOString(),
         tipo_aplazamiento: tipoAplazamiento,
-        veces_aplazada: supabase.sql`veces_aplazada + 1`
+        veces_aplazada: (alertaActual?.veces_aplazada || 0) + 1
       })
       .eq('id', alertaId)
       .select()
