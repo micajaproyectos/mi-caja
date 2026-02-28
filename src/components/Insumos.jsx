@@ -489,9 +489,6 @@ function Insumos() {
                                             const nuevaCantidad = prompt(`Nueva cantidad para ${ing.nombre}:`, ing.cantidad);
                                             if (nuevaCantidad && !isNaN(parseFloat(nuevaCantidad)) && parseFloat(nuevaCantidad) > 0) {
                                               try {
-                                                const diferencia = parseFloat(nuevaCantidad) - ing.cantidad;
-                                                const usuarioId = await authService.getCurrentUserId();
-                                                
                                                 // Actualizar registro de compra
                                                 const { error: errorCompra } = await supabase
                                                   .from('compras_insumos')
@@ -502,23 +499,6 @@ function Insumos() {
                                                   alert('Error al actualizar compra');
                                                   return;
                                                 }
-                                                
-                                                // Ajustar stock en insumos
-                                                const { data: stockActual } = await supabase
-                                                  .from('insumos')
-                                                  .select('cantidad_disponible')
-                                                  .eq('nombre_insumo', ing.nombre)
-                                                  .eq('usuario_id', usuarioId)
-                                                  .limit(1)
-                                                  .single();
-                                                
-                                                const nuevoStock = (stockActual?.cantidad_disponible || 0) + diferencia;
-                                                
-                                                await supabase
-                                                  .from('insumos')
-                                                  .update({ cantidad_disponible: nuevoStock })
-                                                  .eq('nombre_insumo', ing.nombre)
-                                                  .eq('usuario_id', usuarioId);
                                                 
                                                 mostrarToast('✅ Compra actualizada', 'success');
                                                 await cargarCompras();
@@ -551,23 +531,6 @@ function Insumos() {
                                                 alert('Error al eliminar compra');
                                                 return;
                                               }
-                                              
-                                              // Restar del stock en insumos
-                                              const { data: stockActual } = await supabase
-                                                .from('insumos')
-                                                .select('cantidad_disponible')
-                                                .eq('nombre_insumo', ing.nombre)
-                                                .eq('usuario_id', usuarioId)
-                                                .limit(1)
-                                                .single();
-                                              
-                                              const nuevoStock = Math.max(0, (stockActual?.cantidad_disponible || 0) - ing.cantidad);
-                                              
-                                              await supabase
-                                                .from('insumos')
-                                                .update({ cantidad_disponible: nuevoStock })
-                                                .eq('nombre_insumo', ing.nombre)
-                                                .eq('usuario_id', usuarioId);
                                               
                                               mostrarToast('✅ Compra eliminada', 'success');
                                               await cargarCompras();
