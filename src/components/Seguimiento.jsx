@@ -1325,7 +1325,8 @@ export default function Seguimiento() {
           </div>
 
           {/* Estadísticas de Ventas */}
-          <div className="mb-6">
+          {(loadingVentasAcumuladas || datosVentasAcumuladas.some(d => d.totalMes > 0)) && (
+          <><div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Estadísticas de Ventas
             </h2>
@@ -1731,9 +1732,12 @@ export default function Seguimiento() {
             )}
             </div>
             </div>
+          </>
+          )}
 
           {/* Estadísticas de Pedidos */}
-          <div className="mb-6">
+          {(loadingPedidosAcumulados || datosPedidosAcumulados.some(d => d.totalMes > 0)) && (
+          <><div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Estadísticas de Pedidos
             </h2>
@@ -2137,10 +2141,12 @@ export default function Seguimiento() {
               )}
             </div>
           </div>
-
+          </>
+          )}
 
           {/* Estadísticas de Ventas Rápidas */}
-          <div className="mb-6">
+          {(loadingVentasRapidasAcumuladas || datosVentasRapidasAcumuladas.some(d => d.totalMes > 0)) && (
+          <><div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Estadísticas de Ventas Rápidas
             </h2>
@@ -2544,7 +2550,8 @@ export default function Seguimiento() {
               )}
             </div>
           </div>
-
+          </>
+          )}
 
           {/* Botón de recarga */}
           <div className="text-center mb-8">
