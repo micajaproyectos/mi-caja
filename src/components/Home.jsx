@@ -301,6 +301,22 @@ export default function Home() {
     }));
   }, []);
 
+  const frasesMensuales = [
+    { texto: 'El año nuevo es una página en blanco: llénala de acciones, no de promesas.', emoji: '📖' },
+    { texto: 'Toda labor rinde sus frutos, pero hablar por hablar empobrece.', emoji: '🔨' },
+    { texto: 'El que construye en silencio, lidera sin anunciarlo.', emoji: '🧱' },
+    { texto: 'La disciplina hoy es la libertad financiera mañana.', emoji: '📈' },
+    { texto: 'Sin acción, la idea solo es ilusión elegante.', emoji: '💡' },
+    { texto: 'Paso firme supera talento sin constancia.', emoji: '👣' },
+    { texto: 'Primero estructura, luego escala.', emoji: '🏗️' },
+    { texto: 'El mercado paga soluciones, no intenciones.', emoji: '💰' },
+    { texto: 'Si resuelves problemas reales, creas valor real.', emoji: '🛠️' },
+    { texto: 'El enfoque multiplica lo que el esfuerzo inicia.', emoji: '🎯' },
+    { texto: 'Aprende rápido, ejecuta más rápido.', emoji: '⚡' },
+    { texto: 'La paciencia estratégica vence la prisa improvisada.', emoji: '⏳' },
+  ];
+  const fraseDelMes = frasesMensuales[new Date().getMonth()];
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
@@ -563,14 +579,15 @@ export default function Home() {
                 }}
               />
               <p 
-                className="text-sm sm:text-base md:text-lg font-medium whitespace-nowrap overflow-hidden text-ellipsis relative z-10"
+                className="text-sm sm:text-base md:text-lg font-medium whitespace-nowrap relative z-10"
                 style={{ 
                   fontFamily: 'Inter, system-ui, sans-serif',
                   color: '#e5f9e5',
                   textShadow: '0 2px 10px rgba(34, 197, 94, 0.3)',
                 }}
               >
-                Un 2026 lleno de éxito y crecimiento para tu negocio. <span className="inline-block animate-bounce" style={{ animationDuration: '2s' }}>🚀</span>
+                {fraseDelMes.texto}{' '}
+                <span className="inline-block animate-bounce" style={{ animationDuration: '2s' }}>{fraseDelMes.emoji}</span>
               </p>
             </div>
           </div>
