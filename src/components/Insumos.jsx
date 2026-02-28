@@ -33,6 +33,9 @@ function Insumos() {
     }
   });
   const [loadingCompras, setLoadingCompras] = useState(false);
+  const [filtroIngrediente, setFiltroIngrediente] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState('');
   
   // Estados para registrar compras de insumos
   const [modalCompraAbierto, setModalCompraAbierto] = useState(false);
@@ -67,7 +70,29 @@ function Insumos() {
     });
     return Array.from(ingredientesSet).map(str => JSON.parse(str));
   }, [recetas]);
-  
+
+  // Opciones únicas para los filtros del historial
+  const ingredientesEnCompras = useMemo(() => {
+    const set = new Set(compras.map(c => c.nombre_insumo));
+    return Array.from(set).sort();
+  }, [compras]);
+
+  const aniosEnCompras = useMemo(() => {
+    const set = new Set(compras.map(c => new Date(c.fecha_hora).getFullYear()));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [compras]);
+
+  // Compras filtradas (cliente-side, no afecta la carga de datos)
+  const comprasFiltradas = useMemo(() => {
+    return compras.filter(compra => {
+      const fecha = new Date(compra.fecha_hora);
+      const coincideIngrediente = !filtroIngrediente || compra.nombre_insumo === filtroIngrediente;
+      const coincideMes = !filtroMes || (fecha.getMonth() + 1) === parseInt(filtroMes);
+      const coincideAnio = !filtroAnio || fecha.getFullYear() === parseInt(filtroAnio);
+      return coincideIngrediente && coincideMes && coincideAnio;
+    });
+  }, [compras, filtroIngrediente, filtroMes, filtroAnio]);
+
   // Estados para crear nueva receta
   const [productosInventario, setProductosInventario] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
@@ -439,8 +464,67 @@ function Insumos() {
                     <h3 className="text-lg font-bold text-green-400 mb-4">
                       📋 Historial de Compras
                     </h3>
+
+                    {/* Filtros */}
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      <select
+                        value={filtroIngrediente}
+                        onChange={e => setFiltroIngrediente(e.target.value)}
+                        className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        <option value="">Todos los ingredientes</option>
+                        {ingredientesEnCompras.map(nombre => (
+                          <option key={nombre} value={nombre}>{nombre}</option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={filtroMes}
+                        onChange={e => setFiltroMes(e.target.value)}
+                        className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        <option value="">Todos los meses</option>
+                        {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((mes, i) => (
+                          <option key={i+1} value={i+1}>{mes}</option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={filtroAnio}
+                        onChange={e => setFiltroAnio(e.target.value)}
+                        className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                        style={{ colorScheme: 'dark' }}
+                      >
+                        <option value="">Todos los años</option>
+                        {aniosEnCompras.map(anio => (
+                          <option key={anio} value={anio}>{anio}</option>
+                        ))}
+                      </select>
+
+                      {(filtroIngrediente || filtroMes || filtroAnio) && (
+                        <button
+                          onClick={() => { setFiltroIngrediente(''); setFiltroMes(''); setFiltroAnio(''); }}
+                          className="px-3 py-2 rounded-lg bg-red-500/20 border border-red-400/30 text-red-300 text-sm hover:bg-red-500/30 transition-colors"
+                        >
+                          ✕ Limpiar filtros
+                        </button>
+                      )}
+
+                      {(filtroIngrediente || filtroMes || filtroAnio) && (
+                        <span className="self-center text-gray-400 text-xs">
+                          {comprasFiltradas.length} de {compras.length} registros
+                        </span>
+                      )}
+                    </div>
                     
                     <div className="overflow-x-auto">
+                      {comprasFiltradas.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          No hay compras que coincidan con los filtros seleccionados
+                        </div>
+                      ) : (
                       <table className="w-full">
                         <thead>
                           <tr className="bg-white/5 border-b border-white/20">
@@ -453,7 +537,7 @@ function Insumos() {
                         <tbody>
                           {(() => {
                             // Agrupar compras por fecha_hora
-                            const comprasAgrupadas = compras.reduce((acc, compra) => {
+                            const comprasAgrupadas = comprasFiltradas.reduce((acc, compra) => {
                               const key = compra.fecha_hora;
                               if (!acc[key]) {
                                 acc[key] = {
@@ -556,6 +640,7 @@ function Insumos() {
                           })()}
                         </tbody>
                       </table>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1125,10 +1210,10 @@ function Insumos() {
                                   console.error('Error:', error);
                                 }
                               }}
-                              className="text-red-400 hover:text-red-300 text-sm"
+                              className="text-red-400 hover:text-red-300 text-sm font-bold"
                               title="Eliminar receta"
                             >
-                              🗑️
+                              ✕
                             </button>
                           </div>
                           

@@ -32,7 +32,9 @@ const InfoPopup = ({ item, onClose }) => {
       'venta-rapida': 'Sistema de ventas acelerado para transacciones rápidas. Ideal para quienes necesiten registrar ventas sin inventario.',
       'auditoria': 'Revisa todos los cambios y actividades realizadas en el sistema. Control completo de modificaciones.',
       'autoservicio': 'Abre otro punto de venta independiente para que tus clientes puedan realizar sus compras de manera más rápida y expedita, actualizando tu inventario actual.',
-      'gestion-cocina': 'Sistema de gestión de pedidos en tiempo real para cocina. Conecta automáticamente con Pedidos, muestra pedidos pendientes en tarjetas, controla tiempos de preparación, marca como terminado o anulado, y mantiene historial completo con filtros por día, mes, año y estado. Ideal para coordinar meseros y cocineros en el mismo negocio.'
+      'gestion-cocina': 'Pantalla en tiempo real para cocina. Muestra los pedidos pendientes, controla tiempos de preparación y permite marcarlos como terminados o anulados.',
+      'transporte': 'Gestiona tus envíos y despachos a domicilio. Registra pedidos de transporte con destino, cliente, estado y hora de entrega. Mantén el control de tus despachos pendientes y completados en un solo lugar.',
+      'calendario': 'Organiza tus recordatorios y tareas por fecha y hora. Programa alertas con prioridad alta, media o baja y recibe notificaciones automáticas cuando llegue el momento.'
     };
     return descriptions[id] || 'Descripción no disponible.';
   };

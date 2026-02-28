@@ -38,7 +38,8 @@ function Autoservicio() {
   // Refs y estado para el portal del dropdown
   const searchInputRef = useRef(null);
   const dropdownRef = useRef(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const busquedaCodigoTimeoutRef = useRef(null);
+  const skipNextFilterRef = useRef(false);
   
   // Estado para navegación por teclado
   const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
@@ -158,16 +159,20 @@ function Autoservicio() {
 
   // Función para seleccionar un producto del inventario
   const seleccionarProducto = (producto) => {
+    // Evitar que el useEffect de filtrado vuelva a abrir el dropdown
+    skipNextFilterRef.current = true;
+
     // Cerrar dropdown inmediatamente
     setDropdownAbierto(false);
     setIndiceSeleccionado(-1);
     
-    // Actualizar los estados
+    // Actualizar los estados (cantidad 1 por defecto)
     setProductoActual({
       ...productoActual,
       producto: producto.producto,
       precio_unitario: producto.precio_venta.toString(),
       unidad: producto.unidad,
+      cantidad: '1',
       subtotal: 0
     });
     
@@ -190,7 +195,7 @@ function Autoservicio() {
         .from('inventario')
         .select('*')
         .eq('usuario_id', usuarioId)
-        .eq('codigo_interno', parseInt(codigo))
+        .eq('codigo_interno', codigo)
         .single();
 
       if (error) {
@@ -247,28 +252,25 @@ function Autoservicio() {
         subtotal: 0
       });
     } else {
+      // Limpiar timeout anterior si existe
+      if (busquedaCodigoTimeoutRef.current) {
+        clearTimeout(busquedaCodigoTimeoutRef.current);
+      }
+
       // 📷 Detectar si es un código de barras (8 dígitos para EAN-8, 13 para EAN-13)
       const esCodigoBarras = /^\d{8}$|^\d{13}$/.test(valor.trim());
       
       if (esCodigoBarras) {
-        // Si es un código de barras, buscar por código
-        buscarProductoPorCodigo(valor.trim());
-        setDropdownAbierto(false);
-        setIndiceSeleccionado(-1);
+        // Debounce 300ms para esperar que el scanner termine de enviar dígitos
+        busquedaCodigoTimeoutRef.current = setTimeout(() => {
+          buscarProductoPorCodigo(valor.trim());
+          setDropdownAbierto(false);
+          setIndiceSeleccionado(-1);
+        }, 300);
       } else {
         // Si no es código de barras, buscar por nombre (comportamiento normal)
         // Resetear índice al cambiar búsqueda
         setIndiceSeleccionado(-1);
-        
-        // Calcular posición del dropdown SOLO si no está visible
-        if (!dropdownAbierto && searchInputRef.current) {
-          const rect = searchInputRef.current.getBoundingClientRect();
-          setDropdownPosition({
-            top: rect.bottom + window.scrollY,
-            left: rect.left + window.scrollX,
-            width: rect.width
-          });
-        }
         
         // Filtrar productos por nombre
         filtrarProductos(valor);
@@ -876,9 +878,16 @@ function Autoservicio() {
     cargarVentas(); // Cargar también las ventas de autoservicio
   }, []);
 
-  // Filtrar productos cuando cambia la búsqueda
+  // Filtrar productos cuando cambia la búsqueda (solo si no es código de barras ni selección reciente)
   useEffect(() => {
-    filtrarProductos(busquedaProducto);
+    if (skipNextFilterRef.current) {
+      skipNextFilterRef.current = false;
+      return;
+    }
+    const esCodigoBarras = /^\d{8}$|^\d{13}$/.test(busquedaProducto.trim());
+    if (!esCodigoBarras) {
+      filtrarProductos(busquedaProducto);
+    }
   }, [busquedaProducto, productosInventario]);
 
   // Cerrar dropdown cuando se haga clic fuera de él
@@ -1115,14 +1124,14 @@ function Autoservicio() {
           {/* Formulario de Autoservicio */}
           <form onSubmit={(e) => e.preventDefault()} className="space-y-4 md:space-y-6">
             {/* Sección de agregar producto */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+            <div className={`bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 relative ${dropdownAbierto ? 'z-10' : ''}`}>
               <div className="flex items-center mb-4">
                 <span className="text-blue-400 text-lg md:text-xl mr-2">🛒</span>
                 <h3 className="text-blue-400 text-lg md:text-xl font-bold">Agregar Producto</h3>
               </div>
               
                 {/* Campo de búsqueda de producto */}
-                <div className="mb-4">
+                <div className="mb-4 relative">
                   <input
                     ref={searchInputRef}
                     data-search-input
@@ -1132,27 +1141,14 @@ function Autoservicio() {
                     className="w-full px-3 md:px-4 py-3 md:py-4 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base transition-all duration-200"
                     placeholder="🔍 Nombre o código de barras..."
                   />
-                </div>
-                
-                {/* Dropdown de productos filtrados - Portal */}
-                {dropdownAbierto && productosFiltrados.length > 0 && createPortal(
+
+                {/* Dropdown de productos filtrados */}
+                {dropdownAbierto && productosFiltrados.length > 0 && (
                   <div 
                     ref={dropdownRef}
                     data-dropdown-portal
-                    className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl overflow-hidden"
-                    style={{ 
-                      top: dropdownPosition.top + 12,
-                      left: dropdownPosition.left,
-                      width: dropdownPosition.width
-                    }}
+                    className="absolute z-50 left-0 right-0 top-full mt-2 bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl overflow-hidden"
                   >
-                    {/* Hint de navegación por teclado */}
-                    <div className="bg-blue-600/20 px-4 py-2 border-b border-blue-400/30">
-                      <p className="text-blue-200 text-xs text-center">
-                        <span className="font-semibold">💡 Tip:</span> Usa ↑↓ para navegar, Enter para seleccionar, Esc para cerrar
-                      </p>
-                    </div>
-                    
                     {/* Lista de productos */}
                     <div className="max-h-80 overflow-y-auto">
                       {productosFiltrados.map((producto, index) => {
@@ -1190,20 +1186,14 @@ function Autoservicio() {
                         );
                       })}
                     </div>
-                  </div>,
-                  document.body
+                  </div>
                 )}
-                
-                {/* Mensaje cuando no hay productos - Portal */}
-                {dropdownAbierto && productosFiltrados.length === 0 && busquedaProducto.trim() && createPortal(
+
+                {/* Mensaje cuando no hay productos */}
+                {dropdownAbierto && productosFiltrados.length === 0 && busquedaProducto.trim() && (
                   <div 
                     data-dropdown-portal
-                    className="fixed z-[9999] bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl p-6"
-                    style={{ 
-                      top: dropdownPosition.top + 12,
-                      left: dropdownPosition.left,
-                      width: dropdownPosition.width
-                    }}
+                    className="absolute z-50 left-0 right-0 top-full mt-2 bg-gray-900/95 border-2 border-blue-400/60 rounded-2xl shadow-2xl p-6"
                   >
                     <div className="text-center mb-4">
                       <div className="text-gray-300 text-lg mb-2">
@@ -1215,21 +1205,19 @@ function Autoservicio() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        // Redirigir al componente Inventario para agregar el producto
-                        navigate('/inventario');
-                      }}
+                      onClick={() => navigate('/inventario')}
                       className="w-full px-6 py-3 md:py-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-300 text-sm md:text-base shadow-lg"
                     >
                       ➕ Agregar producto al Inventario
                     </button>
-                  </div>,
-                  document.body
+                  </div>
                 )}
                 
+                </div>
+
                 {/* Campos del producto - Responsive y adaptativo */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  <div className="hidden">
                     <label className="block text-white font-medium mb-2 text-xs md:text-sm">Unidad</label>
                     <select
                       name="unidad"
@@ -1244,15 +1232,39 @@ function Autoservicio() {
 
                   <div>
                     <label className="block text-white font-medium mb-2 text-xs md:text-sm">Cantidad</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="cantidad"
-                      value={productoActual.cantidad}
-                      onChange={(e) => setProductoActual({ ...productoActual, cantidad: e.target.value })}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base"
-                      placeholder="0.00"
-                    />
+                    <div className="flex items-stretch gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const actual = parseInt(productoActual.cantidad) || 0;
+                          const nuevo = Math.max(0, actual - 1);
+                          setProductoActual({ ...productoActual, cantidad: nuevo.toString() });
+                        }}
+                        className="px-3 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white font-bold text-lg leading-none transition-colors duration-150 select-none"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        name="cantidad"
+                        value={productoActual.cantidad}
+                        onChange={(e) => setProductoActual({ ...productoActual, cantidad: e.target.value.replace(/[^0-9]/g, '') })}
+                        className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm md:text-base text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="0"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const actual = parseInt(productoActual.cantidad) || 0;
+                          setProductoActual({ ...productoActual, cantidad: (actual + 1).toString() });
+                        }}
+                        className="px-3 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white font-bold text-lg leading-none transition-colors duration-150 select-none"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
                   <div>
