@@ -273,7 +273,7 @@ const RegistroInventario = () => {
           .from('inventario')
           .select('codigo_interno')
           .eq('usuario_id', usuarioId)
-          .eq('codigo_interno', parseInt(codigoCompleto))
+          .eq('codigo_interno', codigoCompleto)
           .single();
 
         if (error && error.code === 'PGRST116') {
@@ -621,7 +621,7 @@ const RegistroInventario = () => {
         precio_unitario: parseFloat(precios.precio_unitario) || 0,
         precio_venta: parseFloat(precios.precio_venta) || 0,
         usuario_id: usuarioId, // 🔒 AGREGAR USER ID PARA SEGURIDAD
-        codigo_interno: codigoInterno ? parseFloat(codigoInterno) : null // 📷 Código de barras (opcional)
+        codigo_interno: codigoInterno || null // 📷 Código de barras (opcional)
       };
 
       const { error } = await supabase
@@ -787,7 +787,7 @@ const RegistroInventario = () => {
           precio_unitario: parseFloat(valoresEdicion.precio_unitario),
           precio_venta: parseFloat(valoresEdicion.precio_venta),
           imagen: valoresEdicion.imagen.trim() || null,
-          codigo_interno: valoresEdicion.codigo_interno ? parseFloat(valoresEdicion.codigo_interno) : null
+          codigo_interno: valoresEdicion.codigo_interno || null
         })
         .eq('id', id);
 

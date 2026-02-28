@@ -124,7 +124,7 @@ BEGIN
         RAISE EXCEPTION '❌ Error: Tabla alertas_stock_bajo no se creó';
     END IF;
     
-    -- Verificar RLS habilitado
+    -- Verificar RLS habilitado 
     IF EXISTS (
         SELECT 1 FROM pg_tables 
         WHERE tablename = 'alertas_stock_bajo' 
