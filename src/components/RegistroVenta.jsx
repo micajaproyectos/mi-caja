@@ -1654,7 +1654,7 @@ export default function RegistroVenta() {
     // 🖨️ PREGUNTAR SI DESEA IMPRIMIR **ANTES** DE REGISTRAR (mientras aún es un "user gesture")
     let deseaImprimir = false;
     
-    if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported()) {
+    if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported() && window.innerWidth >= 820) {
       deseaImprimir = await mostrarConfirmacion('¿Desea imprimir el recibo de esta venta?');
     }
     

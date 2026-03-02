@@ -277,8 +277,9 @@ const VentaRapida = () => {
     // 🖨️ PREGUNTAR SI DESEA IMPRIMIR **ANTES** DE REGISTRAR (solo para efectivo y transferencia)
     let deseaImprimir = false;
     
-    if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported() && 
-        (venta.tipo_pago === 'efectivo' || venta.tipo_pago === 'transferencia')) {
+    if (IMPRESION_TERMICA_HABILITADA && thermalPrinter.isSupported() &&
+        (venta.tipo_pago === 'efectivo' || venta.tipo_pago === 'transferencia') &&
+        window.innerWidth >= 820) {
       deseaImprimir = await mostrarConfirmacion('¿Desea imprimir el recibo de esta venta?');
     }
 
