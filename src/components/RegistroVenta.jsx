@@ -97,7 +97,7 @@ export default function RegistroVenta() {
   const [calculadoraColapsada, setCalculadoraColapsada] = useState(false);
   
   // Estado para colapsar/expandir sección de Cierre de Jornada
-  const [cierreJornadaColapsado, setCierreJornadaColapsado] = useState(false);
+  const [cierreJornadaColapsado, setCierreJornadaColapsado] = useState(true);
   
   // Estados para cuadrar caja (solo frontend)
   const [cajaInicial, setCajaInicial] = useState(() => {
@@ -2425,6 +2425,22 @@ export default function RegistroVenta() {
                     }`}
                     placeholder="0.00"
                   />
+                  {/* Botón Balanza — oculto en móvil/tablet, visible desde md */}
+                  <div className="hidden md:block">
+                    <button
+                      type="button"
+                      onClick={onClickBalanza}
+                      disabled={productoActual.unidad !== 'kg'}
+                      className={`w-full mt-1 text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 text-xs md:text-sm shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                        scaleService.isSampling() ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'
+                      }`}
+                    >
+                      {scaleService.isSampling() ? '🟢 Escuchando...' : '⚖️ Balanza'}
+                    </button>
+                    <div className="text-xs text-gray-400 mt-1 text-center">
+                      {scaleService.isConnected() ? '🔌 Balanza conectada' : '❌ Balanza desconectada'}
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -2451,28 +2467,6 @@ export default function RegistroVenta() {
                 </div>
               </div>
               
-              {/* Controles de balanza - Fila separada debajo */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mt-2">
-                <div></div> {/* Espacio vacío para Unidad */}
-                
-                <div>
-                  <button
-                    type="button"
-                    onClick={onClickBalanza}
-                    disabled={productoActual.unidad !== 'kg'}
-                    className={`w-full text-white font-medium py-2 px-3 rounded-lg transition-all duration-300 text-xs md:text-sm shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                      scaleService.isSampling() ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700'
-                    }`}
-                  >
-                    {scaleService.isSampling() ? '🟢 Escuchando...' : '⚖️ Balanza'}
-                  </button>
-                  
-                  {/* Estado simple de la balanza */}
-                  <div className="text-xs text-gray-400 mt-1 text-center">
-                    {scaleService.isConnected() ? '🔌 Balanza conectada' : '❌ Balanza desconectada'}
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Sección de productos en la venta - Compacta y horizontal */}
