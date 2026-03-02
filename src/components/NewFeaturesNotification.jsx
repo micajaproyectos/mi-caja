@@ -106,22 +106,13 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
           </h3>
           
           <div className="text-left space-y-3">
-            {/* Nuevas actualizaciones */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-xl">🎉</span>
+              <span className="text-xl">📄</span>
               <div>
-                <h4 className="text-green-300 font-semibold text-base mb-2">Nuevas Actualizaciones</h4>
-                <div className="space-y-2">
-                  <p className="text-gray-300 text-xs leading-relaxed">
-                    📅 <strong className="text-green-300">Calendario:</strong> Crea recordatorios con alarmas automáticas. Configura fecha, hora y prioridad.
-                  </p>
-                  <p className="text-gray-300 text-xs leading-relaxed">
-                    🔊 <strong className="text-green-300">Sonidos:</strong> Notificaciones sonoras en Pedidos, Cocina y Calendario. Activa/desactiva desde tu Perfil.
-                  </p>
-                  <p className="text-gray-300 text-xs leading-relaxed">
-                    🍳 <strong className="text-green-300">Insumos:</strong> Crea recetas con ingredientes, registra compras de insumos y controla stock automáticamente. Alertas cuando el stock esté bajo.
-                  </p>
-                </div>
+                <h4 className="text-green-300 font-semibold text-base mb-1">Descargar PDF — Registro de Venta</h4>
+                <p className="text-gray-300 text-xs leading-relaxed">
+                  Selecciona una o más ventas con el checkbox y presiona <strong className="text-green-300">Descargar PDF</strong> para guardar la nota de venta en tu dispositivo.
+                </p>
               </div>
             </div>
           </div>
