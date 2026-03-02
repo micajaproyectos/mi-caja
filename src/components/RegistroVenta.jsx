@@ -2485,51 +2485,42 @@ export default function RegistroVenta() {
                     ) : (
                       <div className="space-y-1 md:space-y-1.5">
                         {productosVenta.map((producto, index) => (
-                          <div key={producto.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-transparent rounded p-2 md:p-2.5 border-b border-white/20 hover:bg-white/5 transition-colors gap-2 sm:gap-3">
-                            {/* Información del producto - Responsive */}
-                            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                          <div key={producto.id} className="flex flex-row items-center justify-between bg-transparent rounded p-2 md:p-2.5 border-b border-white/20 hover:bg-white/5 transition-colors gap-2">
+                            {/* Información del producto */}
+                            <div className="flex-1 flex flex-col gap-0.5 min-w-0">
                               {/* Nombre del producto */}
-                              <div className="flex-1 min-w-0">
-                                <div className="relative group">
-                                  <p className="text-white font-medium text-xs md:text-sm truncate" title={producto.producto}>
-                                    {producto.producto}
-                                  </p>
-                                  {obtenerImagenProducto(producto.producto) && (
-                                    <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
-                                      <img
-                                        src={obtenerImagenProducto(producto.producto)}
-                                        alt={producto.producto}
-                                        className="w-24 h-24 object-cover rounded-lg border border-white/20 shadow-lg"
-                                        onError={(e) => {
-                                          e.target.style.display = 'none';
-                                        }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
+                              <div className="relative group min-w-0">
+                                <p className="text-white font-medium text-xs md:text-sm truncate" title={producto.producto}>
+                                  {producto.producto}
+                                </p>
+                                {obtenerImagenProducto(producto.producto) && (
+                                  <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                                    <img
+                                      src={obtenerImagenProducto(producto.producto)}
+                                      alt={producto.producto}
+                                      className="w-24 h-24 object-cover rounded-lg border border-white/20 shadow-lg"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                  </div>
+                                )}
                               </div>
-                              
-                              {/* Cantidad y unidad */}
-                              <div className="flex items-center gap-1 text-gray-300 text-xs md:text-sm">
+                              {/* Cantidad, unidad y precio en una sola línea */}
+                              <div className="flex items-center gap-1.5 text-gray-300 text-xs">
                                 <span className="font-medium">{producto.cantidad}</span>
                                 <span className="opacity-75">{producto.unidad}</span>
-                              </div>
-                              
-                              {/* Precio unitario */}
-                              <div className="text-gray-300 text-xs md:text-sm">
+                                <span className="opacity-40">·</span>
                                 <span className="font-medium">${parseFloat(producto.precio_unitario).toLocaleString()}</span>
                               </div>
                             </div>
-                            
-                            {/* Subtotal y botón eliminar - Responsive */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-                              {/* Subtotal */}
-                              <div className="text-left sm:text-right">
+
+                            {/* Subtotal y botón eliminar — siempre a la derecha */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <div className="text-right">
                                 <div className="text-green-300 text-xs font-medium opacity-75">Subtotal</div>
                                 <div className="text-green-400 text-xs md:text-sm font-bold">${parseFloat(producto.subtotal).toLocaleString()}</div>
                               </div>
-                              
-                              {/* Botón eliminar */}
                               <button
                                 onClick={() => eliminarProducto(producto.id)}
                                 className="text-red-500 hover:text-red-400 text-lg md:text-xl font-bold flex-shrink-0 px-2 py-1 md:px-2.5 md:py-1.5 rounded hover:bg-red-600/20 transition-colors"
