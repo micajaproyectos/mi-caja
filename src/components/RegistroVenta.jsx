@@ -2387,7 +2387,7 @@ export default function RegistroVenta() {
               
               {/* Campos del producto - Responsive y adaptativo */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
-                <div>
+                <div className="hidden min-[820px]:block">
                   <label className="block text-white font-medium mb-1 text-xs md:text-sm">Unidad</label>
                   <select
                     name="unidad"
@@ -2425,8 +2425,8 @@ export default function RegistroVenta() {
                     }`}
                     placeholder="0.00"
                   />
-                  {/* Botón Balanza — oculto en móvil/tablet, visible desde md */}
-                  <div className="hidden md:block">
+                  {/* Botón Balanza — oculto en móvil/tablet, visible desde 820px */}
+                  <div className="hidden min-[820px]:block">
                     <button
                       type="button"
                       onClick={onClickBalanza}
