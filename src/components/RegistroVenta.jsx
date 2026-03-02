@@ -1913,6 +1913,69 @@ export default function RegistroVenta() {
     }
   };
 
+  // Función para descargar PDF de ventas seleccionadas
+  const descargarPDFVentasSeleccionadas = async () => {
+    if (ventasSeleccionadas.length === 0) {
+      mostrarNotificacion('⚠️ No hay ventas seleccionadas para descargar', 'warning');
+      return;
+    }
+
+    try {
+      const ventasParaDescargar = ventasAMostrar.filter(v => ventasSeleccionadas.includes(v.id));
+
+      if (ventasParaDescargar.length === 0) {
+        mostrarNotificacion('⚠️ No se encontraron las ventas seleccionadas', 'warning');
+        return;
+      }
+
+      const usuarioActual = await authService.getCurrentUser();
+      const nombreUsuario = usuarioActual?.nombre || 'MI CAJA';
+
+      const ventasAgrupadas = {};
+
+      ventasParaDescargar.forEach(venta => {
+        const fecha = venta.fecha_cl || venta.fecha;
+        const tipoPago = venta.tipo_pago;
+        const clave = `${fecha}_${tipoPago}`;
+
+        if (!ventasAgrupadas[clave]) {
+          ventasAgrupadas[clave] = { fecha, tipo_pago: tipoPago, productos: [] };
+        }
+
+        ventasAgrupadas[clave].productos.push({
+          producto: venta.producto,
+          cantidad: venta.cantidad,
+          unidad: venta.unidad,
+          precio_unitario: venta.precio_unitario,
+          subtotal: venta.total_venta
+        });
+      });
+
+      const recibos = Object.values(ventasAgrupadas).map(grupo => {
+        const total = grupo.productos.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
+        return { fecha: grupo.fecha, tipo_pago: grupo.tipo_pago, productos: grupo.productos, total };
+      });
+
+      for (let i = 0; i < recibos.length; i++) {
+        if (i > 0) await new Promise(resolve => setTimeout(resolve, 300));
+        try {
+          mostrarNotificacion(`📄 Generando PDF ${i + 1} de ${recibos.length}...`, 'info');
+          await thermalPrinter.descargarPDF(recibos[i], nombreUsuario);
+          if (i === recibos.length - 1) {
+            mostrarNotificacion(`✅ ${recibos.length} PDF(s) descargado(s)`, 'success');
+          }
+        } catch (error) {
+          console.error(`❌ Error al generar PDF ${i + 1}:`, error);
+          mostrarNotificacion(`❌ Error al generar PDF ${i + 1}: ${error.message}`, 'error');
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error inesperado al descargar PDF:', error);
+      mostrarNotificacion(`❌ Error al descargar PDF: ${error.message}`, 'error');
+    }
+  };
+
   // Función para eliminar ventas seleccionadas
   const eliminarVentasSeleccionadas = async () => {
     if (ventasSeleccionadas.length === 0) {
@@ -2913,6 +2976,14 @@ export default function RegistroVenta() {
                       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                     >
                       🖨️ Imprimir ({ventasSeleccionadas.length})
+                    </button>
+                    <button
+                      onClick={descargarPDFVentasSeleccionadas}
+                      disabled={loadingVentas}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    >
+                      📄 Descargar PDF ({ventasSeleccionadas.length})
                     </button>
                     <button
                       onClick={eliminarVentasSeleccionadas}

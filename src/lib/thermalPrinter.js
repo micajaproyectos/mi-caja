@@ -643,6 +643,32 @@ class ThermalPrinter {
   }
 
   /**
+   * Descargar recibo de venta como PDF
+   */
+  async descargarPDF(venta, nombreUsuario = 'MI CAJA') {
+    const { jsPDF } = await import('jspdf');
+
+    const texto = this.generarReciboTxt(venta, nombreUsuario);
+    const lineas = texto.split('\n');
+
+    // Calcular alto necesario según cantidad de líneas
+    const altoPagina = Math.max(100, lineas.length * 3.8 + 10);
+    const doc = new jsPDF({ unit: 'mm', format: [58, altoPagina] });
+
+    doc.setFont('Courier', 'bold');
+    doc.setFontSize(8);
+
+    let y = 5;
+    lineas.forEach(linea => {
+      doc.text(linea, 2, y);
+      y += 3.8;
+    });
+
+    const fecha = new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }).replace(/\//g, '-');
+    doc.save(`nota-venta-${fecha}.pdf`);
+  }
+
+  /**
    * Diagnóstico de impresora
    */
   async diagnostic() {
