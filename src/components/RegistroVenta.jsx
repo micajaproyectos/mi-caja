@@ -610,7 +610,7 @@ export default function RegistroVenta() {
         .from('inventario')
         .select('*')
         .eq('usuario_id', usuarioId)
-        .eq('codigo_interno', parseInt(codigo))
+        .eq('codigo_interno', codigo)
         .single();
 
       if (error) {
@@ -1694,7 +1694,7 @@ export default function RegistroVenta() {
           // Agregar el usuario_id del usuario autenticado
           usuario_id: usuarioId,
           // 📷 Agregar código interno si existe (opcional)
-          codigo_interno: codigoInternoVenta ? parseFloat(codigoInternoVenta) : null,
+          codigo_interno: codigoInternoVenta || null,
         };
 
         const { error } = await supabase
