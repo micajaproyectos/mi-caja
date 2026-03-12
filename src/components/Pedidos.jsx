@@ -168,6 +168,7 @@ export default function Pedidos() {
   // Estados para propina
   const [propinaActiva, setPropinaActiva] = useState(false);
   const [porcentajePropina, setPorcentajePropina] = useState(10);
+  const [propinaManual, setPropinaManual] = useState(null); // null = usar %, número = monto fijo
   
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
@@ -1357,11 +1358,10 @@ export default function Pedidos() {
 
   // Función para calcular solo la propina
   const calcularPropina = (mesa) => {
+    if (!propinaActiva) return 0;
+    if (propinaManual !== null) return propinaManual;
     const subtotal = calcularTotalMesa(mesa);
-    if (propinaActiva) {
-      return (subtotal * porcentajePropina) / 100;
-    }
-    return 0;
+    return (subtotal * porcentajePropina) / 100;
   };
 
   // Función para calcular el vuelto
@@ -3030,8 +3030,14 @@ export default function Pedidos() {
                           key={producto.id || index}
                           onClick={() => seleccionarProducto(producto)}
                           onTouchStart={(e) => {
-                            e.preventDefault();
-                            seleccionarProducto(producto);
+                            e.currentTarget._touchStartY = e.touches[0].clientY;
+                          }}
+                          onTouchEnd={(e) => {
+                            const deltaY = Math.abs(e.changedTouches[0].clientY - (e.currentTarget._touchStartY || 0));
+                            if (deltaY < 10) {
+                              e.preventDefault();
+                              seleccionarProducto(producto);
+                            }
                           }}
                           className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-blue-600/30 active:bg-blue-600/50 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation"
                           style={{ WebkitTapHighlightColor: 'transparent' }}
@@ -3479,12 +3485,15 @@ export default function Pedidos() {
                            <input
                              type="checkbox"
                              checked={propinaActiva}
-                             onChange={(e) => setPropinaActiva(e.target.checked)}
+                             onChange={(e) => {
+                               setPropinaActiva(e.target.checked);
+                               if (!e.target.checked) setPropinaManual(null);
+                             }}
                              className="w-4 h-4 text-green-600 bg-white/10 border-white/20 rounded focus:ring-green-500 focus:ring-2"
                            />
                            <span className="text-white text-sm font-medium">💡 Propina</span>
                          </div>
-                         
+
                          {propinaActiva && (
                            <div className="flex items-center gap-2">
                              <input
@@ -3492,14 +3501,23 @@ export default function Pedidos() {
                                min="0"
                                max="50"
                                value={porcentajePropina}
-                               onChange={(e) => setPorcentajePropina(parseFloat(e.target.value) || 0)}
+                               onChange={(e) => {
+                                 setPorcentajePropina(parseFloat(e.target.value) || 0);
+                                 setPropinaManual(null); // al cambiar %, volver al cálculo automático
+                               }}
                                onWheel={(e) => e.target.blur()}
                                className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-xs"
                              />
                              <span className="text-white text-xs">%</span>
-                             <span className="text-yellow-400 font-medium text-sm">
-                               ${calcularPropina(mesaSeleccionada).toLocaleString()}
-                             </span>
+                             <input
+                               type="number"
+                               min="0"
+                               value={propinaManual !== null ? propinaManual : Math.round(calcularPropina(mesaSeleccionada))}
+                               onChange={(e) => setPropinaManual(parseFloat(e.target.value) || 0)}
+                               onWheel={(e) => e.target.blur()}
+                               className="w-24 px-2 py-1 rounded border border-yellow-400/40 bg-yellow-400/10 text-yellow-400 text-center text-xs font-medium"
+                               title="Edita para ingresar monto fijo de propina"
+                             />
                            </div>
                          )}
                        </div>

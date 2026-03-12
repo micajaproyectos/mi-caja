@@ -433,6 +433,123 @@ const RegistroInventario = () => {
   };
 
   /**
+   * Generar PDF con listado de todos los productos del inventario (formato oficio vertical)
+   */
+  const generarPDFListadoProductos = async () => {
+    try {
+      if (inventarioRegistrado.length === 0) {
+        alert('No hay productos en el inventario para exportar.');
+        return;
+      }
+
+      const { jsPDF } = await import('jspdf');
+
+      // Oficio vertical: 216 x 330 mm
+      const doc = new jsPDF({ unit: 'mm', format: [216, 330], orientation: 'portrait' });
+
+      const margenIzq = 15;
+      const margenDer = 201;
+      const anchoTotal = margenDer - margenIzq;
+      let y = 20;
+
+      // Encabezado
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('LISTADO DE PRODUCTOS — INVENTARIO', 216 / 2, y, { align: 'center' });
+      y += 6;
+
+      doc.setFontSize(8);
+      doc.setFont('Helvetica', 'normal');
+      const fechaHoy = new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' });
+      doc.text(`Generado el: ${fechaHoy}   |   Total de productos: ${inventarioRegistrado.length}`, 216 / 2, y, { align: 'center' });
+      y += 6;
+
+      // Línea separadora
+      doc.setDrawColor(100, 100, 100);
+      doc.line(margenIzq, y, margenDer, y);
+      y += 5;
+
+      // Encabezados de columnas
+      const cols = [
+        { label: 'Producto',          x: margenIzq,   w: 60 },
+        { label: 'Cód. Barras',       x: 78,          w: 28 },
+        { label: 'Cantidad',          x: 109,         w: 20 },
+        { label: 'Unidad',            x: 132,         w: 18 },
+        { label: 'Costo Unit.',       x: 153,         w: 22 },
+        { label: 'P. Venta',          x: 178,         w: 22 },
+      ];
+
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(8);
+      cols.forEach(col => doc.text(col.label, col.x, y));
+      y += 2;
+      doc.line(margenIzq, y, margenDer, y);
+      y += 4;
+
+      // Filas de productos
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(7.5);
+
+      inventarioRegistrado.forEach((item, idx) => {
+        // Salto de página si es necesario
+        if (y > 310) {
+          doc.addPage([216, 330]);
+          y = 20;
+          doc.setFont('Helvetica', 'bold');
+          doc.setFontSize(8);
+          cols.forEach(col => doc.text(col.label, col.x, y));
+          y += 2;
+          doc.line(margenIzq, y, margenDer, y);
+          y += 4;
+          doc.setFont('Helvetica', 'normal');
+          doc.setFontSize(7.5);
+        }
+
+        // Fondo alternado
+        if (idx % 2 === 0) {
+          doc.setFillColor(240, 240, 240);
+          doc.rect(margenIzq, y - 3.5, anchoTotal, 5.5, 'F');
+        }
+
+        const nombre = item.producto ? item.producto.substring(0, 32) : '—';
+        const codigo = item.codigo_interno ? item.codigo_interno.toString() : '—';
+        const cantidad = item.cantidad !== undefined && item.cantidad !== null ? item.cantidad.toString() : '—';
+        const unidad = item.unidad || '—';
+        const costoUnit = item.precio_unitario ? `$${parseFloat(item.precio_unitario).toLocaleString('es-CL')}` : '—';
+        const precioVenta = item.precio_venta ? `$${parseFloat(item.precio_venta).toLocaleString('es-CL')}` : '—';
+
+        doc.setTextColor(30, 30, 30);
+        doc.text(nombre,     cols[0].x, y);
+        doc.text(codigo,     cols[1].x, y);
+        doc.text(cantidad,   cols[2].x, y);
+        doc.text(unidad,     cols[3].x, y);
+        doc.text(costoUnit,  cols[4].x, y);
+        doc.text(precioVenta,cols[5].x, y);
+
+        y += 5.5;
+      });
+
+      // Línea final
+      doc.setDrawColor(100, 100, 100);
+      doc.line(margenIzq, y, margenDer, y);
+      y += 6;
+
+      // Pie de página
+      doc.setFont('Helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Sistema de Gestión de Negocios - Mi Caja', 216 / 2, y, { align: 'center' });
+
+      const fechaArchivo = fechaHoy.replace(/\//g, '-');
+      doc.save(`listado-productos-${fechaArchivo}.pdf`);
+
+    } catch (error) {
+      console.error('Error al generar listado PDF:', error);
+      alert('Error al generar el PDF. Intenta nuevamente.');
+    }
+  };
+
+  /**
    * Generar PDF con TODOS los códigos de barras en una sola hoja carta
    * Tamaño: Carta (8.5 x 11 pulgadas / 215.9 x 279.4 mm)
    * Organiza múltiples etiquetas 4x2cm en la hoja
@@ -1302,9 +1419,9 @@ const RegistroInventario = () => {
               </div>
             )}
 
-            {/* Botón para descargar todos los códigos de barras */}
+            {/* Botones de descarga PDF */}
             {inventarioRegistrado.length > 0 && (
-              <div className="mb-4 flex justify-center">
+              <div className="mb-4 flex justify-center gap-3 flex-wrap">
                 <button
                   onClick={generarPDFTodosLosCodigos}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
@@ -1312,6 +1429,14 @@ const RegistroInventario = () => {
                 >
                   <span className="text-base">📄</span>
                   <span>Todos los códigos</span>
+                </button>
+                <button
+                  onClick={generarPDFListadoProductos}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                  title="Descargar listado completo de productos en PDF formato oficio"
+                >
+                  <span className="text-base">📋</span>
+                  <span>Listado productos</span>
                 </button>
               </div>
             )}
