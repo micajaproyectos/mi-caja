@@ -32,6 +32,28 @@ export default function RegistroAsistencia() {
   const [fechaActual, setFechaActual] = useState('');
   const [horaActual, setHoraActual] = useState('');
   const [empleado, setEmpleado] = useState('');
+
+  // --- Nueva UI: gestión de carpetas de empleados ---
+  // Empleados nuevos sin registros aún (temporal, solo local)
+  const [empleadosNuevosLocales, setEmpleadosNuevosLocales] = useState(() => {
+    const guardados = localStorage.getItem('empleadosNuevosLocales');
+    return guardados ? JSON.parse(guardados) : [];
+  });
+  // Empleados ocultados manualmente por el usuario
+  const [empleadosOcultos, setEmpleadosOcultos] = useState(() => {
+    const ocultos = localStorage.getItem('empleadosOcultos');
+    return ocultos ? JSON.parse(ocultos) : [];
+  });
+  const [mostrarFormNuevoEmpleado, setMostrarFormNuevoEmpleado] = useState(false);
+  const [nuevoNombreEmpleado, setNuevoNombreEmpleado] = useState('');
+  // Etapa 2: vista individual por empleado
+  const [empleadoAbierto, setEmpleadoAbierto] = useState(null); // string | null
+  const [mesHistorial, setMesHistorial] = useState(() => {
+    const hoy = new Date();
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  });
+  // --------------------------------------------------
+
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroEmpleado, setFiltroEmpleado] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
@@ -732,6 +754,238 @@ export default function RegistroAsistencia() {
     return ultimaEntrada.hora_entrada;
   };
 
+  // --- Lista combinada de empleados: Supabase + nuevos locales, sin ocultos ---
+  const empleadosGuardados = useMemo(() => {
+    const deSupabase = [...new Set(asistencias.map(a => a.empleado).filter(Boolean))];
+    const combinados = [...new Set([...deSupabase, ...empleadosNuevosLocales])];
+    return combinados
+      .filter(e => !empleadosOcultos.includes(e))
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  }, [asistencias, empleadosNuevosLocales, empleadosOcultos]);
+
+  // --- Funciones nueva UI de carpetas ---
+  const agregarEmpleadoGuardado = (nombre) => {
+    const normalizado = nombre.trim();
+    if (!normalizado || normalizado.length < 2) return;
+    // Si ya existe en Supabase, solo asegurarse de que no esté oculto
+    const yaEnSupabase = asistencias.some(a => a.empleado?.toLowerCase() === normalizado.toLowerCase());
+    if (!yaEnSupabase) {
+      setEmpleadosNuevosLocales(prev => {
+        const existe = prev.some(e => e.toLowerCase() === normalizado.toLowerCase());
+        if (existe) return prev;
+        const nuevos = [...prev, normalizado];
+        localStorage.setItem('empleadosNuevosLocales', JSON.stringify(nuevos));
+        return nuevos;
+      });
+    }
+    // Si estaba oculto, quitarlo de ocultos
+    setEmpleadosOcultos(prev => {
+      const actualizado = prev.filter(e => e.toLowerCase() !== normalizado.toLowerCase());
+      localStorage.setItem('empleadosOcultos', JSON.stringify(actualizado));
+      return actualizado;
+    });
+    setNuevoNombreEmpleado('');
+    setMostrarFormNuevoEmpleado(false);
+  };
+
+  const eliminarEmpleadoGuardado = (nombre) => {
+    // Si es un empleado nuevo local sin registros, eliminarlo directamente
+    const tieneRegistrosEnSupabase = asistencias.some(a => a.empleado === nombre);
+    if (!tieneRegistrosEnSupabase) {
+      setEmpleadosNuevosLocales(prev => {
+        const nuevos = prev.filter(e => e !== nombre);
+        localStorage.setItem('empleadosNuevosLocales', JSON.stringify(nuevos));
+        return nuevos;
+      });
+    } else {
+      // Si tiene registros en Supabase, solo ocultarlo localmente
+      setEmpleadosOcultos(prev => {
+        if (prev.includes(nombre)) return prev;
+        const nuevos = [...prev, nombre];
+        localStorage.setItem('empleadosOcultos', JSON.stringify(nuevos));
+        return nuevos;
+      });
+    }
+  };
+
+  // Determina estado del empleado hoy: 'sin_entrada' | 'entrada_pendiente' | 'completo'
+  const obtenerEstadoEmpleadoHoy = (nombreEmpleado) => {
+    if (!fechaActual) return 'sin_entrada';
+    const pendientes = obtenerEntradasPendientes(nombreEmpleado, fechaActual);
+    if (pendientes && pendientes.length > 0) return 'entrada_pendiente';
+    const registrosHoy = asistencias.filter(
+      a => (a.fecha_cl || a.fecha) === fechaActual && a.empleado === nombreEmpleado
+    );
+    if (registrosHoy.length > 0) return 'completo';
+    return 'sin_entrada';
+  };
+
+  // Registrar entrada para un empleado específico desde la nueva UI
+  const registrarEntradaParaEmpleado = async (nombreEmpleado) => {
+    setEmpleado(nombreEmpleado);
+    // Necesitamos que `empleado` esté actualizado antes de llamar registrarEntrada
+    // Por eso duplicamos la lógica mínima aquí
+    try {
+      setLoading(true);
+      const horaAhora = obtenerHoraActualFormato();
+      guardarEntradaLocal(nombreEmpleado, fechaActual, horaAhora);
+      actualizarEmpleadoActivo(nombreEmpleado);
+      agregarEmpleadoActivo(nombreEmpleado);
+      setLocalStorageVersion(v => v + 1);
+      alert(`✅ Entrada registrada: ${horaAhora}\n\nSe sincronizará al registrar la salida.`);
+    } catch (err) {
+      console.error('Error al registrar entrada:', err);
+      alert('❌ Error al registrar la hora de entrada');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Registrar salida para un empleado específico desde la nueva UI
+  const registrarSalidaParaEmpleado = async (nombreEmpleado) => {
+    try {
+      setLoading(true);
+      const horaAhora = obtenerHoraActualFormato();
+      const pendientes = obtenerEntradasPendientes(nombreEmpleado, fechaActual);
+      if (!pendientes || pendientes.length === 0) {
+        alert('❌ No hay registros de entrada pendientes para este empleado hoy');
+        return;
+      }
+      const entradaPendiente = pendientes[pendientes.length - 1];
+      const totalHorasFormato = calcularTotalHoras(entradaPendiente.hora_entrada, horaAhora);
+      const totalHorasDecimal = calcularTotalHorasDecimal(entradaPendiente.hora_entrada, horaAhora);
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) {
+        alert('❌ Error: Usuario no autenticado.');
+        return;
+      }
+      const registroCompleto = {
+        empleado: nombreEmpleado,
+        fecha: fechaActual,
+        hora_entrada: entradaPendiente.hora_entrada,
+        hora_salida: horaAhora,
+        total_horas: totalHorasDecimal,
+        usuario_id: usuarioId,
+      };
+      const { error } = await supabase.from('asistencia').insert([registroCompleto]).select('*');
+      if (error) throw error;
+      eliminarEntradaPendiente(nombreEmpleado, fechaActual, entradaPendiente.hora_entrada);
+      const restantes = obtenerEntradasPendientes(nombreEmpleado, fechaActual);
+      if (restantes.length === 0) removerEmpleadoActivo(nombreEmpleado);
+      setLocalStorageVersion(v => v + 1);
+      cargarAsistencias();
+      alert(`✅ Salida registrada: ${horaAhora}\nTotal horas: ${totalHorasFormato}`);
+    } catch (err) {
+      console.error('Error al registrar salida:', err);
+      alert('❌ Error al registrar la hora de salida');
+    } finally {
+      setLoading(false);
+    }
+  };
+  // --- Editar / Agregar registros en historial ---
+  const [editandoRegistroId, setEditandoRegistroId] = useState(null);
+  const [valoresEdicionRegistro, setValoresEdicionRegistro] = useState({ hora_entrada: '', hora_salida: '' });
+  const [mostrarFormAgregarRegistro, setMostrarFormAgregarRegistro] = useState(false);
+  const [nuevoRegistro, setNuevoRegistro] = useState({ fecha: '', hora_entrada: '', hora_salida: '' });
+
+  const iniciarEdicionRegistro = (r) => {
+    setEditandoRegistroId(r.id);
+    setValoresEdicionRegistro({
+      hora_entrada: r.hora_entrada || '',
+      hora_salida: r.hora_salida || '',
+    });
+  };
+
+  const cancelarEdicionRegistro = () => {
+    setEditandoRegistroId(null);
+    setValoresEdicionRegistro({ hora_entrada: '', hora_salida: '' });
+  };
+
+  const guardarEdicionRegistro = async (r) => {
+    const { hora_entrada, hora_salida } = valoresEdicionRegistro;
+    if (!hora_entrada) { alert('❌ La hora de entrada es obligatoria.'); return; }
+    try {
+      const total_horas = hora_salida ? calcularTotalHorasDecimal(hora_entrada, hora_salida) : null;
+      const usuarioId = await authService.getCurrentUserId();
+      const { error } = await supabase
+        .from('asistencia')
+        .update({ hora_entrada, hora_salida: hora_salida || null, total_horas })
+        .eq('id', r.id)
+        .eq('usuario_id', usuarioId);
+      if (error) throw error;
+      cancelarEdicionRegistro();
+      cargarAsistencias();
+    } catch (err) {
+      console.error('Error al editar registro:', err);
+      alert('❌ Error al guardar los cambios.');
+    }
+  };
+
+  const guardarNuevoRegistro = async () => {
+    const { fecha, hora_entrada, hora_salida } = nuevoRegistro;
+    if (!fecha || !hora_entrada || !hora_salida) {
+      alert('❌ Fecha, hora de entrada y hora de salida son obligatorias.');
+      return;
+    }
+    if (!empleadoAbierto) return;
+    try {
+      const total_horas = calcularTotalHorasDecimal(hora_entrada, hora_salida);
+      const usuarioId = await authService.getCurrentUserId();
+      const { error } = await supabase
+        .from('asistencia')
+        .insert([{
+          empleado: empleadoAbierto,
+          fecha,
+          fecha_cl: fecha,
+          hora_entrada,
+          hora_salida,
+          total_horas,
+          usuario_id: usuarioId,
+        }]);
+      if (error) throw error;
+      setMostrarFormAgregarRegistro(false);
+      setNuevoRegistro({ fecha: '', hora_entrada: '', hora_salida: '' });
+      cargarAsistencias();
+    } catch (err) {
+      console.error('Error al agregar registro:', err);
+      alert('❌ Error al agregar el registro.');
+    }
+  };
+  // --- Fin editar / agregar registros ---
+
+  // Limpiar todo el caché local de empleados
+  const limpiarCacheEmpleados = () => {
+    const confirmado = window.confirm(
+      '⚠️ ¿Limpiar caché de empleados?\n\nEsto eliminará:\n• Empleados nuevos sin registros\n• Empleados ocultos\n• Entradas pendientes de sincronización\n\nLos datos guardados en el servidor NO se verán afectados.\n\nSi hay entradas pendientes sin salida registrada, se perderán.'
+    );
+    if (!confirmado) return;
+
+    // Limpiar estados de nueva UI
+    setEmpleadosNuevosLocales([]);
+    setEmpleadosOcultos([]);
+    localStorage.removeItem('empleadosNuevosLocales');
+    localStorage.removeItem('empleadosOcultos');
+
+    // Limpiar sistema anterior
+    setEmpleadosActivos([]);
+    localStorage.removeItem('empleadosActivos');
+    localStorage.removeItem('empleadoActivo');
+
+    // Limpiar entradas pendientes (claves asistencia_*)
+    const clavesAEliminar = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const clave = localStorage.key(i);
+      if (clave && (clave.startsWith('asistencia_') || clave.startsWith('backup_automatico_'))) {
+        clavesAEliminar.push(clave);
+      }
+    }
+    clavesAEliminar.forEach(clave => localStorage.removeItem(clave));
+
+    setLocalStorageVersion(v => v + 1);
+    alert('✅ Caché limpiado. La lista de empleados ahora se carga directamente desde el servidor.');
+  };
+  // --- Fin funciones nueva UI ---
+
   // Registrar hora de entrada
   const registrarEntrada = async () => {
     if (!empleado) {
@@ -1368,6 +1622,52 @@ export default function RegistroAsistencia() {
     });
   }, [asistencias, empleadosActivos, fechaActual, localStorageVersion]);
 
+  // --- Variables calculadas para la vista individual de empleado (Etapa 2) ---
+  const estadoEmpleadoAbierto = useMemo(() => {
+    if (!empleadoAbierto) return 'sin_entrada';
+    return obtenerEstadoEmpleadoHoy(empleadoAbierto);
+  }, [empleadoAbierto, fechaActual, asistencias, localStorageVersion]);
+
+  const horaEntradaEmpleadoAbierto = useMemo(() => {
+    if (!empleadoAbierto || !fechaActual) return null;
+    const pendientes = obtenerEntradasPendientes(empleadoAbierto, fechaActual);
+    return pendientes && pendientes.length > 0 ? pendientes[pendientes.length - 1].hora_entrada : null;
+  }, [empleadoAbierto, fechaActual, localStorageVersion]);
+
+  const registroHoyEmpleadoAbierto = useMemo(() => {
+    if (!empleadoAbierto || !fechaActual) return null;
+    return asistencias.find(a => (a.fecha_cl || a.fecha) === fechaActual && a.empleado === empleadoAbierto) || null;
+  }, [empleadoAbierto, fechaActual, asistencias]);
+
+  const registrosMesEmpleadoAbierto = useMemo(() => {
+    if (!empleadoAbierto) return [];
+    return asistencias
+      .filter(a => {
+        const fecha = a.fecha_cl || a.fecha || '';
+        return a.empleado === empleadoAbierto && fecha.startsWith(mesHistorial);
+      })
+      .sort((a, b) => {
+        const fa = a.fecha_cl || a.fecha || '';
+        const fb = b.fecha_cl || b.fecha || '';
+        return fb.localeCompare(fa);
+      });
+  }, [empleadoAbierto, mesHistorial, asistencias]);
+
+  const totalHorasMesEmpleadoAbierto = useMemo(() =>
+    registrosMesEmpleadoAbierto.reduce((sum, r) => sum + (parseFloat(r.total_horas) || 0), 0),
+  [registrosMesEmpleadoAbierto]);
+
+  const mesesDisponiblesEmpleadoAbierto = useMemo(() => {
+    if (!empleadoAbierto) return [];
+    return [...new Set(
+      asistencias
+        .filter(a => a.empleado === empleadoAbierto)
+        .map(a => (a.fecha_cl || a.fecha || '').substring(0, 7))
+        .filter(m => m.length === 7)
+    )].sort((a, b) => b.localeCompare(a));
+  }, [empleadoAbierto, asistencias]);
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
@@ -1424,197 +1724,365 @@ export default function RegistroAsistencia() {
             </div>
           </div>
 
-          {/* 2. SECCIÓN MEDIA: Formulario de registro de asistencia */}
+          {/* 2. SECCIÓN MEDIA: Nueva UI de tarjetas de empleados */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              Registrar Asistencia
-            </h2>
-            
-            <div className="space-y-6 md:space-y-8">
-              {/* Sección de entrada de empleado */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
-                <div className="mb-4">
-                  <label className="block text-white font-semibold mb-3 text-base md:text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    Nombre del Empleado
-                  </label>
-                  <input
-                    type="text"
-                    value={empleado}
-                    onChange={(e) => setEmpleado(e.target.value)}
-                    className="w-full px-4 md:px-6 py-3 md:py-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-base md:text-lg font-medium"
-                    placeholder="Ingresa el nombre completo del empleado"
-                    required
-                  />
-                  
-                  {/* Indicador de empleados activos con entradas pendientes */}
-                  {empleadosActivos.length > 0 && (
-                    <div className="mt-3 p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-300 font-medium">
-                            {empleadosActivos.length} empleado{empleadosActivos.length !== 1 ? 's' : ''} activo{empleadosActivos.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+              <h2 className="text-xl md:text-2xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                👥 Empleados
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={limpiarCacheEmpleados}
+                  className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-xl transition-all duration-200 text-xs"
+                  title="Limpia entradas pendientes y caché local. Los datos del servidor no se afectan."
+                >
+                  🧹 Limpiar caché
+                </button>
+                <button
+                  onClick={() => setMostrarFormNuevoEmpleado(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+                >
+                  <span className="text-lg">+</span> Agregar Empleado
+                </button>
+              </div>
+            </div>
+
+            {/* Formulario nuevo empleado */}
+            {mostrarFormNuevoEmpleado && (
+              <div className="mb-6 p-4 bg-white/10 border border-white/20 rounded-xl flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <input
+                  type="text"
+                  value={nuevoNombreEmpleado}
+                  onChange={(e) => setNuevoNombreEmpleado(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && agregarEmpleadoGuardado(nuevoNombreEmpleado)}
+                  className="flex-1 px-4 py-2 bg-white/20 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 text-base"
+                  placeholder="Nombre completo del empleado"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => agregarEmpleadoGuardado(nuevoNombreEmpleado)}
+                    disabled={nuevoNombreEmpleado.trim().length < 2}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg transition-all text-sm"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => { setMostrarFormNuevoEmpleado(false); setNuevoNombreEmpleado(''); }}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tarjetas de empleados */}
+            {empleadosGuardados.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <div className="text-5xl mb-3">👤</div>
+                <p className="text-base">No hay empleados registrados.</p>
+                <p className="text-sm mt-1">Presiona <strong className="text-green-300">+ Agregar Empleado</strong> para comenzar.</p>
+              </div>
+            ) : empleadoAbierto ? (
+              /* Vista individual de empleado (Etapa 2) */
+              <div>
+                {/* Cabecera */}
+                <div className="flex items-center gap-3 mb-6">
+                  <button
+                    onClick={() => setEmpleadoAbierto(null)}
+                    className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors text-sm"
+                  >
+                    ← Volver
+                  </button>
+                  <span className="text-white/30">|</span>
+                  <span className="text-2xl">👤</span>
+                  <h3 className="text-white font-bold text-xl">{empleadoAbierto}</h3>
+                </div>
+
+                {/* Estado de hoy + botón de acción */}
+                <div className={`rounded-2xl border p-4 md:p-5 mb-6 ${
+                  estadoEmpleadoAbierto === 'completo' ? 'bg-green-900/30 border-green-500/40'
+                  : estadoEmpleadoAbierto === 'entrada_pendiente' ? 'bg-yellow-900/30 border-yellow-400/50'
+                  : 'bg-white/5 border-white/15'
+                }`}>
+                  <p className="text-gray-300 text-xs uppercase tracking-wider mb-3 font-medium">Hoy — {fechaActual}</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 space-y-1 text-sm">
+                      {estadoEmpleadoAbierto === 'sin_entrada' && <p className="text-gray-400 italic">Sin registro hoy</p>}
+                      {estadoEmpleadoAbierto === 'entrada_pendiente' && horaEntradaEmpleadoAbierto && (
+                        <p>🟢 Entrada: <span className="text-white font-semibold">{horaEntradaEmpleadoAbierto}</span> <span className="text-yellow-300 text-xs">(pendiente sincronización)</span></p>
+                      )}
+                      {estadoEmpleadoAbierto === 'completo' && registroHoyEmpleadoAbierto && (
+                        <>
+                          <p>🟢 Entrada: <span className="text-white font-semibold">{registroHoyEmpleadoAbierto.hora_entrada}</span></p>
+                          <p>🔴 Salida: <span className="text-white font-semibold">{registroHoyEmpleadoAbierto.hora_salida}</span></p>
+                          {registroHoyEmpleadoAbierto.total_horas && (
+                            <p>⏱ Total: <span className="text-green-300 font-semibold">{convertirHorasDecimalesAFormato(registroHoyEmpleadoAbierto.total_horas)}</span></p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {estadoEmpleadoAbierto !== 'completo' ? (
                         <button
-                          onClick={limpiarTodosEmpleadosActivos}
-                          className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 text-red-300 hover:text-red-200 rounded-md text-sm transition-all duration-200"
+                          onClick={() =>
+                            estadoEmpleadoAbierto === 'sin_entrada'
+                              ? registrarEntradaParaEmpleado(empleadoAbierto)
+                              : registrarSalidaParaEmpleado(empleadoAbierto)
+                          }
+                          disabled={loading}
+                          className={`px-6 py-3 rounded-xl font-bold text-white transition-all duration-200 disabled:opacity-50 ${
+                            estadoEmpleadoAbierto === 'sin_entrada' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                          }`}
                         >
-                          Limpiar Todos
+                          {loading ? 'Registrando...' : estadoEmpleadoAbierto === 'sin_entrada' ? '▶ Registrar Entrada' : '⏹ Registrar Salida'}
                         </button>
+                      ) : (
+                        <span className="text-green-400 font-semibold text-sm">Turno completado ✓</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selector de mes */}
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-white font-semibold text-base">📋 Historial</h4>
+                  <select
+                    value={mesHistorial}
+                    onChange={(e) => setMesHistorial(e.target.value)}
+                    className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  >
+                    {mesesDisponiblesEmpleadoAbierto.length > 0 ? mesesDisponiblesEmpleadoAbierto.map(m => (
+                      <option key={m} value={m} className="bg-gray-800">
+                        {new Date(m + '-15').toLocaleDateString('es-CL', { month: 'long', year: 'numeric', timeZone: 'America/Santiago' })}
+                      </option>
+                    )) : (
+                      <option value={mesHistorial} className="bg-gray-800">
+                        {new Date(mesHistorial + '-15').toLocaleDateString('es-CL', { month: 'long', year: 'numeric', timeZone: 'America/Santiago' })}
+                      </option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Lista de registros del mes */}
+                {registrosMesEmpleadoAbierto.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 text-sm">No hay registros para este mes.</div>
+                ) : (
+                  <>
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                      {registrosMesEmpleadoAbierto.map((r, i) => (
+                        <div key={r.id || i} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm">
+                          {editandoRegistroId === r.id ? (
+                            /* Fila en modo edición */
+                            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                              <span className="text-gray-400 font-medium w-24 flex-shrink-0 text-xs">
+                                {new Date((r.fecha_cl || r.fecha) + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Santiago' })}
+                              </span>
+                              <div className="flex items-center gap-2 flex-wrap flex-1">
+                                <span className="text-green-400 text-xs">🟢</span>
+                                <input
+                                  type="time"
+                                  value={valoresEdicionRegistro.hora_entrada}
+                                  onChange={(e) => setValoresEdicionRegistro(v => ({ ...v, hora_entrada: e.target.value }))}
+                                  className="px-2 py-1 bg-gray-700 border border-green-400/50 rounded text-white text-xs w-28 focus:outline-none focus:ring-1 focus:ring-green-400"
+                                />
+                                <span className="text-red-400 text-xs">🔴</span>
+                                <input
+                                  type="time"
+                                  value={valoresEdicionRegistro.hora_salida}
+                                  onChange={(e) => setValoresEdicionRegistro(v => ({ ...v, hora_salida: e.target.value }))}
+                                  className="px-2 py-1 bg-gray-700 border border-red-400/50 rounded text-white text-xs w-28 focus:outline-none focus:ring-1 focus:ring-red-400"
+                                />
+                              </div>
+                              <div className="flex gap-2 flex-shrink-0">
+                                <button
+                                  onClick={() => guardarEdicionRegistro(r)}
+                                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-all"
+                                >
+                                  Guardar
+                                </button>
+                                <button
+                                  onClick={cancelarEdicionRegistro}
+                                  className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs transition-all"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Fila normal */
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <span className="text-gray-400 font-medium w-24 flex-shrink-0">
+                                  {new Date((r.fecha_cl || r.fecha) + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Santiago' })}
+                                </span>
+                                <span className="text-green-300">🟢 {r.hora_entrada}</span>
+                                {r.hora_salida && <span className="text-red-300">🔴 {r.hora_salida}</span>}
+                              </div>
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                <span className="text-white font-semibold">
+                                  {r.total_horas ? convertirHorasDecimalesAFormato(r.total_horas) : '—'}
+                                </span>
+                                <button
+                                  onClick={() => iniciarEdicionRegistro(r)}
+                                  className="text-gray-400 hover:text-yellow-300 transition-colors text-base"
+                                  title="Editar registro"
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between flex-wrap gap-2 text-sm text-gray-300">
+                      <div>
+                        Total del mes: <span className="text-green-300 font-bold">{convertirHorasDecimalesAFormato(totalHorasMesEmpleadoAbierto)}</span>
+                        <span className="ml-3 text-gray-500">({registrosMesEmpleadoAbierto.length} jornada{registrosMesEmpleadoAbierto.length !== 1 ? 's' : ''})</span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {empleadosActivos.map((empleadoActivo, index) => (
-                          <div
-                            key={`${empleadoActivo}_${index}`}
-                            className="flex items-center gap-2 px-3 py-1 bg-green-600/30 border border-green-500/50 rounded-lg"
-                          >
-                            <span className="text-green-300 text-sm font-medium">{empleadoActivo}</span>
-                            <button
-                              onClick={() => removerEmpleadoActivo(empleadoActivo)}
-                              className="text-red-300 hover:text-red-200 text-xs transition-colors duration-200"
-                              title="Remover empleado"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Botón y formulario: Agregar Registro manual */}
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  {!mostrarFormAgregarRegistro ? (
+                    <button
+                      onClick={() => {
+                        setMostrarFormAgregarRegistro(true);
+                        setNuevoRegistro({ fecha: fechaActual, hora_entrada: '', hora_salida: '' });
+                      }}
+                      className="w-full py-2 border border-dashed border-white/20 hover:border-white/40 text-gray-400 hover:text-white rounded-xl text-sm transition-all"
+                    >
+                      + Agregar Registro Manual
+                    </button>
+                  ) : (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+                      <p className="text-white font-semibold text-sm">📋 Nuevo Registro Manual</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-gray-400 text-xs mb-1">Fecha</label>
+                          <input
+                            type="date"
+                            value={nuevoRegistro.fecha}
+                            onChange={(e) => setNuevoRegistro(v => ({ ...v, fecha: e.target.value }))}
+                            className="w-full px-3 py-2 bg-gray-700 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 text-xs mb-1">🟢 Hora Entrada</label>
+                          <input
+                            type="time"
+                            value={nuevoRegistro.hora_entrada}
+                            onChange={(e) => setNuevoRegistro(v => ({ ...v, hora_entrada: e.target.value }))}
+                            className="w-full px-3 py-2 bg-gray-700 border border-green-400/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 text-xs mb-1">🔴 Hora Salida</label>
+                          <input
+                            type="time"
+                            value={nuevoRegistro.hora_salida}
+                            onChange={(e) => setNuevoRegistro(v => ({ ...v, hora_salida: e.target.value }))}
+                            className="w-full px-3 py-2 bg-gray-700 border border-red-400/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => { setMostrarFormAgregarRegistro(false); setNuevoRegistro({ fecha: '', hora_entrada: '', hora_salida: '' }); }}
+                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-all"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={guardarNuevoRegistro}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm transition-all"
+                        >
+                          Guardar Registro
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {empleadosGuardados.map((nombreEmp) => {
+                  const estado = obtenerEstadoEmpleadoHoy(nombreEmp);
+                  const pendientes = obtenerEntradasPendientes(nombreEmp, fechaActual);
+                  const horaEntrada = pendientes && pendientes.length > 0 ? pendientes[pendientes.length - 1].hora_entrada : null;
+                  const registroHoy = asistencias.find(a => (a.fecha_cl || a.fecha) === fechaActual && a.empleado === nombreEmp);
 
-              {/* Sección de botones de acción */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
-                <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Acciones Disponibles
-                </h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                  {/* Botón de entrada */}
-                  <button
-                    onClick={registrarEntrada}
-                    disabled={loading || !empleado}
-                    className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span>{loading ? 'Registrando...' : 'Registrar Entrada'}</span>
-                    </div>
-                    <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                  </button>
+                  return (
+                    <div
+                      key={nombreEmp}
+                      onClick={() => { setEmpleadoAbierto(nombreEmp); setMesHistorial(new Date().toISOString().substring(0,7)); }}
+                      className={`relative rounded-2xl border p-4 md:p-5 flex flex-col gap-3 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${
+                        estado === 'completo'
+                          ? 'bg-green-900/30 border-green-500/40'
+                          : estado === 'entrada_pendiente'
+                          ? 'bg-yellow-900/30 border-yellow-400/50'
+                          : 'bg-white/5 border-white/15'
+                      }`}
+                    >
+                      {/* Cabecera tarjeta */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-base md:text-lg truncate">{nombreEmp}</span>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); eliminarEmpleadoGuardado(nombreEmp); }}
+                          className="text-gray-500 hover:text-red-400 text-sm transition-colors px-1"
+                          title="Eliminar empleado"
+                        >
+                          ✕
+                        </button>
+                      </div>
 
-                  {/* Botón de salida */}
-                  <button
-                    onClick={registrarSalida}
-                    disabled={loading || !empleado}
-                    className="group relative px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
-                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span>{loading ? 'Registrando...' : 'Registrar Salida'}</span>
+                      {/* Botón de acción contextual */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          estado === 'entrada_pendiente'
+                            ? registrarSalidaParaEmpleado(nombreEmp)
+                            : registrarEntradaParaEmpleado(nombreEmp);
+                        }}
+                        disabled={loading}
+                        className={`w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all duration-200 disabled:opacity-50 ${
+                          estado === 'entrada_pendiente'
+                            ? 'bg-red-600 hover:bg-red-700'
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
+                      >
+                        {loading ? 'Registrando...' : estado === 'entrada_pendiente' ? '⏹ Registrar Salida' : '▶ Registrar Entrada'}
+                      </button>
+                      {estado === 'completo' && (
+                        <div className="text-center text-green-400 text-xs font-medium opacity-70">
+                          Ver todos los turnos →
+                        </div>
+                      )}
                     </div>
-                    <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                  </button>
-                </div>
-                
-                {/* Información de ayuda */}
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <div className="text-center">
-                    <p className="text-gray-300 text-sm md:text-base">
-                      <strong>Proceso:</strong> Registra entrada → Trabaja → Registra salida
-                    </p>
-                    <p className="text-gray-400 text-xs md:text-sm mt-1">
-                      Los datos se sincronizan automáticamente con el servidor
-                    </p>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
+            )}
 
-              {/* Entradas de Empleados Activos */}
+            {/* Sección oculta: mantiene compatibilidad con funciones antiguas */}
+            <div className="hidden">
+              <input value={empleado} onChange={(e) => setEmpleado(e.target.value)} readOnly />
+
+              {/* Entradas de Empleados Activos — mantenido para compatibilidad interna */}
               {empleadosActivos.length > 0 && (
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
                   <h3 className="text-lg md:text-xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     Entradas de Empleados Activos ({empleadosActivos.length})
                   </h3>
                   
-                  {entradasRegistradasHoy.length === 0 ? (
-                      <div className="text-center py-6 md:py-8">
-                      <div className="text-gray-300 text-sm md:text-base">No hay entradas registradas para los empleados activos hoy</div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 md:space-y-4 max-h-80 overflow-y-auto">
-                      {entradasRegistradasHoy.map((entrada, index) => (
-                        <div
-                          key={`${entrada.empleado}_${entrada.hora_entrada}_${index}`}
-                          className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4"
-                        >
-                          <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="text-lg md:text-xl font-bold text-white truncate">
-                                  {entrada.empleado}
-                                </div>
-                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  entrada.origen === 'servidor' 
-                                    ? 'bg-green-500/30 text-green-300 border border-green-500/50'
-                                    : 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
-                                }`}>
-                                  {entrada.origen === 'servidor' ? 'Sincronizado' : 'Pendiente'}
-                                </div>
-                              </div>
-                              
-                              <div className="text-sm md:text-base text-gray-300 mb-1">
-                                Fecha: <span className="font-semibold text-white">{entrada.fecha}</span>
-                              </div>
-                              
-                              <div className="text-sm md:text-base text-gray-300 mb-1">
-                                Hora de entrada: <span className="font-semibold text-white">{entrada.hora_entrada}</span>
-                              </div>
-                              
-                              {entrada.hora_salida && (
-                                <div className="text-sm md:text-base text-gray-300 mb-1">
-                                  Hora de salida: <span className="font-semibold text-white">{entrada.hora_salida}</span>
-                                </div>
-                              )}
-                              
-                              {entrada.total_horas && (
-                                <div className="text-sm md:text-base text-green-400 font-medium">
-                                  Total: {convertirHorasDecimalesAFormato(entrada.total_horas)} horas
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex-shrink-0">
-                              {!entrada.hora_salida && entrada.origen === 'local' ? (
-                                <button
-                                  onClick={() => registrarSalidaDesdeListado(entrada.empleado, entrada.hora_entrada, entrada.fecha)}
-                                  disabled={loading}
-                                  className="px-3 md:px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {loading ? 'Registrando...' : 'Registrar Salida'}
-                                </button>
-                              ) : entrada.hora_salida ? (
-                                <div className="px-3 py-2 bg-green-500/30 border border-green-500/50 rounded-lg">
-                                  <span className="text-green-300 text-sm font-medium">Completado</span>
-                                </div>
-                              ) : (
-                                <div className="px-3 py-2 bg-gray-500/30 border border-gray-500/50 rounded-lg">
-                                  <span className="text-gray-300 text-sm">⏳ Pendiente</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-
                 </div>
               )}
-
-
             </div>
           </div>
 

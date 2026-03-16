@@ -3236,6 +3236,7 @@ export default function Pedidos() {
                                   return;
                                 }
                                 setMesaSeleccionada(mesa);
+                                setPedido(prev => ({ ...prev, tipo_pago: '' }));
                               }}
                               className="flex-1 text-left"
                             >
