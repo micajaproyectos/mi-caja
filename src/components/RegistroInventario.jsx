@@ -490,7 +490,7 @@ const RegistroInventario = () => {
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(7.5);
 
-      inventarioRegistrado.forEach((item, idx) => {
+      [...inventarioRegistrado].sort((a, b) => (a.producto || '').localeCompare(b.producto || '', 'es')).forEach((item, idx) => {
         // Salto de página si es necesario
         if (y > 310) {
           doc.addPage([216, 330]);
