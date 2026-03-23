@@ -2311,8 +2311,14 @@ export default function RegistroVenta() {
                         data-dropdown-item
                         onClick={() => seleccionarProducto(producto)}
                         onTouchStart={(e) => {
-                          e.preventDefault();
-                          seleccionarProducto(producto);
+                          e.currentTarget._touchStartY = e.touches[0].clientY;
+                        }}
+                        onTouchEnd={(e) => {
+                          const deltaY = Math.abs(e.changedTouches[0].clientY - (e.currentTarget._touchStartY || 0));
+                          if (deltaY < 10) {
+                            e.preventDefault();
+                            seleccionarProducto(producto);
+                          }
                         }}
                         className={`px-4 sm:px-6 py-3 sm:py-4 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200 touch-manipulation ${
                           index === indiceSeleccionado 
