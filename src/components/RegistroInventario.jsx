@@ -505,28 +505,32 @@ const RegistroInventario = () => {
           doc.setFontSize(7.5);
         }
 
-        // Fondo alternado
-        if (idx % 2 === 0) {
-          doc.setFillColor(240, 240, 240);
-          doc.rect(margenIzq, y - 3.5, anchoTotal, 5.5, 'F');
-        }
+        const nombreCompleto = item.producto || '—';
+        const nombreLineas = doc.splitTextToSize(nombreCompleto, cols[0].w - 3);
+        const altoPorLinea = 4.5;
+        const altoFila = Math.max(5.5, nombreLineas.length * altoPorLinea + 1);
 
-        const nombre = item.producto ? item.producto.substring(0, 32) : '—';
         const codigo = item.codigo_interno ? item.codigo_interno.toString() : '—';
         const cantidad = item.cantidad !== undefined && item.cantidad !== null ? item.cantidad.toString() : '—';
         const unidad = item.unidad || '—';
         const costoUnit = item.precio_unitario ? `$${parseFloat(item.precio_unitario).toLocaleString('es-CL')}` : '—';
         const precioVenta = item.precio_venta ? `$${parseFloat(item.precio_venta).toLocaleString('es-CL')}` : '—';
 
-        doc.setTextColor(30, 30, 30);
-        doc.text(nombre,     cols[0].x, y);
-        doc.text(codigo,     cols[1].x, y);
-        doc.text(cantidad,   cols[2].x, y);
-        doc.text(unidad,     cols[3].x, y);
-        doc.text(costoUnit,  cols[4].x, y);
-        doc.text(precioVenta,cols[5].x, y);
+        // Fondo alternado con alto dinámico
+        if (idx % 2 === 0) {
+          doc.setFillColor(240, 240, 240);
+          doc.rect(margenIzq, y - 3.5, anchoTotal, altoFila, 'F');
+        }
 
-        y += 5.5;
+        doc.setTextColor(30, 30, 30);
+        doc.text(nombreLineas, cols[0].x, y);
+        doc.text(codigo,       cols[1].x, y);
+        doc.text(cantidad,     cols[2].x, y);
+        doc.text(unidad,       cols[3].x, y);
+        doc.text(costoUnit,    cols[4].x, y);
+        doc.text(precioVenta,  cols[5].x, y);
+
+        y += altoFila;
       });
 
       // Línea final
