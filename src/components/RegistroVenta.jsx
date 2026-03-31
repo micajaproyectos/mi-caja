@@ -630,14 +630,14 @@ export default function RegistroVenta() {
         const cantidadNum = data.unidad === 'unidad' ? 1 : 0;
         const subtotal = data.unidad === 'unidad' ? +(cantidadNum * precio).toFixed(2) : 0;
         
-        setProductoActual({
-          ...productoActual,
+        setProductoActual(prev => ({
+          ...prev,
           producto: data.producto,
           precio_unitario: data.precio_venta.toString(),
           unidad: data.unidad,
           cantidad: cantidad,
           subtotal: subtotal
-        });
+        }));
         setCodigoInternoVenta(codigo);
         setBusquedaProducto(data.producto);
         
