@@ -768,8 +768,6 @@ export default function RegistroVenta() {
 
   // Función para calcular el total de la venta (MEMOIZADA para evitar recalcular en cada render)
   const totalVenta = useMemo(() => {
-    // 👇 Depuración temporal (consola en desktop; en iPhone ver bloque ARRAY debajo del cuadro verde)
-    console.log('productosVenta al calcular total:', JSON.stringify(productosVenta));
     return productosVenta.reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
   }, [productosVenta]);
   
@@ -2464,18 +2462,7 @@ export default function RegistroVenta() {
                   />
                 </div>
 
-                <div className="flex w-full min-w-0 flex-col justify-end gap-1">
-                  {/* Debug temporal - borrar después (visible en móvil: ancho completo, contraste, saltos de línea) */}
-                  <div className="w-full min-w-0 max-w-full rounded-md border border-yellow-500/70 bg-black/90 px-2 py-2 text-[11px] leading-snug text-yellow-200 shadow-sm sm:text-xs [-webkit-text-size-adjust:100%]">
-                    <div className="mb-1 font-semibold text-yellow-400">DEBUG</div>
-                    <div className="break-words break-all space-y-0.5">
-                      <div>producto={String(productoActual.producto)}</div>
-                      <div>cantidad={String(productoActual.cantidad)}</div>
-                      <div>precio={String(productoActual.precio_unitario)}</div>
-                      <div>subtotal={String(productoActual.subtotal)}</div>
-                      <div>tipo={typeof productoActual.subtotal}</div>
-                    </div>
-                  </div>
+                <div className="flex items-end">
                   <button
                     type="button"
                     onClick={agregarProducto}
@@ -2574,10 +2561,6 @@ export default function RegistroVenta() {
                         <div className="text-white text-2xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
                       </div>
                     </div>
-                  </div>
-                  {/* Debug temporal */}
-                  <div style={{ color: 'yellow', fontSize: 11, padding: 4, wordBreak: 'break-all' }}>
-                    ARRAY: {JSON.stringify(productosVenta.map(p => ({ nombre: p.producto, subtotal: p.subtotal })))}
                   </div>
                 </div>
               </div>
