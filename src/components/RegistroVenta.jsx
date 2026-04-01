@@ -2462,7 +2462,15 @@ export default function RegistroVenta() {
                   />
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex flex-col justify-end gap-1">
+                  {/* Debug temporal - borrar después */}
+                  <div style={{ color: 'yellow', fontSize: 12, padding: 4 }}>
+                    DEBUG: producto={productoActual.producto} |
+                    cantidad={productoActual.cantidad} |
+                    precio={productoActual.precio_unitario} |
+                    subtotal={productoActual.subtotal} |
+                    tipo={typeof productoActual.subtotal}
+                  </div>
                   <button
                     type="button"
                     onClick={agregarProducto}
