@@ -732,10 +732,7 @@ export default function RegistroVenta() {
       id: Date.now() // ID único para identificar el producto
     };
 
-    // 👇 Depuración temporal
-    alert(`subtotal en nuevoProducto: ${nuevoProducto.subtotal} | tipo: ${typeof nuevoProducto.subtotal}`);
-
-    setProductosVenta([...productosVenta, nuevoProducto]);
+    setProductosVenta(prev => [...prev, nuevoProducto]);
     
     // 5.2 Handler "Agregar" - stopSampling() + disconnect()
     if (scaleService.isSampling()) {
