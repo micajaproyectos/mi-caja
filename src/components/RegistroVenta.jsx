@@ -768,6 +768,8 @@ export default function RegistroVenta() {
 
   // Función para calcular el total de la venta (MEMOIZADA para evitar recalcular en cada render)
   const totalVenta = useMemo(() => {
+    // 👇 Depuración temporal (consola en desktop; en iPhone ver bloque ARRAY debajo del cuadro verde)
+    console.log('productosVenta al calcular total:', JSON.stringify(productosVenta));
     return productosVenta.reduce((total, producto) => total + (parseFloat(producto.subtotal) || 0), 0);
   }, [productosVenta]);
   
@@ -2572,6 +2574,10 @@ export default function RegistroVenta() {
                         <div className="text-white text-2xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
                       </div>
                     </div>
+                  </div>
+                  {/* Debug temporal */}
+                  <div style={{ color: 'yellow', fontSize: 11, padding: 4, wordBreak: 'break-all' }}>
+                    ARRAY: {JSON.stringify(productosVenta.map(p => ({ nombre: p.producto, subtotal: p.subtotal })))}
                   </div>
                 </div>
               </div>
