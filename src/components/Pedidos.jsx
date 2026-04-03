@@ -57,6 +57,8 @@ export default function Pedidos() {
   const ultimoCambioMesasRef = useRef(null);
   // Ref para timeout de Realtime de mesas
   const realtimeMesasTimeoutRef = useRef(null);
+  // Ref para siempre tener la versión actual de cargarMesasDesdeSupabase (evita stale closure)
+  const cargarMesasRef = useRef(null);
   // Ref para rastrear comentarios que están siendo editados (protección contra Realtime)
   const comentariosEnEdicionRef = useRef({});
   
@@ -2522,6 +2524,9 @@ export default function Pedidos() {
     }
   };
 
+  // Mantener el ref actualizado con la función más reciente en cada render
+  cargarMesasRef.current = cargarMesasDesdeSupabase;
+
   // Cargar datos al montar el componente
   useEffect(() => {
     // Cargar productos temporales INMEDIATAMENTE (prioridad crítica)
@@ -2591,7 +2596,7 @@ export default function Pedidos() {
             clearTimeout(realtimeMesasTimeoutRef.current);
           }
           realtimeMesasTimeoutRef.current = setTimeout(() => {
-            cargarMesasDesdeSupabase(true);
+            cargarMesasRef.current(true);
             debugLog('🔄 Realtime: Recargando mesas');
           }, 2000); // 2 segundos de debounce para permitir que se propague el cambio
         }
