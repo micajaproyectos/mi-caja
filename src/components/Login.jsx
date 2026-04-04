@@ -144,6 +144,156 @@ function Login() {
       {/* Efecto de vidrio esmerilado adicional */}
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
+      {/* Marketing – columna izquierda (solo pantallas grandes) */}
+      <div className="absolute inset-0 z-10 hidden xl:flex flex-col justify-center pointer-events-none" style={{ paddingLeft: '6%', paddingRight: '54%' }}>
+        {/* Tagline principal */}
+        <div className="mb-8">
+          <p className="text-green-400 text-sm font-semibold tracking-widest uppercase mb-3" style={{ letterSpacing: '0.2em' }}>
+            Sistema de Gestión
+          </p>
+          <h1 className="text-5xl font-extrabold text-white leading-tight mb-4" style={{ lineHeight: '1.15' }}>
+            Tu negocio<br />
+            en <span style={{ color: '#4ade80' }}>un solo</span><br />
+            lugar.
+          </h1>
+          <p className="text-gray-300 text-lg leading-relaxed max-w-xs">
+            Ventas, inventario, pedidos y seguimiento — todo conectado en una sola plataforma para tu negocio.
+          </p>
+        </div>
+
+        {/* Features */}
+        <div className="space-y-4 mb-10">
+          {[
+            { icon: '💰', text: 'Registro de ventas rápido y preciso' },
+            { icon: '📦', text: 'Inventario con control de stock en tiempo real' },
+            { icon: '🤖', text: 'Inventario IA — carga tu factura y la IA llena el inventario' },
+            { icon: '📋', text: 'Pedidos y comandas digitales instantáneas' },
+            { icon: '📍', text: 'Seguimiento de operaciones y auditoría del negocio' },
+          ].map(({ icon, text }) => (
+            <div key={text} className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base"
+                style={{
+                  backgroundColor: 'rgba(74, 222, 128, 0.15)',
+                  border: '1px solid rgba(74, 222, 128, 0.3)',
+                }}
+              >
+                {icon}
+              </div>
+              <span className="text-gray-200 text-sm leading-snug">{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Badge de confianza */}
+        <div
+          className="inline-flex items-center gap-3 px-4 py-3 rounded-xl self-start"
+          style={{
+            backgroundColor: 'rgba(74, 222, 128, 0.1)',
+            border: '1px solid rgba(74, 222, 128, 0.25)',
+          }}
+        >
+          <span className="text-2xl">🏪</span>
+          <div>
+            <p className="text-white text-sm font-semibold">Negocios como el tuyo</p>
+            <p className="text-gray-400 text-xs">ya confían en Mi Caja</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Marketing – columna derecha (solo pantallas grandes) */}
+      <div className="absolute inset-0 z-10 hidden xl:flex flex-col justify-center items-end pointer-events-none" style={{ paddingRight: '5%', paddingLeft: '54%' }}>
+        {/* Tarjetas de beneficio */}
+        <div className="space-y-4 w-full max-w-xs">
+          {[
+            {
+              titulo: 'Comandas al instante',
+              desc: 'Toma pedidos y envíalos a cocina o despacho en segundos. Sin papel, sin errores.',
+              color: 'rgba(74, 222, 128, 0.12)',
+              border: 'rgba(74, 222, 128, 0.25)',
+              icon: '📋',
+            },
+            {
+              titulo: 'Inventario con IA',
+              desc: 'Sube la foto o PDF de tu factura y la IA extrae los productos, cantidades y costos automáticamente.',
+              color: 'rgba(34, 197, 94, 0.1)',
+              border: 'rgba(34, 197, 94, 0.2)',
+              icon: '🤖',
+            },
+            {
+              titulo: 'Seguimiento total',
+              desc: 'Monitorea cada venta, movimiento y operación de tu negocio en tiempo real.',
+              color: 'rgba(16, 185, 129, 0.1)',
+              border: 'rgba(16, 185, 129, 0.2)',
+              icon: '📍',
+            },
+          ].map(({ titulo, desc, color, border, icon }) => (
+            <div
+              key={titulo}
+              className="px-5 py-4 rounded-xl"
+              style={{ backgroundColor: color, border: `1px solid ${border}` }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">{icon}</span>
+                <p className="text-white font-semibold text-sm">{titulo}</p>
+              </div>
+              <p className="text-gray-300 text-xs leading-relaxed">{desc}</p>
+            </div>
+          ))}
+
+        </div>
+      </div>
+
+      {/* CTA inferior derecho con flecha apuntando al modal (izquierda) */}
+      <div className="absolute z-10 hidden xl:flex items-center pointer-events-none" style={{ bottom: '8%', right: '5%' }}>
+        {/* Flecha SVG apuntando hacia la izquierda, al modal */}
+        <svg
+          width="200"
+          height="60"
+          viewBox="0 0 200 60"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ marginRight: '-4px' }}
+        >
+          {/* Curva de derecha a izquierda */}
+          <path
+            d="M 188 30 C 150 10, 90 10, 18 30"
+            stroke="#4ade80"
+            strokeWidth="2.5"
+            strokeDasharray="6 4"
+            strokeLinecap="round"
+            fill="none"
+            opacity="0.85"
+          />
+          {/* Punta de flecha en (18,30) apuntando izquierda */}
+          <path
+            d="M 18 30 L 34 20 M 18 30 L 34 40"
+            stroke="#4ade80"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.85"
+          />
+        </svg>
+
+        {/* Texto CTA */}
+        <div
+          className="px-5 py-3 rounded-xl text-center"
+          style={{
+            backgroundColor: 'rgba(74, 222, 128, 0.12)',
+            border: '1px solid rgba(74, 222, 128, 0.35)',
+          }}
+        >
+          <p
+            className="font-extrabold tracking-widest"
+            style={{ color: '#4ade80', fontSize: '1rem', letterSpacing: '0.18em' }}
+          >
+            ACTIVA TU CUENTA
+          </p>
+          <p className="text-gray-400 text-xs mt-1">Empieza hoy, sin costo inicial</p>
+        </div>
+      </div>
+
       {/* Contenido principal */}
       <div className="relative z-10 flex justify-center items-center h-screen px-4 py-8">
         <div 
