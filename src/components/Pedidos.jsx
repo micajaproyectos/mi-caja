@@ -2603,6 +2603,18 @@ export default function Pedidos() {
       )
       .subscribe();
 
+    // Recargar datos cuando la página vuelve a ser visible (fix para tablets en inactividad)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('📱 Página visible nuevamente, recargando mesas y productos...');
+        // fromRealtime=true para saltar el guard de mesasInicialCargadas
+        // (la protección de 3s no aplica si no hubo cambio reciente del usuario)
+        cargarMesasRef.current(true);
+        cargarProductosTemporales();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Cleanup: desuscribir al desmontar y limpiar timeouts
     return () => {
       if (realtimeTimeoutRef.current) {
@@ -2613,6 +2625,7 @@ export default function Pedidos() {
       }
       supabase.removeChannel(channelProductos);
       supabase.removeChannel(channelMesas);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
