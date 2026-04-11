@@ -1351,11 +1351,7 @@ export default function Pedidos() {
   // Función para calcular el total con propina
   const calcularTotalConPropina = (mesa) => {
     const subtotal = calcularTotalMesa(mesa);
-    if (propinaActiva) {
-      const propina = (subtotal * porcentajePropina) / 100;
-      return subtotal + propina;
-    }
-    return subtotal;
+    return subtotal + calcularPropina(mesa);
   };
 
   // Función para calcular solo la propina
@@ -1363,7 +1359,7 @@ export default function Pedidos() {
     if (!propinaActiva) return 0;
     if (propinaManual !== null) return propinaManual;
     const subtotal = calcularTotalMesa(mesa);
-    return (subtotal * porcentajePropina) / 100;
+    return Math.round((subtotal * porcentajePropina) / 100);
   };
 
   // Función para calcular el vuelto
@@ -1814,8 +1810,8 @@ export default function Pedidos() {
       return filtrados;
     }
 
-    // Si no hay filtros activos, mostrar solo los pedidos del día actual
-    if (!filtroFecha && !filtroMes && !filtroAnio && !filtroTipoPago) {
+    // Si no hay filtros de fecha activos, mostrar solo los pedidos del día actual
+    if (!filtroFecha && !filtroMes && !filtroAnio) {
       filtrados = filtrados.filter(pedido => {
         const fechaPedido = pedido.fecha_cl || pedido.fecha;
         return fechaPedido === fechaActual;
@@ -1832,67 +1828,35 @@ export default function Pedidos() {
       // Filtro por mes (si se selecciona y no hay fecha específica)
       if (filtroMes && !filtroFecha) {
         filtrados = filtrados.filter(pedido => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
           let fechaPedido = pedido.fecha_cl || pedido.fecha;
-          
           if (!fechaPedido && pedido.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
             const fechaCreated = new Date(pedido.created_at);
             fechaPedido = fechaCreated.toISOString().split('T')[0];
           }
-          
           if (!fechaPedido) return false;
-          
-          const [year, month] = fechaPedido.split('-');
-          const mesPedido = parseInt(month);
-          const mesFiltro = parseInt(filtroMes);
-          return mesPedido === mesFiltro;
+          const [, month] = fechaPedido.split('-');
+          return parseInt(month) === parseInt(filtroMes);
         });
       }
 
-      // Filtro por año (siempre aplicarlo cuando hay filtros activos)
+      // Filtro por año (sin fecha específica)
       if (filtroAnio && !filtroFecha) {
         filtrados = filtrados.filter(pedido => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
           let fechaPedido = pedido.fecha_cl || pedido.fecha;
-          
           if (!fechaPedido && pedido.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
             const fechaCreated = new Date(pedido.created_at);
             fechaPedido = fechaCreated.toISOString().split('T')[0];
           }
-          
           if (!fechaPedido) return false;
           const year = fechaPedido.split('-')[0];
           return parseInt(year) === parseInt(filtroAnio);
         });
       }
+    }
 
-      // Si hay mes y año seleccionados (sin fecha específica)
-      if (filtroMes && filtroAnio && !filtroFecha) {
-        filtrados = filtrados.filter(pedido => {
-          // Usar fecha_cl si existe, sino fecha, y si no hay ninguna, usar created_at
-          let fechaPedido = pedido.fecha_cl || pedido.fecha;
-          
-          if (!fechaPedido && pedido.created_at) {
-            // Si no hay fecha_cl ni fecha, usar created_at
-            const fechaCreated = new Date(pedido.created_at);
-            fechaPedido = fechaCreated.toISOString().split('T')[0];
-          }
-          
-          if (!fechaPedido) return false;
-          const [year, month] = fechaPedido.split('-');
-          return parseInt(month) === parseInt(filtroMes) && 
-                 parseInt(year) === parseInt(filtroAnio);
-        });
-      }
-
-      // Filtro por tipo de pago
-      if (filtroTipoPago) {
-        filtrados = filtrados.filter(pedido => {
-          return pedido.tipo_pago === filtroTipoPago;
-        });
-      }
+    // Filtro por tipo de pago: se aplica siempre al final, sobre lo que ya está filtrado por fecha
+    if (filtroTipoPago) {
+      filtrados = filtrados.filter(pedido => pedido.tipo_pago === filtroTipoPago);
     }
 
     return filtrados;
@@ -2263,39 +2227,29 @@ export default function Pedidos() {
       // Filtrar solo los productos seleccionados
       const productosAEnviar = productosPorMesa[mesa].filter(p => seleccionados.includes(p.id));
 
-      // Insertar cada producto seleccionado en pedidos_cocina
-      for (let i = 0; i < productosAEnviar.length; i++) {
-        const producto = productosAEnviar[i];
-        
-        const pedidoCocina = {
-          usuario_id: usuarioId,
-          cliente_id: cliente_id,
-          fecha_cl: fechaCl,
-          mesa: String(nombreMesaCompleto),  // Forzar a string
-          // hora_inicio_pedido se genera automáticamente con DEFAULT de la tabla
-          producto: producto.producto,
-          unidad: producto.unidad,
-          cantidad: parseFloat(producto.cantidad) || 0,
-          // Comentarios del producto (normalizado a mayúsculas)
-          comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null
-        };
+      // Preparar todos los productos en un solo batch (mismo hora_inicio_pedido garantizado por PostgreSQL)
+      const pedidosParaInsertar = productosAEnviar.map(producto => ({
+        usuario_id: usuarioId,
+        cliente_id: cliente_id,
+        fecha_cl: fechaCl,
+        mesa: String(nombreMesaCompleto),
+        producto: producto.producto,
+        unidad: producto.unidad,
+        cantidad: parseFloat(producto.cantidad) || 0,
+        comentarios: producto.comentarios ? producto.comentarios.toUpperCase().trim() : null,
+        estado: 'pendiente' // Todas las filas del grupo tienen estado desde el inicio
+      }));
 
-        // Solo la primera fila tiene estado (igual que total_final en RegistroVenta)
-        if (i === 0) {
-          pedidoCocina.estado = 'pendiente';
-        }
+      console.log('Insertando en pedidos_cocina:', pedidosParaInsertar.length, 'productos');
 
-        console.log('Insertando en pedidos_cocina:', pedidoCocina);
+      const { error } = await supabase
+        .from('pedidos_cocina')
+        .insert(pedidosParaInsertar);
 
-        const { error } = await supabase
-          .from('pedidos_cocina')
-          .insert([pedidoCocina]);
-
-        if (error) {
-          console.error('❌ Error al enviar a cocina:', error);
-          alert('❌ Error al enviar pedido a cocina: ' + error.message);
-          return;
-        }
+      if (error) {
+        console.error('❌ Error al enviar a cocina:', error);
+        alert('❌ Error al enviar pedido a cocina: ' + error.message);
+        return;
       }
 
       // Mostrar notificación toast que se cierra automáticamente
@@ -2367,6 +2321,18 @@ export default function Pedidos() {
       registrandoPedidoRef.current = false;
       setRegistrandoPedido(false);
       return;
+    }
+
+    // Validar que el monto pagado sea suficiente (solo si se ingresó y es efectivo)
+    if (pedido.tipo_pago === 'efectivo' && montoPagado !== '') {
+      const montoPagadoNum = parseFloat(montoPagado) || 0;
+      const totalConPropina = calcularTotalConPropina(mesa);
+      if (montoPagadoNum < totalConPropina) {
+        alert(`❌ El monto pagado ($${montoPagadoNum.toLocaleString('es-CL')}) es insuficiente. Total: $${totalConPropina.toLocaleString('es-CL')}`);
+        registrandoPedidoRef.current = false;
+        setRegistrandoPedido(false);
+        return;
+      }
     }
 
     // Validar que la fecha esté presente
@@ -2497,10 +2463,15 @@ export default function Pedidos() {
          ...prev,
          tipo_pago: ''
        }));
-       
+
        // Limpiar campos de vuelto
        setMontoPagado('');
        setMostrarVuelto(false);
+
+       // Limpiar propina al registrar
+       setPropinaActiva(false);
+       setPorcentajePropina(10);
+       setPropinaManual(null);
 
        // El guardado en localStorage se hace automáticamente por los useEffect
 
@@ -3525,17 +3496,18 @@ export default function Pedidos() {
                                  setPropinaManual(null); // al cambiar %, volver al cálculo automático
                                }}
                                onWheel={(e) => e.target.blur()}
-                               className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-center text-xs"
+                               disabled={propinaManual !== null}
+                               className={`w-16 px-2 py-1 rounded border text-center text-xs transition-opacity ${propinaManual !== null ? 'border-white/10 bg-white/5 text-white/30 cursor-not-allowed opacity-40' : 'border-white/20 bg-white/10 text-white'}`}
                              />
                              <span className="text-white text-xs">%</span>
                              <input
                                type="number"
                                min="0"
                                value={propinaManual !== null ? propinaManual : Math.round(calcularPropina(mesaSeleccionada))}
-                               onChange={(e) => setPropinaManual(parseFloat(e.target.value) || 0)}
+                               onChange={(e) => { const v = parseFloat(e.target.value); setPropinaManual(isNaN(v) ? null : v); }}
                                onWheel={(e) => e.target.blur()}
                                className="w-24 px-2 py-1 rounded border border-yellow-400/40 bg-yellow-400/10 text-yellow-400 text-center text-xs font-medium"
-                               title="Edita para ingresar monto fijo de propina"
+                               title="Edita para ingresar monto fijo. Borra el valor para volver al modo porcentaje"
                              />
                            </div>
                          )}
@@ -3763,9 +3735,9 @@ export default function Pedidos() {
                                 registrarPedido(mesaSeleccionada);
                               }
                             }}
-                            disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0 || registrandoPedido}
+                            disabled={(productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0 || registrandoPedido || !pedido.tipo_pago}
                             className={`p-2 rounded-lg border-2 transition-all duration-200 ${
-                              (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0 || registrandoPedido
+                              (productosSeleccionadosParaPago[mesaSeleccionada] || []).length === 0 || registrandoPedido || !pedido.tipo_pago
                                 ? 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
                                 : 'bg-green-600 border-green-500 text-white hover:bg-green-700'
                             }`}

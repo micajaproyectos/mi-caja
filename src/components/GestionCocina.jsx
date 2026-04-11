@@ -180,7 +180,7 @@ export default function GestionCocina() {
       // Filtrar por mes
       if (filtroMes && !filtroDia) {
         pedidosFiltrados = pedidosFiltrados.filter(pedido => {
-          const [year, month] = pedido.fecha_cl.split('-');
+          const [, month] = pedido.fecha_cl.split('-');
           return parseInt(month) === parseInt(filtroMes);
         });
       }
@@ -265,12 +265,13 @@ export default function GestionCocina() {
   // Agrupar pedidos por mesa (solo para tarjetas - PENDIENTES)
   const agruparPorMesa = (pedidos) => {
     const grupos = {};
+    const idsYaProcesados = new Set();
     pedidos.forEach(pedidoPrincipal => {
+      if (idsYaProcesados.has(pedidoPrincipal.id)) return;
       const mesaKey = `${pedidoPrincipal.mesa}_${pedidoPrincipal.hora_inicio_pedido}`;
       if (!grupos[mesaKey]) {
-        // Obtener TODOS los productos de este pedido (incluyendo filas sin estado)
         const todosLosProductos = obtenerProductosCompletosDelPedido(pedidoPrincipal);
-        
+        todosLosProductos.forEach(p => idsYaProcesados.add(p.id));
         grupos[mesaKey] = {
           mesa: pedidoPrincipal.mesa,
           pedidos: todosLosProductos,
@@ -286,8 +287,8 @@ export default function GestionCocina() {
   // Agrupar solo PENDIENTES para las tarjetas
   const mesasAgrupadasPendientes = agruparPorMesa(pedidosPendientes);
 
-  // Contar totales (calculados a partir de las listas separadas)
-  const totalPendientes = pedidosPendientes.length;
+  // Contar totales (en grupos, no en filas individuales)
+  const totalPendientes = mesasAgrupadasPendientes.length;
   const totalTerminados = pedidosTerminados.length;
   const totalAnulados = pedidosAnulados.length;
 
@@ -633,7 +634,7 @@ export default function GestionCocina() {
                     <h4 className="text-white font-bold text-lg mb-3 sticky top-0 bg-black/50 py-2 rounded">
                       Productos ({mesa.pedidos.length}):
                     </h4>
-                    {mesa.pedidos.map((pedido, idx) => (
+                    {mesa.pedidos.map((pedido) => (
                       <div 
                         key={pedido.id} 
                         className="text-gray-200 py-2 px-3 mb-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
@@ -818,20 +819,25 @@ export default function GestionCocina() {
                       {(() => {
                         // Agrupar pedidos terminados Y anulados por pedido completo
                         const gruposHistorial = [];
-                        
+                        const idsYaProcesados = new Set();
+
                         // Agregar terminados
                         pedidosTerminados.forEach(pedidoPrincipal => {
+                          if (idsYaProcesados.has(pedidoPrincipal.id)) return;
                           const productosDelPedido = obtenerProductosCompletosDelPedido(pedidoPrincipal);
+                          productosDelPedido.forEach(p => idsYaProcesados.add(p.id));
                           gruposHistorial.push({
                             pedidoPrincipal: pedidoPrincipal,
                             productos: productosDelPedido,
                             hora_termino: pedidoPrincipal.hora_termino
                           });
                         });
-                        
+
                         // Agregar anulados
                         pedidosAnulados.forEach(pedidoPrincipal => {
+                          if (idsYaProcesados.has(pedidoPrincipal.id)) return;
                           const productosDelPedido = obtenerProductosCompletosDelPedido(pedidoPrincipal);
+                          productosDelPedido.forEach(p => idsYaProcesados.add(p.id));
                           gruposHistorial.push({
                             pedidoPrincipal: pedidoPrincipal,
                             productos: productosDelPedido,
@@ -849,7 +855,6 @@ export default function GestionCocina() {
                         gruposHistorial.forEach((grupo) => {
                           grupo.productos.forEach((pedido, indexEnGrupo) => {
                             const esUltimoDelGrupo = indexEnGrupo === grupo.productos.length - 1;
-                            const esPrimeroDelGrupo = indexEnGrupo === 0;
 
                             filas.push(
                               <tr 
