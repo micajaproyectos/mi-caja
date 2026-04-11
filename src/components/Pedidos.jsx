@@ -871,7 +871,7 @@ export default function Pedidos() {
 
       const { error } = await supabase
         .from('mesas_config')
-        .insert(mesasParaInsertar);
+        .upsert(mesasParaInsertar, { onConflict: 'usuario_id,nombre_mesa' });
 
       if (error) {
         console.error('Error al guardar mesas en Supabase:', error);
@@ -1492,6 +1492,14 @@ export default function Pedidos() {
   const guardarNombreMesa = async (mesaAntigua) => {
     if (!nombreMesaTemporal.trim()) {
       alert('El nombre de la mesa no puede estar vacío');
+      return;
+    }
+
+    const nuevoNombre = nombreMesaTemporal.trim();
+
+    // Validar que el nuevo nombre no exista en otra mesa
+    if (nuevoNombre !== mesaAntigua && mesas.includes(nuevoNombre)) {
+      alert(`Ya existe una mesa con el nombre "${nuevoNombre}". Elige otro nombre.`);
       return;
     }
 
@@ -2626,6 +2634,9 @@ export default function Pedidos() {
 
   // Función para eliminar una notificación
   const eliminarNotificacion = async (notificacionId) => {
+    // Actualizar UI inmediatamente sin esperar a Supabase
+    setNotificacionesPedidosTerminados(prev => prev.filter(n => n.id !== notificacionId));
+
     try {
       const { error } = await supabase
         .from('notificaciones_pedidos_terminados')
@@ -2647,7 +2658,7 @@ export default function Pedidos() {
       // Verificar si los sonidos están habilitados
       const soundsPref = localStorage.getItem('soundsEnabled');
       if (soundsPref === 'false') return;
-      
+
       // Verificar que la página esté visible
       if (document.visibilityState !== 'visible') {
         return;
@@ -2656,11 +2667,10 @@ export default function Pedidos() {
       // Debounce: Solo reproducir si pasaron al menos 2 segundos desde el último sonido
       const ahora = Date.now();
       const tiempoDesdeUltimoSonido = ahora - ultimaVezSonidoRef.current;
-      const DEBOUNCE_TIEMPO = 2000; // 2 segundos - ajustable según necesidad
-      
-      // Si ya se reprodujo un sonido hace menos de 2 segundos, ignorar esta notificación
+      const DEBOUNCE_TIEMPO = 2000;
+
       if (tiempoDesdeUltimoSonido < DEBOUNCE_TIEMPO) {
-        return; // Ignorar notificaciones muy cercanas en el tiempo
+        return;
       }
       
       // Actualizar la última vez que se reprodujo el sonido
@@ -2707,7 +2717,7 @@ export default function Pedidos() {
           if (payload.eventType === 'INSERT') {
             playAlarmSoundPedidos();
           }
-          
+
           // Recargar notificaciones cuando hay cambios
           cargarNotificacionesPedidosTerminados();
         }

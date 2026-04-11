@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { authService } from '../lib/authService.js';
@@ -8,6 +8,10 @@ import Footer from './Footer';
 export default function GestionCocina() {
   const navigate = useNavigate();
   
+  // Refs para debounce de alarma y recarga
+  const ultimaVezSonidoRef = useRef(0);
+  const recargarTimeoutRef = useRef(null);
+
   // Estados
   const [pedidosCocina, setPedidosCocina] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,40 +95,36 @@ export default function GestionCocina() {
   };
 
   // Función para reproducir sonido de alarma cuando llega un nuevo pedido
-  const playAlarmSound = () => {
+  const playAlarmSound = useCallback(() => {
     try {
       // Verificar si los sonidos están habilitados
       const soundsPref = localStorage.getItem('soundsEnabled');
       if (soundsPref === 'false') return;
-      
-      // Verificar que la página esté visible
-      if (document.visibilityState !== 'visible') {
-        return;
-      }
 
-      // Usar HTML5 Audio con archivo de sonido (más confiable que Web Audio API)
+      // Verificar que la página esté visible
+      if (document.visibilityState !== 'visible') return;
+
+      // Debounce: evitar múltiples sonidos por el batch insert (N filas = N eventos)
+      const ahora = Date.now();
+      if (ahora - ultimaVezSonidoRef.current < 2000) return;
+      ultimaVezSonidoRef.current = ahora;
+
       const audio = new Audio('/sounds/alarma-cocina.mp3');
-      audio.volume = 0.7; // 70% de volumen (ajustable según necesidad)
-      
-      // Reproducir el sonido
+      audio.volume = 0.7;
+
       audio.play().catch(error => {
-        // Si falla (permisos del navegador, archivo no encontrado, etc.)
         console.warn('No se pudo reproducir el sonido de alarma:', error);
-        
-        // Fallback: intentar con sonido alternativo si el principal no existe
-        // Esto evita errores si el archivo aún no se ha subido
         if (error.name === 'NotAllowedError') {
           console.info('Permisos de audio bloqueados. El usuario debe interactuar primero con la página.');
         } else if (error.name === 'NotSupportedError' || error.code === 4) {
           console.info('Archivo de sonido no encontrado. Por favor, agrega alarma-cocina.mp3 en public/sounds/');
         }
       });
-      
+
     } catch (error) {
-      // Silenciar errores de audio (navegador no soporta, etc.)
       console.warn('Error al reproducir sonido de alarma:', error);
     }
-  };
+  }, []);
 
   // Cargar datos al montar y configurar suscripción en tiempo real
   useEffect(() => {
@@ -142,13 +142,18 @@ export default function GestionCocina() {
         },
         (payload) => {
           console.log('🔄 Cambio detectado en pedidos_cocina:', payload);
-          
+
           // Reproducir sonido solo cuando llega un nuevo pedido (INSERT)
+          // playAlarmSound tiene debounce interno — ignora duplicados del batch
           if (payload.eventType === 'INSERT') {
             playAlarmSound();
           }
-          
-          cargarPedidosCocina(); // Recargar pedidos
+
+          // Debounce de recarga: colapsa N eventos del batch en una sola llamada
+          if (recargarTimeoutRef.current) clearTimeout(recargarTimeoutRef.current);
+          recargarTimeoutRef.current = setTimeout(() => {
+            cargarPedidosCocina();
+          }, 500);
         }
       )
       .subscribe();
@@ -156,6 +161,7 @@ export default function GestionCocina() {
     // Cleanup
     return () => {
       supabase.removeChannel(channel);
+      if (recargarTimeoutRef.current) clearTimeout(recargarTimeoutRef.current);
     };
   }, []);
 
