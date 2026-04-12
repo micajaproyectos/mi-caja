@@ -332,8 +332,8 @@ export default function Home() {
         }}
       />
 
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      {/* Overlay sutil sin blur para mejor rendimiento */}
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Header con logo - Glassmorphism con animación */}
       <div className="relative z-10 p-6">
@@ -347,10 +347,11 @@ export default function Home() {
 
         <div className="flex items-center relative">
           {/* Logo con animación suave */}
-          <div 
+          <div
             className="w-16 h-16 mr-4 drop-shadow-lg relative"
             style={{
               animation: 'logoFloat 3s ease-in-out infinite',
+              willChange: 'transform',
             }}
           >
             {/* Halo sutil alrededor del logo */}
@@ -358,7 +359,7 @@ export default function Home() {
               className="absolute inset-0 rounded-full blur-md -z-10"
               style={{
                 background: 'radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%)',
-                animation: 'logoGlow 2.5s ease-in-out infinite',
+                opacity: 0.5,
               }}
             />
             <img 
@@ -380,7 +381,7 @@ export default function Home() {
               style={{
                 color: '#e5f9e5',
                 textShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
-                animation: 'textShimmer 3s ease-in-out infinite',
+                textShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
               }}
             >
               Bienvenido a Mi Caja
