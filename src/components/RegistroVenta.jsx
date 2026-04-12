@@ -2263,6 +2263,15 @@ export default function RegistroVenta() {
           
           {/* Nuevo diseño del formulario de venta */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20 mb-4 md:mb-6">
+            <div className="flex justify-end mb-1">
+              <button
+                type="button"
+                onClick={() => document.getElementById('resumen-tipo-pago')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-blue-300 hover:text-blue-200 text-xs underline transition-colors duration-200"
+              >
+                Ver resumen de caja ↓
+              </button>
+            </div>
             {/* Sección de búsqueda y agregar producto - Ultra Compacta */}
             <div className="mb-2 md:mb-3">
               <div className="flex items-center mb-1">
@@ -3395,7 +3404,7 @@ export default function RegistroVenta() {
               )}
 
               {/* Sección de Cierre de Jornada */}
-              <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+              <div id="resumen-tipo-pago" className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                 <h4 className="text-orange-300 font-bold text-base md:text-lg mb-4 md:mb-5 flex items-center justify-between">
                   <span>📅 Cierre de Jornada</span>
                   <button

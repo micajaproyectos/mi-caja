@@ -859,6 +859,15 @@ const VentaRapida = () => {
 
           {/* Formulario de Venta Rápida */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-4 border border-white/20">
+            <div className="flex justify-end mb-1">
+              <button
+                type="button"
+                onClick={() => document.getElementById('resumen-tipo-pago')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-blue-300 hover:text-blue-200 text-xs underline transition-colors duration-200"
+              >
+                Ver resumen de caja ↓
+              </button>
+            </div>
             <form onSubmit={registrarVentaRapida} className="space-y-3">
               {/* Primera fila: Fecha y Monto */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1355,7 +1364,7 @@ const VentaRapida = () => {
                 </div>
 
                 {/* Sumatorias por Tipo de Pago */}
-                <div className="mt-6 bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-white/10">
+                <div id="resumen-tipo-pago" className="mt-6 bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-white/10">
                   <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">
                     Resumen por Tipo de Pago
                   </h4>

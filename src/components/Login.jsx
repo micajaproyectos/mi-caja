@@ -519,6 +519,9 @@ function Login() {
                       Mi Caja no reemplaza ni sustituye las obligaciones legales del contribuyente ante el Servicio de Impuestos Internos (SII) u otros organismos fiscalizadores.
                     </p>
                     <p>
+                      Los comprobantes, notas de venta y registros generados por Mi Caja tienen carácter interno y de gestión solamente. En ningún caso reemplazan ni tienen validez como boletas electrónicas, facturas u otros documentos tributarios oficiales emitidos a través del SII.
+                    </p>
+                    <p>
                       Es responsabilidad exclusiva del titular declarar, respaldar y reportar correctamente todas las operaciones comerciales según la normativa vigente.
                     </p>
                   </div>
