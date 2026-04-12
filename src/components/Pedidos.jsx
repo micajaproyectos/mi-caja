@@ -2226,8 +2226,8 @@ export default function Pedidos() {
 
       const cliente_id = usuarioData?.cliente_id || null;
 
-      // Usar la fecha correcta del pedido (ya configurada con zona horaria de Chile)
-      const fechaCl = pedido.fecha;
+      // Siempre calcular la fecha actual de Chile al momento de guardar (no usar estado montado)
+      const fechaCl = obtenerFechaHoyChile();
 
       // Usar el nombre completo de la mesa (ahora la columna mesa acepta texto)
       const nombreMesaCompleto = mesa;
@@ -2382,13 +2382,13 @@ export default function Pedidos() {
       // Calcular propina una sola vez (fuera del bucle)
       const propinaValue = calcularPropina(mesa);
       
-      // Usar la fecha correcta del pedido (ya configurada con zona horaria de Chile)
-      const fechaCl = pedido.fecha;
-      
+      // Siempre calcular la fecha actual de Chile al momento de guardar (no usar estado montado)
+      const fechaCl = obtenerFechaHoyChile();
+
       // Preparar TODOS los pedidos para insertar en una sola operación (BATCH INSERT)
       const pedidosParaInsertar = productosAPagar.map((producto, i) => {
         return {
-          fecha: pedido.fecha,
+          fecha: fechaCl,
           fecha_cl: fechaCl,
           // Mesa solo en la primera fila
           mesa: i === 0 ? nombreMesaCompleto : null,
