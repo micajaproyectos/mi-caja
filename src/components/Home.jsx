@@ -279,7 +279,7 @@ export default function Home() {
 
   // Generar partículas para la sección principal solo una vez
   const mainParticles = useMemo(() => {
-    return Array.from({ length: 20 }, (_, i) => ({
+    return Array.from({ length: 6 }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
@@ -291,7 +291,7 @@ export default function Home() {
 
   // Generar partículas para el panel inferior solo una vez
   const panelParticles = useMemo(() => {
-    return Array.from({ length: 15 }, (_, i) => ({
+    return Array.from({ length: 6 }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
@@ -337,12 +337,11 @@ export default function Home() {
 
       {/* Header con logo - Glassmorphism con animación */}
       <div className="relative z-10 p-6">
-        {/* Efecto de brillo sutil en el fondo - se extiende hacia abajo */}
-        <div 
+        {/* Efecto de brillo estático en el fondo del header */}
+        <div
           className="absolute inset-0 opacity-20"
           style={{
             background: 'radial-gradient(ellipse 150% 200% at 50% -20%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.2) 40%, transparent 70%)',
-            animation: 'headerGlow 4s ease-in-out infinite',
           }}
         />
 
@@ -430,59 +429,37 @@ export default function Home() {
 
         {/* Estilos de animación para el header */}
         <style>{`
-          @keyframes headerGlow {
-            0%, 100% {
-              opacity: 0.15;
-            }
-            50% {
-              opacity: 0.3;
-            }
-          }
           @keyframes logoFloat {
-            0%, 100% {
-              transform: translateY(0px);
-            }
-            50% {
-              transform: translateY(-5px);
-            }
-          }
-          @keyframes logoGlow {
-            0%, 100% {
-              opacity: 0.4;
-              transform: scale(0.9);
-            }
-            50% {
-              opacity: 0.7;
-              transform: scale(1.1);
-            }
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
           }
           @keyframes fadeInSlide {
-            from {
-              opacity: 0;
-              transform: translateX(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0);
-            }
-          }
-          @keyframes textShimmer {
-            0%, 100% {
-              text-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
-            }
-            50% {
-              text-shadow: 0 2px 12px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.2);
-            }
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
           }
           @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1.5); }
+          }
+          @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+          }
+          @keyframes glowPulse {
+            0%, 100% { opacity: 0.5; transform: scale(0.95); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+          }
+          @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-20px) translateY(-50%); }
+            to { opacity: 1; transform: translateX(0) translateY(-50%); }
+          }
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px) translateY(-50%); }
+            to { opacity: 1; transform: translateX(0) translateY(-50%); }
           }
         `}</style>
       </div>
@@ -501,17 +478,17 @@ export default function Home() {
                 top: particle.top,
                 animation: `sparkle ${particle.duration}s ease-in-out infinite`,
                 animationDelay: `${particle.delay}s`,
+                willChange: 'transform, opacity',
               }}
             />
           ))}
         </div>
 
-        {/* Efecto de brillo animado - se extiende hacia arriba para fusionarse */}
-        <div 
-          className="absolute inset-0 opacity-30"
+        {/* Efecto de brillo estático - sin animación para mejor rendimiento */}
+        <div
+          className="absolute inset-0 opacity-25"
           style={{
-            background: 'radial-gradient(ellipse 150% 200% at 50% 120%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.25) 35%, rgba(34, 197, 94, 0.15) 50%, transparent 75%)',
-            animation: 'pulseGlow 4s ease-in-out infinite',
+            background: 'radial-gradient(ellipse 150% 200% at 50% 120%, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.2) 35%, transparent 70%)',
           }}
         />
 
@@ -569,14 +546,10 @@ export default function Home() {
                 animation: 'fadeInUp 1s ease-out 0.3s both',
               }}
             >
-              {/* Overlay animado para efecto de pulso coherente con el fondo */}
-              <div 
+              {/* Overlay estático */}
+              <div
                 className="absolute inset-0 rounded-xl backdrop-blur-sm"
-                style={{
-                  background: 'rgba(34, 197, 94, 0.03)',
-                  animation: 'containerPulse 4s ease-in-out infinite',
-                  pointerEvents: 'none',
-                }}
+                style={{ background: 'rgba(34, 197, 94, 0.03)', pointerEvents: 'none' }}
               />
               <p 
                 className="text-sm sm:text-base md:text-lg font-medium whitespace-nowrap relative z-10"
@@ -593,101 +566,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Estilos de animación */}
-        <style>{`
-          @keyframes sparkle {
-            0%, 100% {
-              opacity: 0;
-              transform: scale(0);
-            }
-            50% {
-              opacity: 1;
-              transform: scale(1.5);
-            }
-          }
-          @keyframes pulseGlow {
-            0%, 100% {
-              opacity: 0.25;
-              transform: scale(1);
-            }
-            50% {
-              opacity: 0.4;
-              transform: scale(1.05);
-            }
-          }
-          @keyframes gradientShift {
-            0%, 100% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-          }
-          @keyframes glowPulse {
-            0%, 100% {
-              opacity: 0.5;
-              transform: scale(0.95);
-            }
-            50% {
-              opacity: 0.8;
-              transform: scale(1.05);
-            }
-          }
-          @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          @keyframes containerPulse {
-            0%, 100% {
-              opacity: 0.2;
-            }
-            50% {
-              opacity: 0.4;
-            }
-          }
-          @keyframes slideInLeft {
-            from {
-              opacity: 0;
-              transform: translateX(-20px) translateY(-50%);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0) translateY(-50%);
-            }
-          }
-          @keyframes slideInRight {
-            from {
-              opacity: 0;
-              transform: translateX(20px) translateY(-50%);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0) translateY(-50%);
-            }
-          }
-          @keyframes panelGlow {
-            0%, 100% {
-              opacity: 0.25;
-            }
-            50% {
-              opacity: 0.4;
-            }
-          }
-          @keyframes panelGlowSubtle {
-            0%, 100% {
-              opacity: 0.22;
-            }
-            50% {
-              opacity: 0.28;
-            }
-          }
-        `}</style>
       </div>
 
       {/* Panel inferior con iconos - Neumorfismo */}
@@ -704,17 +582,17 @@ export default function Home() {
                 top: particle.top,
                 animation: `sparkle ${particle.duration}s ease-in-out infinite`,
                 animationDelay: `${particle.delay}s`,
+                willChange: 'transform, opacity',
               }}
             />
           ))}
         </div>
 
         {/* Efecto de brillo animado - continúa el efecto de la sección INICIO */}
-        <div 
-          className="absolute inset-0 opacity-25"
+        <div
+          className="absolute inset-0 opacity-20"
           style={{
-            background: 'radial-gradient(ellipse 150% 200% at 50% 120%, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.25) 35%, rgba(34, 197, 94, 0.15) 50%, transparent 75%)',
-            animation: 'panelGlowSubtle 5s ease-in-out infinite',
+            background: 'radial-gradient(ellipse 150% 200% at 50% 120%, rgba(34, 197, 94, 0.35) 0%, rgba(34, 197, 94, 0.2) 35%, transparent 70%)',
           }}
         />
 
