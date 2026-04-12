@@ -356,9 +356,9 @@ export default function Home() {
           >
             {/* Halo sutil alrededor del logo */}
             <div 
-              className="absolute inset-0 rounded-full blur-md -z-10"
+              className="absolute inset-0 rounded-full -z-10"
               style={{
-                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.3) 0%, transparent 70%)',
                 opacity: 0.5,
               }}
             />
@@ -424,8 +424,6 @@ export default function Home() {
           </div>
 
           {/* Partículas decorativas sutiles */}
-          <div className="absolute -top-2 -right-2 w-2 h-2 rounded-full bg-green-400/60 animate-pulse" style={{ animationDuration: '2s' }} />
-          <div className="absolute top-1/2 -right-4 w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse" style={{ animationDelay: '1s', animationDuration: '2.5s' }} />
         </div>
 
         {/* Estilos de animación para el header */}
@@ -449,10 +447,6 @@ export default function Home() {
           @keyframes gradientShift {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
-          }
-          @keyframes glowPulse {
-            0%, 100% { opacity: 0.5; transform: scale(0.95); }
-            50% { opacity: 0.8; transform: scale(1.05); }
           }
           @keyframes slideInLeft {
             from { opacity: 0; transform: translateX(-20px) translateY(-50%); }
@@ -510,12 +504,11 @@ export default function Home() {
             >
               Inicio
             </h1>
-            {/* Efecto de brillo detrás del título */}
-            <div 
-              className="absolute inset-0 blur-2xl -z-10"
+            {/* Efecto de brillo estático detrás del título */}
+            <div
+              className="absolute inset-0 -z-10 opacity-40"
               style={{
                 background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.5) 0%, rgba(34, 197, 94, 0.2) 100%)',
-                animation: 'glowPulse 3s ease-in-out infinite',
               }}
             />
           </div>
@@ -547,11 +540,6 @@ export default function Home() {
                 animation: 'fadeInUp 1s ease-out 0.3s both',
               }}
             >
-              {/* Overlay estático */}
-              <div
-                className="absolute inset-0 rounded-xl backdrop-blur-sm"
-                style={{ background: 'rgba(34, 197, 94, 0.03)', pointerEvents: 'none' }}
-              />
               <p 
                 className="text-sm sm:text-base md:text-lg font-medium whitespace-nowrap relative z-10"
                 style={{ 

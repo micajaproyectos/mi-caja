@@ -16,16 +16,17 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
     setTimeout(onClose, 200); // Esperar a que termine la animación
   };
 
-  // Generar confeti elements solo una vez usando useMemo
+  // Generar confeti elements solo una vez usando useMemo — 15 piezas con 3 keyframes compartidos
   const confettiPieces = useMemo(() => {
     const confettiColors = ['#22c55e', '#fbbf24', '#ef4444', '#3b82f6', '#a855f7', '#ec4899'];
-    return Array.from({ length: 50 }, (_, i) => ({
+    const animations = ['confettiFallA', 'confettiFallB', 'confettiFallC'];
+    return Array.from({ length: 15 }, (_, i) => ({
       id: i,
-      color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-      left: `${Math.random() * 100}%`,
-      delay: Math.random() * 2,
-      duration: 3 + Math.random() * 2,
-      rotationEnd: 360 + Math.random() * 720,
+      color: confettiColors[i % confettiColors.length],
+      left: `${(i / 15) * 100}%`,
+      delay: (i % 5) * 0.4,
+      duration: 3 + (i % 3),
+      animation: animations[i % 3],
     }));
   }, []);
 
@@ -40,6 +41,20 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
       {isVisible && (
         <>
           <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 5 }}>
+            <style>{`
+              @keyframes confettiFallA {
+                0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+                100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+              }
+              @keyframes confettiFallB {
+                0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+                100% { transform: translateY(100vh) rotate(540deg); opacity: 0; }
+              }
+              @keyframes confettiFallC {
+                0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+                100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+              }
+            `}</style>
             {confettiPieces.map((piece) => (
               <div
                 key={piece.id}
@@ -48,38 +63,24 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
                   left: piece.left,
                   top: '-10px',
                   backgroundColor: piece.color,
-                  animation: `confettiFall${piece.id} ${piece.duration}s linear ${piece.delay}s forwards`,
+                  animation: `${piece.animation} ${piece.duration}s linear ${piece.delay}s forwards`,
                   transformOrigin: 'center',
+                  willChange: 'transform, opacity',
                 }}
               />
             ))}
           </div>
-          <style>{`
-            ${confettiPieces.map((piece) => `
-              @keyframes confettiFall${piece.id} {
-                0% {
-                  transform: translateY(0) rotate(0deg);
-                  opacity: 1;
-                }
-                100% {
-                  transform: translateY(100vh) rotate(${piece.rotationEnd}deg);
-                  opacity: 0;
-                }
-              }
-            `).join('')}
-          `}</style>
         </>
       )}
 
-      {/* Fondo con blur */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      {/* Fondo oscuro sin blur */}
+      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
       
       {/* Contenedor de la notificación */}
       <div className={`relative z-10 w-11/12 max-w-lg p-6 rounded-2xl shadow-lg transform transition-all duration-200 ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
            style={{
-             backgroundColor: 'rgba(31, 74, 31, 0.95)',
-             border: '1px solid rgba(255, 255, 255, 0.1)',
-             backdropFilter: 'blur(10px)'
+             backgroundColor: 'rgba(31, 74, 31, 0.97)',
+             border: '1px solid rgba(255, 255, 255, 0.1)'
            }}>
         
         {/* Botón cerrar */}
@@ -93,7 +94,7 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
         
         {/* Icono de notificación */}
         <div className="flex items-center justify-center mb-4">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center animate-pulse"
+          <div className="w-16 h-16 rounded-full flex items-center justify-center"
                style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '2px solid rgba(34, 197, 94, 0.3)' }}>
             <span className="text-3xl">🎊</span>
           </div>

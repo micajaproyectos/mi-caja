@@ -31,15 +31,14 @@ const RatingNotification = ({ onClose, show = false }) => {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      {/* Fondo con blur */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      {/* Fondo oscuro sin blur */}
+      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
       
       {/* Contenedor de la notificación */}
       <div className={`relative z-10 w-11/12 max-w-md p-6 rounded-2xl shadow-lg transform transition-all duration-200 ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
            style={{
-             backgroundColor: 'rgba(31, 74, 31, 0.95)',
-             border: '1px solid rgba(255, 255, 255, 0.1)',
-             backdropFilter: 'blur(10px)'
+             backgroundColor: 'rgba(31, 74, 31, 0.97)',
+             border: '1px solid rgba(255, 255, 255, 0.1)'
            }}>
         
         {/* Botón cerrar */}
@@ -53,7 +52,7 @@ const RatingNotification = ({ onClose, show = false }) => {
         
         {/* Icono de notificación */}
         <div className="flex items-center justify-center mb-4">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center animate-pulse"
+          <div className="w-16 h-16 rounded-full flex items-center justify-center"
                style={{ backgroundColor: 'rgba(255, 193, 7, 0.2)', border: '2px solid rgba(255, 193, 7, 0.3)' }}>
             <span className="text-3xl">⭐</span>
           </div>
