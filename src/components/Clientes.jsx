@@ -1029,7 +1029,16 @@ export default function Clientes() {
         return;
       }
 
-      alert(`✅ Pedido registrado correctamente con ${productosDelPedido.length} producto(s)`);
+      const resumenProductos = productosDelPedido
+        .map(p => `  • ${p.producto}`)
+        .join('\n');
+
+      alert(
+        `✅ Pedido registrado exitosamente\n\n` +
+        `🏢 Empresa: ${pedidoActual.nombre_empresa}\n` +
+        `📅 Fecha: ${pedidoActual.fecha_cl}\n` +
+        `📦 Productos (${productosDelPedido.length}):\n${resumenProductos}`
+      );
       
       // Solo recargar los registros (los clientes ya están actualizados en la lista local)
       await cargarRegistrosPedidos(); // Esto también recalcula el resumen
