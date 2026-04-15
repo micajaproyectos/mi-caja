@@ -1201,35 +1201,43 @@ export default function RegistroVenta() {
     return titulo + partes.join(' | ');
   };
 
-  // Función para exportar datos filtrados
+  // Función para exportar datos filtrados como Excel (.xls)
   const exportarDatosFiltrados = () => {
     if (ventasFiltradas.length === 0) {
       mostrarNotificacion('No hay datos para exportar', 'error');
       return;
     }
 
-    // Crear contenido CSV
     const headers = ['Fecha', 'Producto', 'Cantidad', 'Unidad', 'Precio Unitario', 'Total Venta', 'Total Final', 'Tipo Pago'];
-    const csvContent = [
-      headers.join(','),
-      ...ventasFiltradas.map(venta => [
-        formatearFecha(venta.fecha_cl || venta.fecha),
-        venta.producto,
-        venta.cantidad,
-        venta.unidad,
-        venta.precio_unitario,
-        venta.total_venta,
-        venta.total_final || '',
-        venta.tipo_pago
-      ].join(','))
-    ].join('\n');
 
-    // Crear y descargar archivo
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const filas = ventasFiltradas.map(venta => `
+      <tr>
+        <td>${formatearFecha(venta.fecha_cl || venta.fecha)}</td>
+        <td>${venta.producto || ''}</td>
+        <td>${venta.cantidad || ''}</td>
+        <td>${venta.unidad || ''}</td>
+        <td>${venta.precio_unitario || ''}</td>
+        <td>${venta.total_venta || ''}</td>
+        <td>${venta.total_final || ''}</td>
+        <td>${venta.tipo_pago || ''}</td>
+      </tr>`).join('');
+
+    const tabla = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8"></head>
+      <body>
+        <table>
+          <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </body>
+      </html>`;
+
+    const blob = new Blob([tabla], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `ventas_${obtenerFechaActual()}.csv`);
+    link.setAttribute('download', `ventas_${obtenerFechaActual()}.xls`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -3834,7 +3842,7 @@ export default function RegistroVenta() {
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
-                  📊 Exportar CSV
+                  📗 Exportar Excel
                 </button>
               </div>
             </div>
