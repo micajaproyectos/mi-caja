@@ -11,6 +11,12 @@ export default function GestionCocina() {
   // Refs para debounce de alarma y recarga
   const ultimaVezSonidoRef = useRef(0);
   const recargarTimeoutRef = useRef(null);
+  const sonidoPendienteRef = useRef(false);
+  const channelRef = useRef(null);
+  const reconectarTimeoutRef = useRef(null);
+
+  // Estado de unlock de audio (autoplay policy)
+  const [audioDesbloqueado, setAudioDesbloqueado] = useState(false);
 
   // Estados
   const [pedidosCocina, setPedidosCocina] = useState([]);
@@ -130,38 +136,81 @@ export default function GestionCocina() {
   useEffect(() => {
     cargarPedidosCocina();
 
-    // Configurar suscripción en tiempo real
-    const channel = supabase
-      .channel('pedidos_cocina_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'pedidos_cocina'
-        },
-        (payload) => {
-          console.log('🔄 Cambio detectado en pedidos_cocina:', payload);
+    const suscribir = () => {
+      // Limpiar canal anterior si existe
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
 
-          // Reproducir sonido solo cuando llega un nuevo pedido (INSERT)
-          // playAlarmSound tiene debounce interno — ignora duplicados del batch
-          if (payload.eventType === 'INSERT') {
-            playAlarmSound();
+      const channel = supabase
+        .channel('pedidos_cocina_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'pedidos_cocina'
+          },
+          (payload) => {
+            console.log('🔄 Cambio detectado en pedidos_cocina:', payload);
+
+            // Reproducir sonido solo cuando llega un nuevo pedido (INSERT)
+            // playAlarmSound tiene debounce interno — ignora duplicados del batch
+            if (payload.eventType === 'INSERT') {
+              if (document.visibilityState !== 'visible') {
+                sonidoPendienteRef.current = true;
+              } else {
+                playAlarmSound();
+              }
+            }
+
+            // Debounce de recarga: colapsa N eventos del batch en una sola llamada
+            if (recargarTimeoutRef.current) clearTimeout(recargarTimeoutRef.current);
+            recargarTimeoutRef.current = setTimeout(() => {
+              cargarPedidosCocina();
+            }, 500);
           }
+        )
+        .subscribe((status) => {
+          // Reconectar si el canal se desconecta (OS suspende WebSocket por batería)
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            console.warn('⚠️ Canal Realtime desconectado, reconectando en 5s...');
+            if (reconectarTimeoutRef.current) clearTimeout(reconectarTimeoutRef.current);
+            reconectarTimeoutRef.current = setTimeout(() => suscribir(), 5000);
+          }
+        });
 
-          // Debounce de recarga: colapsa N eventos del batch en una sola llamada
-          if (recargarTimeoutRef.current) clearTimeout(recargarTimeoutRef.current);
-          recargarTimeoutRef.current = setTimeout(() => {
-            cargarPedidosCocina();
-          }, 500);
+      channelRef.current = channel;
+    };
+
+    suscribir();
+
+    // Reconectar también al volver la pantalla visible (por si el WS fue suspendido)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Reintento de sonido pendiente
+        if (sonidoPendienteRef.current) {
+          sonidoPendienteRef.current = false;
+          playAlarmSound();
         }
-      )
-      .subscribe();
+        // Verificar estado del canal y reconectar si es necesario
+        const estado = channelRef.current?.state;
+        if (estado === 'closed' || estado === 'errored' || !channelRef.current) {
+          console.warn('⚠️ Canal inactivo al volver visible, reconectando...');
+          suscribir();
+          cargarPedidosCocina();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (recargarTimeoutRef.current) clearTimeout(recargarTimeoutRef.current);
+      if (reconectarTimeoutRef.current) clearTimeout(reconectarTimeoutRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -562,14 +611,36 @@ export default function GestionCocina() {
               </div>
             </div>
 
-            {/* Botón recargar */}
-            <button
-              onClick={cargarPedidosCocina}
-              disabled={loading}
-              className="bg-white/20 hover:bg-white/30 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
-            >
-              {loading ? '⏳ Cargando...' : '🔄 Recargar'}
-            </button>
+            {/* Botones derecha */}
+            <div className="flex gap-2 items-center">
+              {/* Unlock de audio — requerido por autoplay policy del browser */}
+              <button
+                onClick={() => {
+                  const audio = new Audio('/sounds/alarma-cocina.mp3');
+                  audio.volume = 0.01;
+                  audio.play()
+                    .then(() => { audio.pause(); setAudioDesbloqueado(true); })
+                    .catch(() => setAudioDesbloqueado(false));
+                }}
+                title="Activar alertas de sonido"
+                className={`px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  audioDesbloqueado
+                    ? 'bg-green-700/50 text-green-300 cursor-default'
+                    : 'bg-yellow-600/80 hover:bg-yellow-500 text-white animate-pulse'
+                }`}
+              >
+                {audioDesbloqueado ? '🔔' : '🔕'}
+              </button>
+
+              {/* Botón recargar */}
+              <button
+                onClick={cargarPedidosCocina}
+                disabled={loading}
+                className="bg-white/20 hover:bg-white/30 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
+              >
+                {loading ? '⏳ Cargando...' : '🔄 Recargar'}
+              </button>
+            </div>
           </div>
 
           {/* Título sección de tarjetas */}
