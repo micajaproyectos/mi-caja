@@ -684,7 +684,7 @@ export default function Pedidos() {
         if (tiempoDesdeUltimoCambio < 3000) { // 3 segundos de protección
           debugLog(`⏸️ Realtime bloqueado: cambio reciente hace ${tiempoDesdeUltimoCambio}ms`);
           // Reintentar después de que pase el tiempo de protección
-          setTimeout(() => cargarMesasDesdeSupabase(true), 3500);
+          setTimeout(() => cargarMesasRef.current(true), 3500);
           return;
         }
       }
