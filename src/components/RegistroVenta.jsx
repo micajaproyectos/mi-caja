@@ -465,6 +465,10 @@ export default function RegistroVenta() {
     tipo_pago: ''
   });
 
+  // Estados para edición rápida de comentario por transacción
+  const [editandoComentarioId, setEditandoComentarioId] = useState(null);
+  const [comentarioTemporal, setComentarioTemporal] = useState('');
+
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
@@ -1260,7 +1264,7 @@ export default function RegistroVenta() {
       // Excluir ventas de autoservicio (donde autoservicio = 'autoservicio')
       let { data, error } = await supabase
         .from('ventas')
-        .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
+        .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, comentarios, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .is('autoservicio', null) // 🔒 EXCLUIR VENTAS DE AUTOSERVICIO
         .order('fecha_cl', { ascending: false })
@@ -1271,12 +1275,27 @@ export default function RegistroVenta() {
         console.warn('⚠️ Columna fecha_cl no existe en ventas, usando fecha');
         const fallbackQuery = await supabase
           .from('ventas')
-          .select('id, fecha, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
+          .select('id, fecha, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, comentarios, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
           .is('autoservicio', null) // 🔒 EXCLUIR VENTAS DE AUTOSERVICIO
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
-        
+
+        data = fallbackQuery.data;
+        error = fallbackQuery.error;
+      }
+
+      // Si hay error con comentarios, usar consulta sin comentarios
+      if (error && error.message?.includes('comentarios')) {
+        console.warn('⚠️ Columna comentarios no existe en ventas, cargando sin ella');
+        const fallbackQuery = await supabase
+          .from('ventas')
+          .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
+          .eq('usuario_id', usuarioId)
+          .is('autoservicio', null)
+          .order('fecha_cl', { ascending: false })
+          .order('created_at', { ascending: false });
+
         data = fallbackQuery.data;
         error = fallbackQuery.error;
       }
@@ -2055,6 +2074,33 @@ export default function RegistroVenta() {
     } else {
       // Seleccionar todas las visibles
       setVentasSeleccionadas(idsVisibles);
+    }
+  };
+
+  // Guardar comentario rápido (solo el campo comentarios, sin edición completa)
+  const guardarComentarioRapido = async (id, comentario) => {
+    const texto = comentario ? comentario.toUpperCase().trim() : null;
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+      const { error } = await supabase
+        .from('ventas')
+        .update({ comentarios: texto })
+        .eq('id', id)
+        .eq('usuario_id', usuarioId);
+      if (error) {
+        console.error('Error al guardar comentario:', error);
+        mostrarToast('❌ Error al guardar el comentario', 'error', 3000);
+        return;
+      }
+      setVentasRegistradas(prev =>
+        prev.map(v => v.id === id ? { ...v, comentarios: texto } : v)
+      );
+    } catch (err) {
+      console.error('Error inesperado al guardar comentario:', err);
+    } finally {
+      setEditandoComentarioId(null);
+      setComentarioTemporal('');
     }
   };
 
@@ -3075,6 +3121,7 @@ export default function RegistroVenta() {
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Total Final</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Pago</th>
+                          <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Comentario</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Acciones</th>
                         </tr>
                       </thead>
@@ -3213,6 +3260,48 @@ export default function RegistroVenta() {
                                       <span className="px-1 md:px-2 py-1 bg-green-600/20 rounded-full text-xs">
                                         {obtenerInfoTipoPago(venta.tipo_pago).icon}
                                       </span>
+                                    )}
+                                  </td>
+
+                                  {/* Comentario rápido (solo fila principal de la transacción) */}
+                                  <td className="p-2 md:p-3 text-xs md:text-sm">
+                                    {venta.total_final !== null && venta.total_final !== undefined ? (
+                                      editandoComentarioId === venta.id ? (
+                                        <input
+                                          autoFocus
+                                          type="text"
+                                          value={comentarioTemporal}
+                                          onChange={(e) => setComentarioTemporal(e.target.value.toUpperCase())}
+                                          onBlur={() => guardarComentarioRapido(venta.id, comentarioTemporal)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') guardarComentarioRapido(venta.id, comentarioTemporal);
+                                            if (e.key === 'Escape') { setEditandoComentarioId(null); setComentarioTemporal(''); }
+                                          }}
+                                          className="w-full px-2 py-1 bg-gray-700 border border-yellow-400 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                          placeholder="Comentario general..."
+                                          style={{ textTransform: 'uppercase' }}
+                                        />
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setEditandoComentarioId(venta.id);
+                                            setComentarioTemporal(venta.comentarios || '');
+                                          }}
+                                          className="flex items-center gap-1 group"
+                                          title={venta.comentarios ? 'Editar comentario' : 'Agregar comentario'}
+                                        >
+                                          {venta.comentarios ? (
+                                            <>
+                                              <span className="text-blue-300">{venta.comentarios}</span>
+                                              <span className="text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
+                                            </>
+                                          ) : (
+                                            <span className="text-gray-500 hover:text-yellow-400 transition-colors">📝</span>
+                                          )}
+                                        </button>
+                                      )
+                                    ) : (
+                                      <span className="text-gray-600">-</span>
                                     )}
                                   </td>
 

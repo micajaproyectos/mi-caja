@@ -132,14 +132,16 @@ export default function RegistroAsistencia() {
   // Función para obtener la hora actual en formato HH:MM para registros
   const obtenerHoraActualFormato = () => {
     const fecha = new Date();
-    // Convertir a hora de Santiago, Chile
-    const horaSantiago = fecha.toLocaleString('en-US', {
+    const partes = new Intl.DateTimeFormat('es-CL', {
       timeZone: 'America/Santiago',
-      hour12: false,
       hour: '2-digit',
-      minute: '2-digit'
-    });
-    return horaSantiago;
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(fecha);
+    // Algunos browsers retornan '24' en vez de '00' para medianoche
+    const hora = (partes.find(p => p.type === 'hour')?.value ?? '00').replace('24', '00');
+    const minuto = partes.find(p => p.type === 'minute')?.value ?? '00';
+    return `${hora}:${minuto}`;
   };
 
   // Actualizar fecha y hora cada segundo
@@ -234,15 +236,32 @@ export default function RegistroAsistencia() {
   // Función para limpiar backups obsoletos
   const limpiarBackupsObsoletos = useCallback(() => {
     try {
-      // Limpiar backups de fechas anteriores
-      const fechaActual = obtenerFechaActual();
+      const fechaHoy = obtenerFechaActual();
+      const clavesARevisar = [];
       for (let i = 0; i < localStorage.length; i++) {
         const clave = localStorage.key(i);
-        if (clave && clave.startsWith('backup_automatico_') && !clave.includes(fechaActual)) {
-          localStorage.removeItem(clave);
-          console.log('🗑️ Backup obsoleto eliminado:', clave);
+        if (clave && clave.startsWith('backup_automatico_') && !clave.includes(fechaHoy)) {
+          clavesARevisar.push(clave);
         }
       }
+      clavesARevisar.forEach(clave => {
+        try {
+          const backup = JSON.parse(localStorage.getItem(clave) || '{}');
+          // No eliminar si el backup contiene entradas sin sincronizar
+          const tienePendientes = Object.values(backup.datosLocalStorage || {}).some(val => {
+            const entradas = JSON.parse(val || '[]');
+            return entradas.some(e => !e.sincronizado);
+          });
+          if (!tienePendientes) {
+            localStorage.removeItem(clave);
+            console.log('🗑️ Backup obsoleto eliminado:', clave);
+          } else {
+            console.log('⚠️ Backup conservado por tener entradas pendientes:', clave);
+          }
+        } catch {
+          localStorage.removeItem(clave);
+        }
+      });
     } catch (error) {
       console.error('❌ Error al limpiar backups obsoletos:', error);
     }
@@ -656,6 +675,7 @@ export default function RegistroAsistencia() {
     const entradasExistentes = JSON.parse(localStorage.getItem(clave) || '[]');
     
     const nuevaEntrada = {
+      id: Date.now(),
       hora_entrada: hora,
       sincronizado: false
     };
@@ -706,9 +726,11 @@ export default function RegistroAsistencia() {
     
     const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
     
-    // Encontrar y marcar como sincronizada la entrada específica
+    // Marcar como sincronizada solo la primera entrada con esa hora (evita marcar duplicados)
+    let yaEliminada = false;
     const entradasActualizadas = entradas.map(entrada => {
-      if (entrada.hora_entrada === horaEntrada && !entrada.sincronizado) {
+      if (!yaEliminada && entrada.hora_entrada === horaEntrada && !entrada.sincronizado) {
+        yaEliminada = true;
         return { ...entrada, sincronizado: true };
       }
       return entrada;
@@ -854,6 +876,12 @@ export default function RegistroAsistencia() {
       const entradaPendiente = pendientes[pendientes.length - 1];
       const totalHorasFormato = calcularTotalHoras(entradaPendiente.hora_entrada, horaAhora);
       const totalHorasDecimal = calcularTotalHorasDecimal(entradaPendiente.hora_entrada, horaAhora);
+
+      if (totalHorasDecimal <= 0) {
+        alert(`❌ La hora de salida (${horaAhora}) debe ser posterior a la hora de entrada (${entradaPendiente.hora_entrada}).\n\nRevisa que el reloj del dispositivo sea correcto.`);
+        return;
+      }
+
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) {
         alert('❌ Error: Usuario no autenticado.');
@@ -877,7 +905,7 @@ export default function RegistroAsistencia() {
       alert(`✅ Salida registrada: ${horaAhora}\nTotal horas: ${totalHorasFormato}`);
     } catch (err) {
       console.error('Error al registrar salida:', err);
-      alert('❌ Error al registrar la hora de salida');
+      alert('❌ Error al guardar en el servidor.\n\nTu registro de entrada sigue guardado localmente.\nPuedes intentar registrar la salida nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -955,8 +983,31 @@ export default function RegistroAsistencia() {
 
   // Limpiar todo el caché local de empleados
   const limpiarCacheEmpleados = () => {
+    // Detectar entradas sin sincronizar antes de proceder
+    const pendientesPorEmpleado = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const clave = localStorage.key(i);
+      if (clave?.startsWith('asistencia_')) {
+        try {
+          const entradas = JSON.parse(localStorage.getItem(clave) || '[]');
+          if (entradas.some(e => !e.sincronizado)) {
+            const partes = clave.split('_');
+            const nombre = partes.slice(1, -1).join('_');
+            pendientesPorEmpleado.push(nombre);
+          }
+        } catch { /* clave corrupta, ignorar */ }
+      }
+    }
+
+    if (pendientesPorEmpleado.length > 0) {
+      alert(
+        `⛔ No se puede limpiar el caché.\n\nLos siguientes empleados tienen entradas sin registrar salida:\n• ${[...new Set(pendientesPorEmpleado)].join('\n• ')}\n\nRegistra la salida de cada uno antes de limpiar.`
+      );
+      return;
+    }
+
     const confirmado = window.confirm(
-      '⚠️ ¿Limpiar caché de empleados?\n\nEsto eliminará:\n• Empleados nuevos sin registros\n• Empleados ocultos\n• Entradas pendientes de sincronización\n\nLos datos guardados en el servidor NO se verán afectados.\n\nSi hay entradas pendientes sin salida registrada, se perderán.'
+      '⚠️ ¿Limpiar caché de empleados?\n\nEsto eliminará:\n• Empleados nuevos sin registros\n• Empleados ocultos\n\nLos datos guardados en el servidor NO se verán afectados.'
     );
     if (!confirmado) return;
 
@@ -1043,6 +1094,11 @@ export default function RegistroAsistencia() {
        const totalHorasFormato = calcularTotalHoras(entradaPendiente.hora_entrada, horaActual);
        const totalHorasDecimal = calcularTotalHorasDecimal(entradaPendiente.hora_entrada, horaActual);
 
+       if (totalHorasDecimal <= 0) {
+         alert(`❌ La hora de salida (${horaActual}) debe ser posterior a la hora de entrada (${entradaPendiente.hora_entrada}).\n\nRevisa que el reloj del dispositivo sea correcto.`);
+         return;
+       }
+
        // Obtener el usuario_id del usuario autenticado
        const usuarioId = await authService.getCurrentUserId();
        if (!usuarioId) {
@@ -1090,7 +1146,7 @@ export default function RegistroAsistencia() {
       
     } catch (error) {
       console.error('Error al registrar salida:', error);
-      alert('❌ Error al registrar la hora de salida');
+      alert('❌ Error al guardar en el servidor.\n\nTu registro de entrada sigue guardado localmente.\nPuedes intentar registrar la salida nuevamente.');
     } finally {
       setLoading(false);
     }
