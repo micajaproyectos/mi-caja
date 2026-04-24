@@ -239,9 +239,9 @@ export default function Pedidos() {
     comentarios: ''
   });
 
-  // Estados para edición rápida de comentario por transacción
-  const [editandoComentarioId, setEditandoComentarioId] = useState(null);
-  const [comentarioTemporal, setComentarioTemporal] = useState('');
+  // Estados para edición rápida de anotación por transacción
+  const [editandoAnotacionId, setEditandoAnotacionId] = useState(null);
+  const [anotacionTemporal, setAnotacionTemporal] = useState('');
 
   // Estado para pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
@@ -321,7 +321,7 @@ export default function Pedidos() {
       // Intentar consulta con fecha_cl primero
       let { data, error } = await supabase
         .from('pedidos')
-        .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
+        .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, anotaciones, usuario_id, created_at')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .order('fecha_cl', { ascending: false })
         .order('fecha', { ascending: false })
@@ -333,7 +333,7 @@ export default function Pedidos() {
 
         const fallbackResult = await supabase
           .from('pedidos')
-          .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
+          .select('id, fecha, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, anotaciones, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
           .order('fecha', { ascending: false })
           .order('created_at', { ascending: false });
@@ -348,7 +348,23 @@ export default function Pedidos() {
 
         const fallbackResult = await supabase
           .from('pedidos')
-          .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, usuario_id, created_at')
+          .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, anotaciones, usuario_id, created_at')
+          .eq('usuario_id', usuarioId)
+          .order('fecha_cl', { ascending: false })
+          .order('fecha', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
+
+      // Si hay error con anotaciones, usar consulta sin anotaciones
+      if (error && error.message?.includes('anotaciones')) {
+        console.warn('⚠️ Columna anotaciones no existe en pedidos, cargando sin ella');
+
+        const fallbackResult = await supabase
+          .from('pedidos')
+          .select('id, fecha, fecha_cl, mesa, producto, unidad, cantidad, precio, total, total_final, propina, estado, tipo_pago, comentarios, usuario_id, created_at')
           .eq('usuario_id', usuarioId)
           .order('fecha_cl', { ascending: false })
           .order('fecha', { ascending: false })
@@ -2080,30 +2096,30 @@ export default function Pedidos() {
     }
   };
 
-  // Guardar comentario rápido (solo el campo comentarios, sin edición completa)
-  const guardarComentarioRapido = async (id, comentario) => {
-    const texto = comentario ? comentario.toUpperCase().trim() : null;
+  // Guardar anotación rápida de transacción (solo campo anotaciones, sin edición completa)
+  const guardarAnotacionRapida = async (id, anotacion) => {
+    const texto = anotacion ? anotacion.toUpperCase().trim() : null;
     try {
       const usuarioId = await authService.getCurrentUserId();
       if (!usuarioId) return;
       const { error } = await supabase
         .from('pedidos')
-        .update({ comentarios: texto })
+        .update({ anotaciones: texto })
         .eq('id', id)
         .eq('usuario_id', usuarioId);
       if (error) {
-        console.error('Error al guardar comentario:', error);
-        mostrarToast('❌ Error al guardar el comentario', 'error', 3000);
+        console.error('Error al guardar anotación:', error);
+        mostrarToast('❌ Error al guardar la anotación', 'error', 3000);
         return;
       }
       setPedidosRegistrados(prev =>
-        prev.map(p => p.id === id ? { ...p, comentarios: texto } : p)
+        prev.map(p => p.id === id ? { ...p, anotaciones: texto } : p)
       );
     } catch (err) {
-      console.error('Error inesperado al guardar comentario:', err);
+      console.error('Error inesperado al guardar anotación:', err);
     } finally {
-      setEditandoComentarioId(null);
-      setComentarioTemporal('');
+      setEditandoAnotacionId(null);
+      setAnotacionTemporal('');
     }
   };
 
@@ -4014,6 +4030,7 @@ export default function Pedidos() {
                           <th className="px-4 py-3">Propina</th>
                           <th className="px-4 py-3">Tipo Pago</th>
                           <th className="px-4 py-3">Estado</th>
+                          <th className="px-4 py-3">Anotaciones</th>
                           <th className="px-4 py-3 rounded-r-lg">Acciones</th>
                         </tr>
                       </thead>
@@ -4121,46 +4138,11 @@ export default function Pedidos() {
                                     placeholder="Comentarios..."
                                     style={{ textTransform: 'uppercase' }}
                                   />
-                                ) : pedido.total_final !== null ? (
-                                  // Fila principal de la transacción: ícono de comentario rápido
-                                  editandoComentarioId === pedido.id ? (
-                                    <input
-                                      autoFocus
-                                      type="text"
-                                      value={comentarioTemporal}
-                                      onChange={(e) => setComentarioTemporal(e.target.value.toUpperCase())}
-                                      onBlur={() => guardarComentarioRapido(pedido.id, comentarioTemporal)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') guardarComentarioRapido(pedido.id, comentarioTemporal);
-                                        if (e.key === 'Escape') { setEditandoComentarioId(null); setComentarioTemporal(''); }
-                                      }}
-                                      className="w-full px-2 py-1 bg-gray-700 border border-yellow-400 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
-                                      placeholder="Comentario general..."
-                                      style={{ textTransform: 'uppercase' }}
-                                    />
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setEditandoComentarioId(pedido.id);
-                                        setComentarioTemporal(pedido.comentarios || '');
-                                      }}
-                                      className="flex items-center gap-1 text-xs group"
-                                      title={pedido.comentarios ? 'Editar comentario' : 'Agregar comentario'}
-                                    >
-                                      {pedido.comentarios ? (
-                                        <>
-                                          <span className="text-blue-300">{pedido.comentarios}</span>
-                                          <span className="text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
-                                        </>
-                                      ) : (
-                                        <span className="text-gray-500 hover:text-yellow-400 transition-colors">📝</span>
-                                      )}
-                                    </button>
-                                  )
                                 ) : (
-                                  // Filas secundarias: solo mostrar el comentario del producto si existe
                                   pedido.comentarios ? (
-                                    <span className="text-blue-300 text-xs">{pedido.comentarios}</span>
+                                    <span className="text-blue-300 text-xs">
+                                      {pedido.comentarios}
+                                    </span>
                                   ) : (
                                     <span className="text-gray-500 text-xs">-</span>
                                   )
@@ -4322,6 +4304,48 @@ export default function Pedidos() {
                                   ) : (
                                     <span className="text-gray-500 text-xs">-</span>
                                   )
+                                )}
+                              </td>
+
+                              {/* Anotaciones (nota general de transacción, solo fila principal) */}
+                              <td className="px-4 py-3">
+                                {pedido.total_final !== null ? (
+                                  editandoAnotacionId === pedido.id ? (
+                                    <input
+                                      autoFocus
+                                      type="text"
+                                      value={anotacionTemporal}
+                                      onChange={(e) => setAnotacionTemporal(e.target.value.toUpperCase())}
+                                      onBlur={() => guardarAnotacionRapida(pedido.id, anotacionTemporal)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') guardarAnotacionRapida(pedido.id, anotacionTemporal);
+                                        if (e.key === 'Escape') { setEditandoAnotacionId(null); setAnotacionTemporal(''); }
+                                      }}
+                                      className="w-full px-2 py-1 bg-gray-700 border border-yellow-400 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                                      placeholder="Anotación general..."
+                                      style={{ textTransform: 'uppercase' }}
+                                    />
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setEditandoAnotacionId(pedido.id);
+                                        setAnotacionTemporal(pedido.anotaciones || '');
+                                      }}
+                                      className="flex items-center gap-1 text-xs group"
+                                      title={pedido.anotaciones ? 'Editar anotación' : 'Agregar anotación'}
+                                    >
+                                      {pedido.anotaciones ? (
+                                        <>
+                                          <span className="text-yellow-300">{pedido.anotaciones}</span>
+                                          <span className="text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
+                                        </>
+                                      ) : (
+                                        <span className="text-gray-500 hover:text-yellow-400 transition-colors">📝</span>
+                                      )}
+                                    </button>
+                                  )
+                                ) : (
+                                  <span className="text-gray-600 text-xs">-</span>
                                 )}
                               </td>
 
