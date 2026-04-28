@@ -132,6 +132,11 @@ export default function RegistroVenta() {
   
   // Estado para almacenar cierres de jornada registrados (información complementaria)
   const [cierresRegistrados, setCierresRegistrados] = useState([]);
+
+  // ID del registro caja_diaria en BD para hoy (permite editar/eliminar)
+  const [cajaDiariaId, setCajaDiariaId] = useState(null);
+  // Caja inicial de una fecha histórica filtrada (independiente de la calculadora de hoy)
+  const [cajaInicialHistorica, setCajaInicialHistorica] = useState(null);
   
   // Función para calcular diferencias
   const calcularDiferencia = (registrado, verificado) => {
@@ -368,6 +373,116 @@ export default function RegistroVenta() {
     }
   };
 
+  // Guarda o actualiza la caja inicial del día en la BD (upsert por usuario+fecha)
+  const guardarCajaDiariaDB = useCallback(async (monto, fecha) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('cliente_id')
+        .eq('usuario_id', usuarioId)
+        .single();
+
+      const { data, error } = await supabase
+        .from('caja_diaria')
+        .upsert(
+          {
+            usuario_id: usuarioId,
+            cliente_id: usuarioData?.cliente_id || null,
+            fecha,
+            monto: parseFloat(monto) || 0,
+            fuente: 'registroventa',
+          },
+          { onConflict: 'usuario_id,fecha,fuente' }
+        )
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error al guardar caja diaria:', error);
+        return;
+      }
+
+      setCajaDiariaId(data?.id || null);
+    } catch (error) {
+      console.error('Error inesperado al guardar caja diaria:', error);
+    }
+  }, []);
+
+  // Carga la caja inicial desde BD para una fecha dada.
+  // Si es hoy y no hay registro en BD pero sí en localStorage, migra automáticamente.
+  // Si es una fecha histórica, guarda el valor en cajaInicialHistorica.
+  const cargarCajaDiaria = useCallback(async (fecha) => {
+    try {
+      const usuarioId = await authService.getCurrentUserId();
+      if (!usuarioId) return;
+
+      const { data, error } = await supabase
+        .from('caja_diaria')
+        .select('id, monto')
+        .eq('usuario_id', usuarioId)
+        .eq('fecha', fecha)
+        .eq('fuente', 'registroventa')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error al cargar caja diaria:', error);
+        return;
+      }
+
+      const fechaActual = obtenerFechaActual();
+
+      if (fecha === fechaActual) {
+        if (data) {
+          setCajaDiariaId(data.id);
+          const montoStr = String(Math.round(parseFloat(data.monto) || 0));
+          setCajaInicial(montoStr);
+          localStorage.setItem('cajaInicial', montoStr);
+          localStorage.setItem('cajaInicialFecha', fechaActual);
+        } else {
+          // Sin registro en BD — migrar desde localStorage si hay valor de hoy
+          const cajaLocal = localStorage.getItem('cajaInicial');
+          const fechaLocal = localStorage.getItem('cajaInicialFecha');
+          if (cajaLocal && fechaLocal === fechaActual) {
+            await guardarCajaDiariaDB(cajaLocal, fechaActual);
+          }
+        }
+      } else {
+        // Fecha histórica — no tocar cajaInicial (calculadora de hoy)
+        setCajaInicialHistorica(data ? parseFloat(data.monto) : null);
+      }
+    } catch (error) {
+      console.error('Error inesperado al cargar caja diaria:', error);
+    }
+  }, [guardarCajaDiariaDB]);
+
+  // Elimina el registro de caja_diaria de hoy
+  const eliminarCajaDiariaDB = async () => {
+    if (!cajaDiariaId) return;
+    try {
+      const { error } = await supabase
+        .from('caja_diaria')
+        .delete()
+        .eq('id', cajaDiariaId);
+
+      if (error) {
+        console.error('Error al eliminar caja diaria:', error);
+        mostrarToast('❌ Error al eliminar la caja inicial', 'error', 3000);
+        return;
+      }
+
+      setCajaDiariaId(null);
+      setCajaInicial('');
+      localStorage.removeItem('cajaInicial');
+      localStorage.removeItem('cajaInicialFecha');
+      mostrarToast('✅ Caja inicial eliminada', 'success', 2500);
+    } catch (error) {
+      console.error('Error inesperado al eliminar caja diaria:', error);
+    }
+  };
+
   // Función para cargar cierres de jornada registrados (solo los más recientes)
   const cargarCierresRegistrados = useCallback(async () => {
     try {
@@ -396,6 +511,11 @@ export default function RegistroVenta() {
   useEffect(() => {
     cargarCierresRegistrados();
   }, [cargarCierresRegistrados]);
+
+  // Cargar caja_diaria de hoy al montar
+  useEffect(() => {
+    cargarCajaDiaria(obtenerFechaActual());
+  }, [cargarCajaDiaria]);
 
   // Memoizar el procesamiento de cierres registrados para optimizar rendimiento
   const cierresProcesados = useMemo(() => {
@@ -445,6 +565,16 @@ export default function RegistroVenta() {
   const [filtroAnio, setFiltroAnio] = useState('');
   const [filtroTipoPago, setFiltroTipoPago] = useState('');
   const [ventasFiltradas, setVentasFiltradas] = useState([]);
+
+  // Cuando cambia el filtro de fecha, cargar la caja_diaria de esa fecha histórica
+  // (declarado aquí porque necesita filtroDia ya inicializado)
+  useEffect(() => {
+    if (filtroDia) {
+      cargarCajaDiaria(filtroDia);
+    } else {
+      setCajaInicialHistorica(null);
+    }
+  }, [filtroDia, cargarCajaDiaria]);
   
   // Estado para controlar la cantidad de ventas mostradas
   const [ventasMostradas, setVentasMostradas] = useState(300); // Límite inicial para minimarkets con muchas ventas diarias
@@ -779,15 +909,16 @@ export default function RegistroVenta() {
   const calcularTotalVenta = () => totalVenta;
   
   // Función para calcular el acumulado real desde las ventas registradas (MEMOIZADA para evitar recalcular en cada render)
+  // Respeta filtroDia: si hay filtro de fecha activo usa esa fecha, si no usa hoy
   const acumuladoReal = useMemo(() => {
-    const fechaActual = obtenerFechaActual();
-    const ventasEfectivoHoy = ventasRegistradas.filter(venta => {
+    const fechaObjetivo = filtroDia || obtenerFechaActual();
+    const ventasEfectivoFecha = ventasRegistradas.filter(venta => {
       const fechaVenta = venta.fecha_cl || venta.fecha;
-      return fechaVenta === fechaActual && venta.tipo_pago === 'efectivo';
+      return fechaVenta === fechaObjetivo && venta.tipo_pago === 'efectivo';
     });
 
     // Sumar solo los totales de ventas completas (con total_final)
-    const acumulado = ventasEfectivoHoy.reduce((total, venta) => {
+    const acumulado = ventasEfectivoFecha.reduce((total, venta) => {
       if (venta.total_final !== null && venta.total_final !== undefined) {
         return total + (parseFloat(venta.total_final) || 0);
       }
@@ -795,16 +926,19 @@ export default function RegistroVenta() {
     }, 0);
 
     return acumulado;
-  }, [ventasRegistradas]);
+  }, [ventasRegistradas, filtroDia]);
 
   // Función para compatibilidad (mantiene la misma interfaz)
   const calcularAcumuladoReal = () => acumuladoReal;
 
   // Función para calcular el total de caja (caja inicial + acumulado real) (MEMOIZADA para evitar recalcular en cada render)
+  // Cuando hay filtro de fecha activo usa cajaInicialHistorica (cargada desde BD), si no usa cajaInicial de hoy
   const totalCaja = useMemo(() => {
-    const cajaInicialNum = parseFloat(cajaInicial) || 0;
+    const cajaInicialNum = filtroDia
+      ? (cajaInicialHistorica ?? (parseFloat(cajaInicial) || 0))
+      : (parseFloat(cajaInicial) || 0);
     return cajaInicialNum + acumuladoReal;
-  }, [cajaInicial, acumuladoReal]);
+  }, [cajaInicial, acumuladoReal, filtroDia, cajaInicialHistorica]);
 
   // Función para compatibilidad (mantiene la misma interfaz)
   const calcularTotalCaja = () => totalCaja;
@@ -1359,6 +1493,7 @@ export default function RegistroVenta() {
         
         // Reiniciar caja inicial al nuevo día
         setCajaInicial('');
+        setCajaDiariaId(null);
         // Limpiar localStorage de caja inicial al nuevo día
         localStorage.removeItem('cajaInicial');
         localStorage.removeItem('cajaInicialFecha');
@@ -2828,16 +2963,29 @@ export default function RegistroVenta() {
                         onChange={(e) => {
                           const valor = e.target.value;
                           setCajaInicial(valor);
-                          // Guardar en localStorage con la fecha actual
                           const fechaActual = obtenerFechaActual();
                           localStorage.setItem('cajaInicial', valor);
                           localStorage.setItem('cajaInicialFecha', fechaActual);
+                        }}
+                        onBlur={(e) => {
+                          const valor = e.target.value;
+                          if (valor !== '') guardarCajaDiariaDB(valor, obtenerFechaActual());
+                          else if (cajaDiariaId) eliminarCajaDiariaDB();
                         }}
                         placeholder="Ej: 20000"
                         step="100"
                         min="0"
                         className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                       />
+                      {cajaDiariaId && (
+                        <button
+                          type="button"
+                          onClick={eliminarCajaDiariaDB}
+                          className="mt-1 text-xs text-red-400 hover:text-red-300 transition-colors duration-150"
+                        >
+                          🗑️ Eliminar caja del día
+                        </button>
+                      )}
                     </div>
 
                     {/* Monto pagado por el cliente */}
@@ -3480,6 +3628,36 @@ export default function RegistroVenta() {
                         </div>
                       </div>
                       
+                      {/* Caja Inicial */}
+                      {(() => {
+                        const montoCaja = filtroDia
+                          ? (cajaInicialHistorica ?? 0)
+                          : (parseFloat(cajaInicial) || 0);
+                        const tieneCaja = montoCaja > 0;
+                        return (
+                          <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                            <div className="flex items-center">
+                              <span className="text-yellow-400 text-lg md:text-xl mr-3">💵</span>
+                              <div>
+                                <p className="text-yellow-200 text-sm md:text-base font-medium">Caja Inicial</p>
+                                <p className="text-yellow-300 text-xs md:text-sm">Registrada en el sistema</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              {tieneCaja ? (
+                                <p className="text-yellow-300 font-bold text-lg md:text-xl">
+                                  ${montoCaja.toLocaleString()}
+                                </p>
+                              ) : (
+                                <p className="text-orange-400 font-bold text-sm md:text-base animate-pulse">
+                                  Sin registro
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Total en Caja */}
                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
@@ -3735,6 +3913,11 @@ export default function RegistroVenta() {
                                   const fechaActual = obtenerFechaActual();
                                   localStorage.setItem('cajaInicial', valorEntero);
                                   localStorage.setItem('cajaInicialFecha', fechaActual);
+                                }}
+                                onBlur={(e) => {
+                                  const valorEntero = e.target.value;
+                                  if (valorEntero !== '') guardarCajaDiariaDB(valorEntero, obtenerFechaActual());
+                                  else if (cajaDiariaId) eliminarCajaDiariaDB();
                                 }}
                                 className="w-full px-2 py-1 rounded border border-yellow-500/50 bg-white/10 text-yellow-300 text-center focus:outline-none focus:ring-1 focus:ring-yellow-400"
                                 placeholder="0"

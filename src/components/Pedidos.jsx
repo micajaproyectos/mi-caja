@@ -179,22 +179,20 @@ export default function Pedidos() {
   
   // Estados para cuadrar caja (solo frontend)
   const [cajaInicial, setCajaInicial] = useState(() => {
-    // Cargar caja inicial desde localStorage al inicializar
     const fechaActual = obtenerFechaHoyChile();
-    const cajaGuardada = localStorage.getItem('cajaInicial');
-    const fechaGuardada = localStorage.getItem('cajaInicialFecha');
-    
-    // Si hay caja guardada y es del mismo día, usarla
+    const cajaGuardada = localStorage.getItem('cajaInicialPedidos');
+    const fechaGuardada = localStorage.getItem('cajaInicialPedidosFecha');
     if (cajaGuardada && fechaGuardada === fechaActual) {
       return cajaGuardada;
     }
-    
-    // Si es un día diferente o no hay datos, limpiar
-    localStorage.removeItem('cajaInicial');
-    localStorage.removeItem('cajaInicialFecha');
+    localStorage.removeItem('cajaInicialPedidos');
+    localStorage.removeItem('cajaInicialPedidosFecha');
     return '';
   });
   
+  const [cajaDiariaId, setCajaDiariaId] = useState(null);
+  const [cajaInicialHistorica, setCajaInicialHistorica] = useState(null);
+
   // Estados para filtros
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
@@ -1404,6 +1402,50 @@ export default function Pedidos() {
     const totalMesa = calcularTotalConPropina(mesaSeleccionada);
     const montoPagadoNum = parseFloat(montoPagado) || 0;
     return montoPagadoNum - totalMesa;
+  };
+
+  const guardarCajaDiariaDB = useCallback(async (monto, fecha) => {
+    const usuarioId = await authService.getCurrentUserId();
+    if (!usuarioId) return;
+    const { data: usuarioData } = await supabase.from('usuarios').select('cliente_id').eq('usuario_id', usuarioId).single();
+    const { data, error } = await supabase.from('caja_diaria')
+      .upsert({ usuario_id: usuarioId, cliente_id: usuarioData?.cliente_id || null, fecha, monto: parseFloat(monto) || 0, fuente: 'pedidos' }, { onConflict: 'usuario_id,fecha,fuente' })
+      .select('id').single();
+    if (!error) setCajaDiariaId(data?.id || null);
+  }, []);
+
+  const cargarCajaDiaria = useCallback(async (fecha) => {
+    const usuarioId = await authService.getCurrentUserId();
+    if (!usuarioId) return;
+    const { data, error } = await supabase.from('caja_diaria').select('id, monto').eq('usuario_id', usuarioId).eq('fecha', fecha).eq('fuente', 'pedidos').maybeSingle();
+    if (error) return;
+    const fechaActual = obtenerFechaHoyChile();
+    if (fecha === fechaActual) {
+      if (data) {
+        setCajaDiariaId(data.id);
+        const montoStr = String(Math.round(parseFloat(data.monto) || 0));
+        setCajaInicial(montoStr);
+        localStorage.setItem('cajaInicialPedidos', montoStr);
+        localStorage.setItem('cajaInicialPedidosFecha', fechaActual);
+      } else {
+        const cajaLocal = localStorage.getItem('cajaInicialPedidos');
+        const fechaLocal = localStorage.getItem('cajaInicialPedidosFecha');
+        if (cajaLocal && fechaLocal === fechaActual) await guardarCajaDiariaDB(cajaLocal, fechaActual);
+      }
+    } else {
+      setCajaInicialHistorica(data ? parseFloat(data.monto) : null);
+    }
+  }, [guardarCajaDiariaDB]);
+
+  const eliminarCajaDiariaDB = async () => {
+    if (!cajaDiariaId) return;
+    const { error } = await supabase.from('caja_diaria').delete().eq('id', cajaDiariaId);
+    if (error) { mostrarToast('❌ Error al eliminar la caja inicial', 'error', 3000); return; }
+    setCajaDiariaId(null);
+    setCajaInicial('');
+    localStorage.removeItem('cajaInicialPedidos');
+    localStorage.removeItem('cajaInicialPedidosFecha');
+    mostrarToast('✅ Caja inicial eliminada', 'success', 2500);
   };
 
   // Función para calcular el acumulado real desde los pedidos registrados del día
@@ -2825,6 +2867,13 @@ export default function Pedidos() {
     setEstadisticasPedidos(estadisticasPedidosMemo);
   }, [pedidosFiltradosMemo, aniosDisponiblesMemo, estadisticasPedidosMemo]);
 
+  useEffect(() => { cargarCajaDiaria(obtenerFechaHoyChile()); }, [cargarCajaDiaria]);
+
+  useEffect(() => {
+    if (filtroFecha) { cargarCajaDiaria(filtroFecha); }
+    else { setCajaInicialHistorica(null); }
+  }, [filtroFecha, cargarCajaDiaria]);
+
   // Escuchar cambios en el estado de pantalla completa
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -3648,10 +3697,14 @@ export default function Pedidos() {
                                   onChange={(e) => {
                                     const valor = e.target.value;
                                     setCajaInicial(valor);
-                                    // Guardar en localStorage con la fecha actual
                                     const fechaActual = obtenerFechaHoyChile();
-                                    localStorage.setItem('cajaInicial', valor);
-                                    localStorage.setItem('cajaInicialFecha', fechaActual);
+                                    localStorage.setItem('cajaInicialPedidos', valor);
+                                    localStorage.setItem('cajaInicialPedidosFecha', fechaActual);
+                                  }}
+                                  onBlur={(e) => {
+                                    const valor = e.target.value;
+                                    if (valor !== '') guardarCajaDiariaDB(valor, obtenerFechaHoyChile());
+                                    else if (cajaDiariaId) eliminarCajaDiariaDB();
                                   }}
                                   onWheel={(e) => e.target.blur()}
                                   placeholder="Ej: 20000"
@@ -3659,6 +3712,11 @@ export default function Pedidos() {
                                   min="0"
                                   className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
                                 />
+                                {cajaDiariaId && (
+                                  <button type="button" onClick={eliminarCajaDiariaDB} className="mt-1 text-xs text-red-400 hover:text-red-300 transition-colors duration-150">
+                                    🗑️ Eliminar caja del día
+                                  </button>
+                                )}
                               </div>
 
                               {/* Monto pagado por el cliente */}
@@ -4487,6 +4545,30 @@ export default function Pedidos() {
                      </div>
                    </div>
                    
+                   {/* Caja Inicial */}
+                   {(() => {
+                     const montoCaja = filtroFecha ? (cajaInicialHistorica ?? 0) : (parseFloat(cajaInicial) || 0);
+                     const tieneCaja = montoCaja > 0;
+                     return (
+                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                         <div className="flex items-center">
+                           <span className="text-yellow-400 text-lg md:text-xl mr-3">💵</span>
+                           <div>
+                             <p className="text-yellow-200 text-sm md:text-base font-medium">Caja Inicial</p>
+                             <p className="text-yellow-300 text-xs md:text-sm">Registrada en el sistema</p>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           {tieneCaja ? (
+                             <p className="text-yellow-300 font-bold text-lg md:text-xl">${montoCaja.toLocaleString()}</p>
+                           ) : (
+                             <p className="text-orange-400 font-bold text-sm md:text-base animate-pulse">Sin registro</p>
+                           )}
+                         </div>
+                       </div>
+                     );
+                   })()}
+
                    {/* Total en Caja */}
                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
