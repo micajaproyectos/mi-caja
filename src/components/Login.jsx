@@ -64,6 +64,12 @@ function Login() {
         body: formData,
       });
       setContactoEnviado(true);
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'conversion_formulario', {
+          event_category: 'leads',
+          event_label: 'formulario_contacto',
+        });
+      }
     } catch {
       setContactoEnviado(true);
     } finally {
