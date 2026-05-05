@@ -16,8 +16,8 @@ function Login() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [nombreTitular, setNombreTitular] = useState('');
   const [correoContacto, setCorreoContacto] = useState('');
-  const [fonoContacto, setFonoContacto] = useState('');
-  const [mensajeContacto, setMensajeContacto] = useState('');
+  const [fonoContacto, setFonoContacto] = useState('+569');
+  const [mensajeContacto, setMensajeContacto] = useState('Hola, quiero usar Mi Caja para mi negocio');
   const [enviandoContacto, setEnviandoContacto] = useState(false);
   const [contactoEnviado, setContactoEnviado] = useState(false);
   const [botAbierto, setBotAbierto] = useState(false);
@@ -46,35 +46,33 @@ function Login() {
     }
   };
 
-  const GOOGLE_SCRIPT_URL = 'https://script.google.com/a/macros/amconsultora.cl/s/AKfycbwckE9Xid5KEeYv-ni971F5PusOhsVB1luK6TH_92Gm68UpptLhW3Qf7ZuQ-LMb_sCC/exec';
+  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7PmdPRJFhf4JsTicftp3-AYy8roQNtd3fkEM37GyAU46oCazymRrMJck8nT6EWid9/exec';
 
-  const handleContactoSubmit = async (e) => {
+  const handleContactoSubmit = (e) => {
     e.preventDefault();
-    setEnviandoContacto(true);
-    try {
-      const formData = new URLSearchParams();
-      formData.append('nombre_titular', nombreTitular);
-      formData.append('correo_electronico', correoContacto);
-      formData.append('fono_contacto', fonoContacto);
-      formData.append('mensaje', mensajeContacto);
 
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: formData,
+    const formData = new URLSearchParams();
+    formData.append('nombre_titular', nombreTitular);
+    formData.append('correo_electronico', correoContacto);
+    formData.append('fono_contacto', fonoContacto);
+    formData.append('mensaje', mensajeContacto);
+
+    // Mostrar éxito de inmediato sin esperar la respuesta del sheet
+    setContactoEnviado(true);
+
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion_formulario', {
+        event_category: 'leads',
+        event_label: 'formulario_contacto',
       });
-      setContactoEnviado(true);
-      if (typeof window.gtag === 'function') {
-        window.gtag('event', 'conversion_formulario', {
-          event_category: 'leads',
-          event_label: 'formulario_contacto',
-        });
-      }
-    } catch {
-      setContactoEnviado(true);
-    } finally {
-      setEnviandoContacto(false);
     }
+
+    // Envío silencioso en segundo plano
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: formData,
+    }).catch(() => {});
   };
 
   // Verificar si ya existe un usuario logueado
