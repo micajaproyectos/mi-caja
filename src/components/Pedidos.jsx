@@ -95,7 +95,6 @@ export default function Pedidos() {
     }
     return 'Mesa 1';
   });
-  const [cantidadMesas, setCantidadMesas] = useState(4);
   // Inicializar productos desde cache para carga instantánea
   const [productosPorMesa, setProductosPorMesa] = useState(() => {
     try {
@@ -241,12 +240,6 @@ export default function Pedidos() {
   const [editandoAnotacionId, setEditandoAnotacionId] = useState(null);
   const [anotacionTemporal, setAnotacionTemporal] = useState('');
 
-  // Estado para pantalla completa
-  const [pantallaCompleta, setPantallaCompleta] = useState(false);
-  
-  // Estado para notificación de dispositivos táctiles
-  const [notificacionTactil, setNotificacionTactil] = useState(false);
-  
   // Estado para notificaciones de pedidos terminados desde cocina
   const [notificacionesPedidosTerminados, setNotificacionesPedidosTerminados] = useState([]);
   
@@ -255,42 +248,6 @@ export default function Pedidos() {
   
   // Ref para controlar el debounce del sonido (evita múltiples sonidos simultáneos)
   const ultimaVezSonidoRef = useRef(0);
-
-  // Función para detectar dispositivos táctiles (tablets/móviles) y navegadores específicos
-  const esDispositivoTactil = () => {
-    // Detectar iOS/iPadOS
-    const esIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Detectar Android tablets
-    const esAndroidTablet = /Android/.test(navigator.userAgent) && !/Mobile/.test(navigator.userAgent);
-    
-    // Detectar Chrome en tablets/dispositivos táctiles
-    const esChromeEnTablet = /Chrome/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
-    
-    // Detectar cualquier dispositivo táctil
-    const esDeviceTactil = navigator.maxTouchPoints > 1 || 'ontouchstart' in window;
-    
-    return esIOS || esAndroidTablet || esChromeEnTablet || esDeviceTactil;
-  };
-  
-  // Función para obtener información específica del navegador/dispositivo  
-  const obtenerInfoDispositivo = () => {
-    const userAgent = navigator.userAgent;
-    
-    if (/Chrome/.test(userAgent) && navigator.maxTouchPoints > 1) {
-      return { navegador: 'Chrome', tipo: 'tablet' };
-    }
-    if (/Safari/.test(userAgent) && /iPhone|iPad|iPod/.test(userAgent)) {
-      return { navegador: 'Safari', tipo: 'iOS' };
-    }
-    if (/Android/.test(userAgent)) {
-      return { navegador: 'Android', tipo: 'tablet' };
-    }
-    
-    return { navegador: 'Navegador', tipo: 'dispositivo táctil' };
-  };
-  
 
   // Estados para estadísticas de pedidos
   const [estadisticasPedidos, setEstadisticasPedidos] = useState({
@@ -710,21 +667,27 @@ export default function Pedidos() {
   // ============================================================
 
   // Función para cargar mesas desde Supabase (sin bloquear UI, actualización silenciosa)
-  const cargarMesasDesdeSupabase = async (fromRealtime = false) => {
+  const cargarMesasDesdeSupabase = async (origenCarga = 'initial') => {
     try {
+      // Compatibilidad interna: llamadas antiguas con true significan Realtime.
+      const origen = origenCarga === true ? 'realtime' : origenCarga;
+      const esRealtime = origen === 'realtime' || origen === 'realtime-delete';
+      const esEliminacionRealtime = origen === 'realtime-delete';
+
       // 🛡️ PROTECCIÓN: Si viene de Realtime y hubo un cambio muy reciente (< 3 segundos), esperar
-      if (fromRealtime && ultimoCambioMesasRef.current) {
+      if (esRealtime && ultimoCambioMesasRef.current) {
         const tiempoDesdeUltimoCambio = Date.now() - ultimoCambioMesasRef.current;
         if (tiempoDesdeUltimoCambio < 3000) { // 3 segundos de protección
           debugLog(`⏸️ Realtime bloqueado: cambio reciente hace ${tiempoDesdeUltimoCambio}ms`);
           // Reintentar después de que pase el tiempo de protección
-          setTimeout(() => cargarMesasRef.current(true), 3500);
+          setTimeout(() => cargarMesasRef.current(origen), 3500);
           return;
         }
       }
       
-      // Evitar carga múltiple (solo si no viene de Realtime)
-      if (!fromRealtime && mesasInicialCargadas) {
+      // Evitar carga múltiple solo para la carga inicial.
+      // Realtime y visibility deben poder validar datos después del montaje.
+      if (origen === 'initial' && mesasInicialCargadas) {
         return;
       }
       
@@ -797,15 +760,15 @@ export default function Pedidos() {
             console.log(`✅ Actualización válida: ${cantidadActual} → ${cantidadNueva} mesas`);
             setMesas(mesasOrdenadas);
             localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
-          } else if (fromRealtime) {
-            // Viene de Realtime y hay MENOS mesas: probablemente una eliminación legítima
-            console.log(`⚠️ Eliminación Realtime: ${cantidadActual} → ${cantidadNueva} mesas`);
+          } else if (esEliminacionRealtime && cantidadNueva === cantidadActual - 1) {
+            // Solo un DELETE real de Realtime puede reducir mesas.
+            console.log(`⚠️ Eliminación Realtime confirmada: ${cantidadActual} → ${cantidadNueva} mesas`);
             setMesas(mesasOrdenadas);
             localStorage.setItem('mesasPedidos', JSON.stringify(mesasOrdenadas));
           } else {
-            // 🚨 BLOQUEO: Supabase tiene menos mesas y no viene de Realtime
-            console.error(`🛑 BLOQUEADO: No actualizar mesas. Supabase=${cantidadNueva}, Local=${cantidadActual}`);
-            console.error('Posible error de red o query incompleto. Manteniendo mesas locales.');
+            // 🚨 BLOQUEO: visibility/realtime no destructivo nunca debe borrar pestañas.
+            console.error(`🛑 BLOQUEADO (${origen}): No actualizar mesas. Supabase=${cantidadNueva}, Local=${cantidadActual}`);
+            console.error('Posible respuesta parcial tras inactividad o reconexión. Manteniendo mesas locales.');
             // NO actualizar estado, mantener las mesas actuales
             return; // Salir sin actualizar
           }
@@ -1484,31 +1447,6 @@ export default function Pedidos() {
     return cajaInicialNum + calcularAcumuladoReal();
   };
 
-  // Función para agregar mesas
-  const agregarMesas = async () => {
-    if (cantidadMesas <= 0) {
-      alert('La cantidad de mesas debe ser mayor a 0');
-      return;
-    }
-
-    // 🛡️ Marcar timestamp del cambio para protección contra Realtime
-    ultimoCambioMesasRef.current = Date.now();
-
-    const nuevasMesas = [];
-    for (let i = 1; i <= cantidadMesas; i++) {
-      nuevasMesas.push(`Mesa ${mesas.length + i}`);
-    }
-    
-    const mesasActualizadas = [...mesas, ...nuevasMesas];
-    setMesas(mesasActualizadas);
-    setCantidadMesas(4); // Resetear a 4
-    
-    // Guardar en localStorage PRIMERO (cache secundario)
-    localStorage.setItem('mesasPedidos', JSON.stringify(mesasActualizadas));
-    
-    // Guardar en Supabase (sincronización multi-dispositivo)
-    await guardarMesasEnSupabase(nuevasMesas);
-  };
 
   // Función para eliminar una mesa
   const eliminarMesa = async (mesaAEliminar) => {
@@ -1805,12 +1743,19 @@ export default function Pedidos() {
     const handleTouchEnd = (e) => {
       finalizarArrastre(e);
     };
+
+    const cancelarArrastre = () => {
+      setMesaArrastrando(null);
+      setIndiceArrastrando(null);
+      setEsArrastrando(false);
+    };
     
     // Agregar listeners globales
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchcancel', cancelarArrastre);
     
     // Limpiar listeners al desmontar o cuando termine el drag
     return () => {
@@ -1818,6 +1763,7 @@ export default function Pedidos() {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', cancelarArrastre);
     };
   }, [mesaArrastrando, indiceArrastrando, moverArrastre, finalizarArrastre]);
 
@@ -2211,31 +2157,6 @@ export default function Pedidos() {
     }));
   };
 
-  // Función para alternar pantalla completa usando la API del navegador
-  const togglePantallaCompleta = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        // Entrar a pantalla completa
-        await document.documentElement.requestFullscreen();
-        setPantallaCompleta(true);
-        
-        // Mostrar notificación específica para dispositivos táctiles
-        if (esDispositivoTactil()) {
-          setNotificacionTactil(true);
-          setTimeout(() => setNotificacionTactil(false), 5000);
-        }
-      } else {
-        // Salir de pantalla completa
-        await document.exitFullscreen();
-        setPantallaCompleta(false);
-      }
-    } catch (error) {
-      console.error('Error al cambiar modo pantalla completa:', error);
-      // Fallback al comportamiento anterior si la API no está disponible
-      setPantallaCompleta(!pantallaCompleta);
-    }
-  };
-
   // Función para guardar edición
   const guardarEdicion = async (id) => {
     try {
@@ -2619,7 +2540,7 @@ export default function Pedidos() {
     });
     
     // Cargar mesas en paralelo (prioridad alta)
-    cargarMesasDesdeSupabase().catch(err => {
+    cargarMesasDesdeSupabase('initial').catch(err => {
       console.error('Error al cargar mesas:', err);
     });
     
@@ -2680,7 +2601,8 @@ export default function Pedidos() {
             clearTimeout(realtimeMesasTimeoutRef.current);
           }
           realtimeMesasTimeoutRef.current = setTimeout(() => {
-            cargarMesasRef.current(true);
+            const origenMesas = payload.eventType === 'DELETE' ? 'realtime-delete' : 'realtime';
+            cargarMesasRef.current(origenMesas);
             debugLog('🔄 Realtime: Recargando mesas');
           }, 2000); // 2 segundos de debounce para permitir que se propague el cambio
         }
@@ -2691,9 +2613,8 @@ export default function Pedidos() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('📱 Página visible nuevamente, recargando mesas y productos...');
-        // fromRealtime=true para saltar el guard de mesasInicialCargadas
-        // (la protección de 3s no aplica si no hubo cambio reciente del usuario)
-        cargarMesasRef.current(true);
+        // Recarga segura: al volver de inactividad nunca se deben reducir pestañas.
+        cargarMesasRef.current('visibility');
         cargarProductosTemporales();
       }
     };
@@ -2874,35 +2795,6 @@ export default function Pedidos() {
     else { setCajaInicialHistorica(null); }
   }, [filtroFecha, cargarCajaDiaria]);
 
-  // Escuchar cambios en el estado de pantalla completa
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const estaEnFullscreen = !!document.fullscreenElement;
-      const estadoAnterior = pantallaCompleta;
-      
-      // Sincronizar el estado con el estado real de fullscreen
-      setPantallaCompleta(estaEnFullscreen);
-      
-      // Si estamos en un dispositivo táctil y se salió automáticamente de fullscreen 
-      // (no fue por acción del usuario), mostrar notificación
-      if (esDispositivoTactil() && estadoAnterior && !estaEnFullscreen) {
-        setNotificacionTactil(false); // Ocultar notificación anterior si existe
-        setTimeout(() => {
-          setNotificacionTactil(true);
-          setTimeout(() => setNotificacionTactil(false), 4000);
-        }, 500);
-      }
-    };
-
-    // Agregar el listener para cambios de fullscreen
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    // Cleanup: remover el listener cuando el componente se desmonte
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, [pantallaCompleta]);
-
   // Re-filtrar productos cuando se cargan los productos del inventario si hay una búsqueda activa
   // Esto soluciona el problema cuando el usuario escribe antes de que se carguen los productos
   useEffect(() => {
@@ -2944,20 +2836,7 @@ export default function Pedidos() {
   ];
 
   return (
-    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
-      {/* Notificación para dispositivos táctiles */}
-      {notificacionTactil && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
-          <div className="flex items-center gap-2">
-            <span>📱</span>
-            <div className="text-sm">
-              <div className="font-semibold">{obtenerInfoDispositivo().navegador} en {obtenerInfoDispositivo().tipo}</div>
-              <div className="text-xs opacity-90">La pantalla completa puede cerrarse al usar campos de texto</div>
-            </div>
-          </div>
-        </div>
-      )}
-      
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Notificaciones tipo banda de pedidos terminados desde cocina */}
       {notificacionesPedidosTerminados.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-[70] bg-green-600/95 backdrop-blur-md border-b-2 border-green-400/50 animate-slide-down py-1.5">
@@ -3022,51 +2901,25 @@ export default function Pedidos() {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-3 sm:p-4 md:p-8'}`}>
-        <div className={`${pantallaCompleta ? 'h-full px-3 sm:px-4 py-4' : 'max-w-7xl mx-auto'}`}>
+      <div className="relative z-10 p-3 sm:p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
           {/* Botón de regreso */}
-          {!pantallaCompleta && (
-            <div className="mb-4 md:mb-6">
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-              >
-                <span className="text-lg md:text-xl">←</span>
-                <span>Volver al Inicio</span>
-              </button>
-            </div>
-          )}
+          <div className="mb-4 md:mb-6">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
+              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+            >
+              <span className="text-lg md:text-xl">←</span>
+              <span>Volver al Inicio</span>
+            </button>
+          </div>
 
-          {/* Header con título y botón pantalla completa */}
+          {/* Header con título */}
           <div className="text-center mb-6 md:mb-8 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex-1"></div>
-              <div className="flex-1">
-                <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Sistema de Pedidos
-                </h1>
-              </div>
-              <div className="flex-1 flex justify-end">
-                <button
-                  onClick={togglePantallaCompleta}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                  title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
-                >
-                  {pantallaCompleta ? (
-                    <span className="flex items-center gap-2">
-                      <span>⛶</span>
-                      <span className="hidden md:inline">Salir</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <span>⛶</span>
-                      <span className="hidden md:inline">Pantalla Completa</span>
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
+            <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Sistema de Pedidos
+            </h1>
           </div>
 
           {/* Formulario de Pedido */}
@@ -3380,7 +3233,11 @@ export default function Pedidos() {
                         // 🛡️ Marcar timestamp del cambio para protección contra Realtime
                         ultimoCambioMesasRef.current = Date.now();
                         
-                        const nuevaMesa = `Mesa ${mesas.length + 1}`;
+                        const numerosUsados = mesas
+                          .map(m => { const match = m.match(/^Mesa (\d+)$/); return match ? parseInt(match[1], 10) : 0; })
+                          .filter(n => n > 0);
+                        const siguienteNumero = numerosUsados.length > 0 ? Math.max(...numerosUsados) + 1 : mesas.length + 1;
+                        const nuevaMesa = `Mesa ${siguienteNumero}`;
                         const mesasActualizadas = [...mesas, nuevaMesa];
                         setMesas(mesasActualizadas);
                         
@@ -4592,7 +4449,7 @@ export default function Pedidos() {
        </div>
        
       {/* Footer */}
-      {!pantallaCompleta && <Footer />}
+      <Footer />
 
       {/* Modal del Escáner de Código de Barras */}
       <BarcodeScanner
