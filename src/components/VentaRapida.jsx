@@ -15,6 +15,16 @@ import Footer from './Footer';
 const IMPRESION_TERMICA_HABILITADA = true;
 // ========================================
 
+const formatearHoraRegistro = (created_at) => {
+  if (!created_at) return '--:--';
+  return new Date(created_at).toLocaleTimeString('es-CL', {
+    timeZone: 'America/Santiago',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
+
 const VentaRapida = () => {
   const [venta, setVenta] = useState({
     fecha: obtenerFechaHoyChile(),
@@ -44,17 +54,11 @@ const VentaRapida = () => {
     tipo_pago: ''
   });
 
-  // Estado para pantalla completa
-  const [pantallaCompleta, setPantallaCompleta] = useState(false);
-  
-  // Estado para notificación de dispositivos táctiles
-  const [notificacionTactil, setNotificacionTactil] = useState(false);
+  // Estado para popup de hora de registro
+  const [horaPopupId, setHoraPopupId] = useState(null);
 
   // Estado para notificaciones personalizadas
   const [notificacionPersonalizada, setNotificacionPersonalizada] = useState(null);
-
-  // Estado para confirmaciones personalizadas
-  const [confirmacionPersonalizada, setConfirmacionPersonalizada] = useState(null);
 
   // Estado para prevenir doble clic en registro de venta rápida
   const [registrando, setRegistrando] = useState(false);
@@ -68,62 +72,10 @@ const VentaRapida = () => {
     setTimeout(() => setNotificacionPersonalizada(null), 3000);
   };
 
-  // Función para mostrar confirmaciones (inteligente según modo pantalla completa)
   const mostrarConfirmacion = (mensaje) => {
     return new Promise((resolve) => {
-      if (pantallaCompleta) {
-        // Mostrar confirmación personalizada en pantalla completa
-        setConfirmacionPersonalizada({
-          mensaje,
-          onConfirm: () => {
-            setConfirmacionPersonalizada(null);
-            resolve(true);
-          },
-          onCancel: () => {
-            setConfirmacionPersonalizada(null);
-            resolve(false);
-          }
-        });
-      } else {
-        // Usar confirm nativo fuera de pantalla completa
-        resolve(confirm(mensaje));
-      }
+      resolve(confirm(mensaje));
     });
-  };
-
-  // Función para detectar dispositivos táctiles (tablets/móviles) y navegadores específicos
-  const esDispositivoTactil = () => {
-    // Detectar iOS/iPadOS
-    const esIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Detectar Android tablets
-    const esAndroidTablet = /Android/.test(navigator.userAgent) && !/Mobile/.test(navigator.userAgent);
-    
-    // Detectar Chrome en tablets/dispositivos táctiles
-    const esChromeEnTablet = /Chrome/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
-    
-    // Detectar cualquier dispositivo táctil
-    const esDeviceTactil = navigator.maxTouchPoints > 1 || 'ontouchstart' in window;
-    
-    return esIOS || esAndroidTablet || esChromeEnTablet || esDeviceTactil;
-  };
-  
-  // Función para obtener información específica del navegador/dispositivo  
-  const obtenerInfoDispositivo = () => {
-    const userAgent = navigator.userAgent;
-    
-    if (/Chrome/.test(userAgent) && navigator.maxTouchPoints > 1) {
-      return { navegador: 'Chrome', tipo: 'tablet' };
-    }
-    if (/Safari/.test(userAgent) && /iPhone|iPad|iPod/.test(userAgent)) {
-      return { navegador: 'Safari', tipo: 'iOS' };
-    }
-    if (/Android/.test(userAgent)) {
-      return { navegador: 'Android', tipo: 'tablet' };
-    }
-    
-    return { navegador: 'Navegador', tipo: 'dispositivo táctil' };
   };
 
   // Función para cargar ventas rápidas registradas
@@ -201,34 +153,14 @@ const VentaRapida = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Escuchar cambios en el estado de pantalla completa
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const estaEnFullscreen = !!document.fullscreenElement;
-      const estadoAnterior = pantallaCompleta;
-      
-      // Sincronizar el estado con el estado real de fullscreen
-      setPantallaCompleta(estaEnFullscreen);
-      
-      // Si estamos en un dispositivo táctil y se salió automáticamente de fullscreen 
-      // (no fue por acción del usuario), mostrar notificación
-      if (esDispositivoTactil() && estadoAnterior && !estaEnFullscreen) {
-        setNotificacionTactil(false); // Ocultar notificación anterior si existe
-        setTimeout(() => {
-          setNotificacionTactil(true);
-          setTimeout(() => setNotificacionTactil(false), 4000);
-        }, 500);
-      }
+useEffect(() => {
+    if (!horaPopupId) return;
+    const cerrar = (e) => {
+      if (!e.target.closest('[data-hora-popup]')) setHoraPopupId(null);
     };
-
-    // Agregar el listener para cambios de fullscreen
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    // Cleanup: remover el listener cuando el componente se desmonte
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, [pantallaCompleta]);
+    document.addEventListener('click', cerrar);
+    return () => document.removeEventListener('click', cerrar);
+  }, [horaPopupId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -671,31 +603,6 @@ const VentaRapida = () => {
     }
   };
 
-  // Función para alternar pantalla completa usando la API del navegador
-  const togglePantallaCompleta = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        // Entrar a pantalla completa
-        await document.documentElement.requestFullscreen();
-        setPantallaCompleta(true);
-        
-        // Mostrar notificación específica para dispositivos táctiles
-        if (esDispositivoTactil()) {
-          setNotificacionTactil(true);
-          setTimeout(() => setNotificacionTactil(false), 5000);
-        }
-      } else {
-        // Salir de pantalla completa
-        await document.exitFullscreen();
-        setPantallaCompleta(false);
-      }
-    } catch (error) {
-      console.error('Error al cambiar modo pantalla completa:', error);
-      // Fallback al comportamiento anterior si la API no está disponible
-      setPantallaCompleta(!pantallaCompleta);
-    }
-  };
-
   // Función para eliminar venta
   const eliminarVenta = async (id) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta venta rápida?')) {
@@ -728,21 +635,8 @@ const VentaRapida = () => {
   };
 
   return (
-    <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
-      {/* Notificación para dispositivos táctiles */}
-      {notificacionTactil && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
-          <div className="flex items-center gap-2">
-            <span>📱</span>
-            <div className="text-sm">
-              <div className="font-semibold">{obtenerInfoDispositivo().navegador} en {obtenerInfoDispositivo().tipo}</div>
-              <div className="text-xs opacity-90">La pantalla completa puede cerrarse al usar campos de texto</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notificaciones personalizadas para pantalla completa */}
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
+      {/* Notificaciones personalizadas */}
       {notificacionPersonalizada && (
         <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border max-w-sm text-center animate-fade-in ${
           notificacionPersonalizada.tipo === 'success' ? 'bg-green-600/95 border-green-400/30' :
@@ -761,30 +655,6 @@ const VentaRapida = () => {
         </div>
       )}
 
-      {/* Confirmaciones personalizadas para pantalla completa */}
-      {confirmacionPersonalizada && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
-            <p className="text-white text-center mb-6 text-lg">
-              {confirmacionPersonalizada.mensaje}
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={confirmacionPersonalizada.onCancel}
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                No
-              </button>
-              <button
-                onClick={confirmacionPersonalizada.onConfirm}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                Sí
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Fondo degradado moderno */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -802,59 +672,31 @@ const VentaRapida = () => {
       <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
-      <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
-        <div className={`${pantallaCompleta ? 'h-full px-4 py-4' : 'max-w-4xl mx-auto'}`}>
+      <div className="relative z-10 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
           {/* Botón de regreso */}
-          {!pantallaCompleta && (
-            <div className="mb-4 md:mb-6">
-              <button
-                onClick={() => window.history.back()}
-                className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
-                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-              >
-                <span className="text-lg md:text-xl">←</span>
-                <span>Volver al Inicio</span>
-              </button>
-            </div>
-          )}
+          <div className="mb-4 md:mb-6">
+            <button
+              onClick={() => window.history.back()}
+              className="flex items-center gap-2 text-white hover:text-green-300 transition-colors duration-200 font-medium text-sm md:text-base"
+              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+            >
+              <span className="text-lg md:text-xl">←</span>
+              <span>Volver al Inicio</span>
+            </button>
+          </div>
 
-          {/* Header con título y botón de pantalla completa */}
+          {/* Header */}
           <div className="text-center mb-6 md:mb-8 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex-1"></div>
-              <div className="flex-1">
-                <div className="inline-flex items-center justify-center gap-3 mb-4">
-                  <span className="text-5xl md:text-6xl">⚡</span>
-                </div>
-                <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Venta Rápida
-                </h1>
-              </div>
-              <div className="flex-1 flex justify-end">
-                <button
-                  onClick={togglePantallaCompleta}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                  title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
-                >
-                  {pantallaCompleta ? (
-                    <span className="flex items-center gap-2">
-                      <span>⛶</span>
-                      <span className="hidden md:inline">Salir</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <span>⛶</span>
-                      <span className="hidden md:inline">Pantalla Completa</span>
-                    </span>
-                  )}
-                </button>
-              </div>
+            <div className="inline-flex items-center justify-center gap-3 mb-4">
+              <span className="text-5xl md:text-6xl">⚡</span>
             </div>
-            {!pantallaCompleta && (
-              <p className="text-gray-300 text-sm md:text-base mt-2">
-                Registra tus ventas diarias de forma simple y rápida
-              </p>
-            )}
+            <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg animate-slide-up" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Venta Rápida
+            </h1>
+            <p className="text-gray-300 text-sm md:text-base mt-2">
+              Registra tus ventas diarias de forma simple y rápida
+            </p>
           </div>
 
           {/* Formulario de Venta Rápida */}
@@ -1275,7 +1117,22 @@ const VentaRapida = () => {
                                   className="w-full p-1 md:p-2 bg-white/10 border border-yellow-400 rounded text-white text-xs md:text-sm"
                                 />
                               ) : (
-                                formatearFechaCortaChile(ventaItem.fecha_cl)
+                                <span
+                                  data-hora-popup
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setHoraPopupId(prev => prev === ventaItem.id ? null : ventaItem.id);
+                                  }}
+                                  className="relative cursor-pointer hover:text-white transition-colors duration-150"
+                                >
+                                  {formatearFechaCortaChile(ventaItem.fecha_cl)}
+                                  {horaPopupId === ventaItem.id && (
+                                    <div className="absolute left-0 top-full mt-1 z-20 bg-gray-900 border border-white/20 rounded px-2 py-0.5 shadow text-xs text-white whitespace-nowrap">
+                                      <span className="text-gray-400">Hora: </span>
+                                      <span className="font-mono text-yellow-300">{formatearHoraRegistro(ventaItem.created_at)}</span>
+                                    </div>
+                                  )}
+                                </span>
                               )}
                             </td>
                             
@@ -1458,7 +1315,7 @@ const VentaRapida = () => {
       </div>
       
       {/* Footer */}
-      {!pantallaCompleta && <Footer />}
+      <Footer />
     </div>
   );
 };

@@ -1134,6 +1134,9 @@ function Login() {
                       Los comprobantes, notas de venta y registros generados por Mi Caja tienen carácter interno y de gestión solamente. En ningún caso reemplazan ni tienen validez como boletas electrónicas, facturas u otros documentos tributarios oficiales emitidos a través del SII.
                     </p>
                     <p>
+                      La <strong className="text-white">Nota de Venta</strong> generada por esta plataforma es un documento de uso interno exclusivamente. No constituye ni reemplaza una boleta, factura u otro documento tributario oficial emitido a través del Servicio de Impuestos Internos (SII).
+                    </p>
+                    <p>
                       Es responsabilidad exclusiva del titular declarar, respaldar y reportar correctamente todas las operaciones comerciales según la normativa vigente.
                     </p>
                   </div>
