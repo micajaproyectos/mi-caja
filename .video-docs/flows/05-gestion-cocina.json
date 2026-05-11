@@ -1,0 +1,50 @@
+{
+  "project": "Mi Caja",
+  "title": "Gestión de Cocina",
+  "category": "Operaciones",
+  "description": "Las comandas llegan a cocina al instante, sin gritos ni papelitos perdidos.",
+  "steps_summary": ["Acceder al módulo de Gestión Cocina", "Ver las comandas en tiempo real", "Gestionar estados de pedidos"],
+  "output_name": "05-gestion-cocina",
+  "viewport": { "width": 1280, "height": 800 },
+  "use_setup_login": false,
+  "show_cursor": true,
+  "setup": [
+    { "action": "navigate", "value": "http://localhost:5173/login" },
+    { "action": "click", "selector": "nav button.px-5" },
+    { "action": "wait_ms", "value": "1000" },
+    { "action": "fill", "selector": "#email", "value": "millapinda92@gmail.com" },
+    { "action": "fill", "selector": "#password", "value": "millapinda92" },
+    { "action": "click", "selector": ".z-40 button[type=submit]" },
+    { "action": "wait_ms", "value": "2500" }
+  ],
+  "steps": [
+    {
+      "id": "home",
+      "action": "navigate",
+      "value": "http://localhost:5173/",
+      "narration": "Desde el panel principal, accedemos al módulo de Gestión Cocina.",
+      "action_ms": 2000,
+      "wait_for": ".grid"
+    },
+    {
+      "id": "click_cocina",
+      "action": "click",
+      "selector": ".grid.gap-6 button:nth-child(9)",
+      "action_ms": 500,
+      "wait_for_url": "/gestion-cocina"
+    },
+    {
+      "id": "show_cocina",
+      "action": "wait",
+      "narration": "Este es el módulo de Gestión Cocina. Las comandas llegan aquí al instante desde el módulo de Pedidos. Sin gritos, sin papelitos: el equipo de cocina ve en tiempo real qué hay que preparar y en qué orden.",
+      "action_ms": 4500
+    },
+    {
+      "id": "scroll_cocina",
+      "action": "scroll",
+      "value": "down",
+      "narration": "Podés filtrar los pedidos por fecha, estado pendiente o terminado, y actualizar cada comanda con un solo clic. El sistema notifica automáticamente cuando hay nuevos pedidos entrantes.",
+      "action_ms": 4000
+    }
+  ]
+}

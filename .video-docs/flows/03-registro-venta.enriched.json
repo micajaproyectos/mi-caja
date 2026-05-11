@@ -1,0 +1,90 @@
+{
+  "project": "Mi Caja",
+  "title": "Registro de Venta",
+  "category": "Ventas",
+  "description": "Aprende a registrar ventas, agregar productos y gestionar el cierre de caja diario.",
+  "steps_summary": [
+    "Acceder al módulo de Registro de Venta",
+    "Explorar el formulario de venta",
+    "Ver el historial de ventas"
+  ],
+  "output_name": "03-registro-venta",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "use_setup_login": false,
+  "show_cursor": true,
+  "setup": [
+    {
+      "action": "navigate",
+      "value": "http://localhost:5173/login"
+    },
+    {
+      "action": "click",
+      "selector": "nav button.px-5"
+    },
+    {
+      "action": "wait_ms",
+      "value": "1000"
+    },
+    {
+      "action": "fill",
+      "selector": "#email",
+      "value": "millapinda92@gmail.com"
+    },
+    {
+      "action": "fill",
+      "selector": "#password",
+      "value": "millapinda92"
+    },
+    {
+      "action": "click",
+      "selector": ".z-40 button[type=submit]"
+    },
+    {
+      "action": "wait_ms",
+      "value": "2500"
+    }
+  ],
+  "steps": [
+    {
+      "id": "home",
+      "action": "navigate",
+      "value": "http://localhost:5173/",
+      "narration": "Desde el panel principal, accedemos al módulo de Registro de Venta haciendo clic en su ícono.",
+      "action_ms": 2000,
+      "wait_for": ".grid",
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\03-registro-venta\\audio\\home.mp3",
+      "audio_duration_ms": 5759,
+      "audio_start_ms": 2000
+    },
+    {
+      "id": "click_ventas",
+      "action": "click",
+      "selector": ".grid.gap-6 button:nth-child(1)",
+      "action_ms": 500,
+      "wait_for_url": "/ventas",
+      "audio_start_ms": 8759
+    },
+    {
+      "id": "show_ventas",
+      "action": "wait",
+      "narration": "Este es el módulo de Registro de Venta. Aquí podés registrar cada venta del día: buscás el producto, ingresás la cantidad, seleccionás el tipo de pago y guardás la transacción.",
+      "action_ms": 4000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\03-registro-venta\\audio\\show_ventas.mp3",
+      "audio_duration_ms": 12493,
+      "audio_start_ms": 12759
+    },
+    {
+      "id": "scroll_down",
+      "action": "scroll",
+      "value": "down",
+      "narration": "El historial de ventas registradas aparece más abajo, donde podés ver, filtrar y revisar todas las transacciones del período. Esto te permite hacer un cierre de caja preciso al final del día.",
+      "action_ms": 4000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\03-registro-venta\\audio\\scroll_down.mp3",
+      "audio_duration_ms": 14025,
+      "audio_start_ms": 29752
+    }
+  ]
+}

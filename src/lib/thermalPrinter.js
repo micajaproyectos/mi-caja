@@ -323,13 +323,13 @@ class ThermalPrinter {
    * Generar texto plano del recibo formateado para impresión térmica 58mm
    */
   generarReciboTxt(venta, nombreUsuario = 'MI CAJA') {
-    // Obtener fecha en zona horaria de Chile (Santiago)
-    const fecha = new Date(venta.fecha);
-    const fechaStr = fecha.toLocaleDateString('es-CL', { timeZone: 'America/Santiago' });
-    
-    // Obtener hora actual en zona horaria de Chile (Santiago)
-    const ahora = new Date();
-    const horaStr = ahora.toLocaleTimeString('es-CL', { 
+    // Parsear YYYY-MM-DD como fecha local para evitar desfase UTC→Santiago
+    const [year, month, day] = venta.fecha.split('-').map(Number);
+    const fechaStr = new Date(year, month - 1, day).toLocaleDateString('es-CL', { timeZone: 'America/Santiago' });
+
+    // Usar hora del registro si está disponible; si no, usar hora actual
+    const fuenteHora = venta.created_at ? new Date(venta.created_at) : new Date();
+    const horaStr = fuenteHora.toLocaleTimeString('es-CL', {
       timeZone: 'America/Santiago',
       hour: '2-digit',
       minute: '2-digit',
@@ -664,8 +664,7 @@ class ThermalPrinter {
       y += 3.8;
     });
 
-    const fecha = new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago' }).replace(/\//g, '-');
-    doc.save(`nota-venta-${fecha}.pdf`);
+    doc.save(`nota-venta-${venta.fecha}-${venta.tipo_pago}.pdf`);
   }
 
   /**

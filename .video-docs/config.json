@@ -1,0 +1,14 @@
+{
+  "app_name": "Mi Caja",
+  "base_url": "http://localhost:5173",
+  "credentials": {
+    "demo": {
+      "email": "millapinda92@gmail.com",
+      "password": "millapinda92"
+    }
+  },
+  "setup_login": {
+    "email": "millapinda92@gmail.com",
+    "password": "millapinda92"
+  }
+}

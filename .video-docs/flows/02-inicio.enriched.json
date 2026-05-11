@@ -1,0 +1,90 @@
+{
+  "project": "Mi Caja",
+  "title": "Panel principal de Mi Caja",
+  "category": "Primeros Pasos",
+  "description": "Conoce el panel principal con todos los módulos disponibles para gestionar tu negocio.",
+  "steps_summary": [
+    "Acceder al panel principal",
+    "Explorar los módulos disponibles"
+  ],
+  "output_name": "02-inicio",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "use_setup_login": false,
+  "show_cursor": true,
+  "setup": [
+    {
+      "action": "navigate",
+      "value": "http://localhost:5173/login"
+    },
+    {
+      "action": "click",
+      "selector": "nav button.px-5"
+    },
+    {
+      "action": "wait_ms",
+      "value": "1000"
+    },
+    {
+      "action": "fill",
+      "selector": "#email",
+      "value": "millapinda92@gmail.com"
+    },
+    {
+      "action": "fill",
+      "selector": "#password",
+      "value": "millapinda92"
+    },
+    {
+      "action": "click",
+      "selector": ".z-40 button[type=submit]"
+    },
+    {
+      "action": "wait_ms",
+      "value": "2500"
+    }
+  ],
+  "steps": [
+    {
+      "id": "home",
+      "action": "navigate",
+      "value": "http://localhost:5173/",
+      "narration": "Este es el panel principal de Mi Caja. Desde aquí tenés acceso inmediato a todos los módulos del sistema organizados en una grilla de accesos directos.",
+      "action_ms": 3000,
+      "wait_for": ".grid",
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\02-inicio\\audio\\home.mp3",
+      "audio_duration_ms": 11007,
+      "audio_start_ms": 3000
+    },
+    {
+      "id": "show_first_row",
+      "action": "wait",
+      "narration": "En la primera fila encontramos los módulos de ventas: Registro de Venta para el control de caja, Venta Rápida para operaciones ágiles, Pedidos para gestionar mesas y delivery, y Autoservicio.",
+      "action_ms": 4000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\02-inicio\\audio\\show_first_row.mp3",
+      "audio_duration_ms": 12957,
+      "audio_start_ms": 18507
+    },
+    {
+      "id": "scroll_down",
+      "action": "scroll",
+      "value": "down",
+      "narration": "Más abajo encontramos los módulos de inventario y operaciones: Inventario, Stock con alertas en tiempo real, Inventario IA para carga automática desde fotos de facturas, e Insumos para gestión de cocina.",
+      "action_ms": 3500,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\02-inicio\\audio\\scroll_down.mp3",
+      "audio_duration_ms": 12679,
+      "audio_start_ms": 35464
+    },
+    {
+      "id": "show_last_rows",
+      "action": "wait",
+      "narration": "También tenemos Gestión de Cocina para comandas digitales, Registro de Asistencia del equipo, Gastos, Proveedores, Clientes, Seguimiento, Auditoría y más. Cada módulo resuelve una tarea específica de tu operación diaria.",
+      "action_ms": 4000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\02-inicio\\audio\\show_last_rows.mp3",
+      "audio_duration_ms": 16115,
+      "audio_start_ms": 52643
+    }
+  ]
+}

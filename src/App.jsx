@@ -8,6 +8,7 @@ import FormularioProveedores from './components/FormularioProveedores';
 import Login from './components/Login';
 import Dashboard from './pages/Dashboard';
 import Ventas from './pages/Ventas';
+import VerNota from './pages/VerNota';
 import RutaPrivada from './components/RutaPrivada';
 import NavBar from './components/NavBar';
 import InventarioIA from './components/InventarioIA';
@@ -42,7 +43,8 @@ const Proveedores = () => {
 
 function App() {
   const location = useLocation();
-  const showOffset = location.pathname !== '/login';
+  const isPublicPage = location.pathname === '/login' || location.pathname.startsWith('/ver-nota');
+  const showOffset = !isPublicPage;
 
   return (
     <AlarmasProvider>
@@ -56,7 +58,7 @@ function App() {
         {/* Componente global de alertas de stock bajo */}
         <AlertaStockBajoGlobal />
         
-        <NavBar />
+        {!isPublicPage && <NavBar />}
         <div className={showOffset ? 'pt-16' : ''}>
         <Routes>
           <Route path="/" element={
@@ -65,6 +67,7 @@ function App() {
             </RutaPrivada>
           } />
           <Route path="/login" element={<Login />} />
+          <Route path="/ver-nota/:token" element={<VerNota />} />
           <Route path="/dashboard" element={
             <RutaPrivada>
               <Dashboard />

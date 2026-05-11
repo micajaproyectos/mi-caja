@@ -1,0 +1,100 @@
+{
+  "project": "Mi Caja",
+  "title": "Cómo iniciar sesión en Mi Caja",
+  "category": "Primeros Pasos",
+  "description": "Guía paso a paso para acceder a tu cuenta de Mi Caja desde la página principal.",
+  "steps_summary": [
+    "Abrir la página de Mi Caja",
+    "Hacer clic en Cliente Mi Caja",
+    "Ingresar credenciales",
+    "Acceder al panel principal"
+  ],
+  "output_name": "01-login",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "use_setup_login": false,
+  "show_cursor": true,
+  "steps": [
+    {
+      "id": "landing",
+      "action": "navigate",
+      "value": "http://localhost:5173/login",
+      "narration": "Esta es la página principal de Mi Caja. Desde aquí puedes conocer todas las funcionalidades de la plataforma y acceder a tu cuenta.",
+      "action_ms": 3000,
+      "wait_for": "nav",
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\01-login\\audio\\landing.mp3",
+      "audio_duration_ms": 8174,
+      "audio_start_ms": 3000
+    },
+    {
+      "id": "pre_click_btn",
+      "action": "wait",
+      "narration": "Para iniciar sesión, hacemos clic en el botón Cliente Mi Caja ubicado en la barra de navegación superior.",
+      "action_ms": 1500,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\01-login\\audio\\pre_click_btn.mp3",
+      "audio_duration_ms": 6874,
+      "audio_start_ms": 13174
+    },
+    {
+      "id": "click_login_btn",
+      "action": "click",
+      "selector": "nav button.px-5",
+      "action_ms": 1000,
+      "wait_for": "#email",
+      "audio_start_ms": 21548
+    },
+    {
+      "id": "pre_fill",
+      "action": "wait",
+      "narration": "Se abre el formulario de inicio de sesión. Ingresamos nuestro correo electrónico y contraseña.",
+      "action_ms": 1200,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\01-login\\audio\\pre_fill.mp3",
+      "audio_duration_ms": 6038,
+      "audio_start_ms": 22748
+    },
+    {
+      "id": "fill_email",
+      "action": "fill",
+      "selector": "#email",
+      "value": "millapinda92@gmail.com",
+      "action_ms": 700,
+      "audio_start_ms": 29986
+    },
+    {
+      "id": "fill_password",
+      "action": "fill",
+      "selector": "#password",
+      "value": "millapinda92",
+      "action_ms": 700,
+      "audio_start_ms": 30686
+    },
+    {
+      "id": "pre_submit",
+      "action": "wait",
+      "narration": "Con las credenciales ingresadas, hacemos clic en Iniciar Sesión para acceder al panel de control.",
+      "action_ms": 1000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\01-login\\audio\\pre_submit.mp3",
+      "audio_duration_ms": 5805,
+      "audio_start_ms": 31686
+    },
+    {
+      "id": "submit",
+      "action": "click",
+      "selector": ".z-40 button[type=submit]",
+      "action_ms": 500,
+      "wait_for_url": "localhost:5173/",
+      "audio_start_ms": 38491
+    },
+    {
+      "id": "post_login",
+      "action": "wait",
+      "narration": "¡Acceso exitoso! Hemos ingresado al panel principal de Mi Caja donde están todos los módulos del sistema.",
+      "action_ms": 3500,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\01-login\\audio\\post_login.mp3",
+      "audio_duration_ms": 7059,
+      "audio_start_ms": 41991
+    }
+  ]
+}

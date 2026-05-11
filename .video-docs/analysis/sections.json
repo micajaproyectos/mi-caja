@@ -1,0 +1,27 @@
+{
+  "app_name": "Mi Caja",
+  "base_url": "http://localhost:5173",
+  "analyzed_at": "2026-05-09T05:00:08.956Z",
+  "sections": [
+    { "id": "login",      "label": "Login / Inicio de sesión", "route": "/login" },
+    { "id": "home",       "label": "Inicio (panel principal)", "route": "/" },
+    { "id": "ventas",     "label": "Registro de Venta",        "route": "/ventas" },
+    { "id": "venta-rapida","label": "Venta Rápida",            "route": "/venta-rapida" },
+    { "id": "pedidos",    "label": "Pedidos",                  "route": "/pedidos" },
+    { "id": "autoservicio","label": "Autoservicio",            "route": "/autoservicio" },
+    { "id": "inventario", "label": "Inventario",               "route": "/inventario" },
+    { "id": "stock",      "label": "Stock",                    "route": "/stock" },
+    { "id": "inventario-ia","label": "Inventario IA",          "route": "/inventario-ia" },
+    { "id": "insumos",    "label": "Insumos",                  "route": "/insumos" },
+    { "id": "gestion-cocina","label": "Gestión Cocina",        "route": "/gestion-cocina" },
+    { "id": "asistencia", "label": "Registro de Asistencia",   "route": "/asistencia" },
+    { "id": "gastos",     "label": "Gastos",                   "route": "/gastos" },
+    { "id": "proveedores","label": "Proveedor",                "route": "/proveedores" },
+    { "id": "transporte", "label": "Transporte",               "route": "/transporte" },
+    { "id": "clientes",   "label": "Clientes",                 "route": "/clientes" },
+    { "id": "seguimiento","label": "Seguimiento",              "route": "/seguimiento" },
+    { "id": "auditoria",  "label": "Auditoría",                "route": "/auditoria" },
+    { "id": "calendario", "label": "Calendario Mi Caja",       "route": "/calendario" },
+    { "id": "comunidad",  "label": "Comunidad Mi Caja",        "route": "/comunidad" }
+  ]
+}

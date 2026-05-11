@@ -16,6 +16,7 @@ import {
 } from '../lib/dateUtils.js';
 import { scaleService } from '../lib/ScaleService.js';
 import thermalPrinter from '../lib/thermalPrinter.js';
+import QRCode from 'qrcode';
 import Footer from './Footer';
 import BarcodeScanner from './BarcodeScanner';
 
@@ -581,6 +582,9 @@ export default function RegistroVenta() {
 
   // Estados para eliminación múltiple
   const [ventasSeleccionadas, setVentasSeleccionadas] = useState([]);
+
+  // Estado para modal de QR
+  const [modalQR, setModalQR] = useState(null);
 
   // Estados para edición inline
   const [editandoId, setEditandoId] = useState(null);
@@ -1398,7 +1402,7 @@ export default function RegistroVenta() {
       // Excluir ventas de autoservicio (donde autoservicio = 'autoservicio')
       let { data, error } = await supabase
         .from('ventas')
-        .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, comentarios, usuario_id, created_at')
+        .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, comentarios, usuario_id, created_at, transaction_id')
         .eq('usuario_id', usuarioId) // 🔒 FILTRO CRÍTICO POR USUARIO
         .is('autoservicio', null) // 🔒 EXCLUIR VENTAS DE AUTOSERVICIO
         .order('fecha_cl', { ascending: false })
@@ -1409,7 +1413,7 @@ export default function RegistroVenta() {
         console.warn('⚠️ Columna fecha_cl no existe en ventas, usando fecha');
         const fallbackQuery = await supabase
           .from('ventas')
-          .select('id, fecha, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, comentarios, usuario_id, created_at')
+          .select('id, fecha, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, comentarios, usuario_id, created_at, transaction_id')
           .eq('usuario_id', usuarioId)
           .is('autoservicio', null) // 🔒 EXCLUIR VENTAS DE AUTOSERVICIO
           .order('fecha', { ascending: false })
@@ -1424,7 +1428,7 @@ export default function RegistroVenta() {
         console.warn('⚠️ Columna comentarios no existe en ventas, cargando sin ella');
         const fallbackQuery = await supabase
           .from('ventas')
-          .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at')
+          .select('id, fecha, fecha_cl, producto, cantidad, unidad, precio_unitario, tipo_pago, total_venta, total_final, usuario_id, created_at, transaction_id')
           .eq('usuario_id', usuarioId)
           .is('autoservicio', null)
           .order('fecha_cl', { ascending: false })
@@ -1840,6 +1844,9 @@ export default function RegistroVenta() {
       const totalFinal = calcularTotalVenta();
       
       // Registrar cada producto como una venta individual
+      // Un UUID compartido vincula todos los productos de esta transacción
+      const transactionId = crypto.randomUUID();
+
       for (let i = 0; i < productosVenta.length; i++) {
         const producto = productosVenta[i];
         const ventaParaInsertar = {
@@ -1857,6 +1864,8 @@ export default function RegistroVenta() {
           usuario_id: usuarioId,
           // 📷 Agregar código interno si existe (opcional)
           codigo_interno: codigoInternoVenta || null,
+          // Vincular todos los productos de esta venta
+          transaction_id: transactionId,
         };
 
         const { error } = await supabase
@@ -2011,22 +2020,23 @@ export default function RegistroVenta() {
       const usuarioActual = await authService.getCurrentUser();
       const nombreUsuario = usuarioActual?.nombre || 'MI CAJA';
 
-      // Agrupar ventas por fecha y tipo_pago (para crear recibos separados por transacción)
+      // Agrupar por transaction_id si existe, sino por fecha+tipo_pago (datos anteriores al deploy)
       const ventasAgrupadas = {};
-      
+
       ventasParaImprimir.forEach(venta => {
         const fecha = venta.fecha_cl || venta.fecha;
         const tipoPago = venta.tipo_pago;
-        const clave = `${fecha}_${tipoPago}`;
-        
+        const clave = venta.transaction_id || `${fecha}_${tipoPago}`;
+
         if (!ventasAgrupadas[clave]) {
           ventasAgrupadas[clave] = {
             fecha: fecha,
             tipo_pago: tipoPago,
+            created_at: venta.created_at,
             productos: []
           };
         }
-        
+
         ventasAgrupadas[clave].productos.push({
           producto: venta.producto,
           cantidad: venta.cantidad,
@@ -2042,6 +2052,7 @@ export default function RegistroVenta() {
         return {
           fecha: grupo.fecha,
           tipo_pago: grupo.tipo_pago,
+          created_at: grupo.created_at,
           productos: grupo.productos,
           total: total
         };
@@ -2082,6 +2093,7 @@ export default function RegistroVenta() {
       return;
     }
 
+    setLoadingVentas(true);
     try {
       const ventasParaDescargar = ventasAMostrar.filter(v => ventasSeleccionadas.includes(v.id));
 
@@ -2098,10 +2110,10 @@ export default function RegistroVenta() {
       ventasParaDescargar.forEach(venta => {
         const fecha = venta.fecha_cl || venta.fecha;
         const tipoPago = venta.tipo_pago;
-        const clave = `${fecha}_${tipoPago}`;
+        const clave = venta.transaction_id || `${fecha}_${tipoPago}`;
 
         if (!ventasAgrupadas[clave]) {
-          ventasAgrupadas[clave] = { fecha, tipo_pago: tipoPago, productos: [] };
+          ventasAgrupadas[clave] = { fecha, tipo_pago: tipoPago, created_at: venta.created_at, productos: [] };
         }
 
         ventasAgrupadas[clave].productos.push({
@@ -2115,7 +2127,7 @@ export default function RegistroVenta() {
 
       const recibos = Object.values(ventasAgrupadas).map(grupo => {
         const total = grupo.productos.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
-        return { fecha: grupo.fecha, tipo_pago: grupo.tipo_pago, productos: grupo.productos, total };
+        return { fecha: grupo.fecha, tipo_pago: grupo.tipo_pago, created_at: grupo.created_at, productos: grupo.productos, total };
       });
 
       for (let i = 0; i < recibos.length; i++) {
@@ -2135,6 +2147,131 @@ export default function RegistroVenta() {
     } catch (error) {
       console.error('❌ Error inesperado al descargar PDF:', error);
       mostrarNotificacion(`❌ Error al descargar PDF: ${error.message}`, 'error');
+    } finally {
+      setLoadingVentas(false);
+    }
+  };
+
+  // Función para generar QR de ventas seleccionadas
+  const generarQRVentasSeleccionadas = async () => {
+    if (ventasSeleccionadas.length === 0) {
+      mostrarNotificacion('⚠️ No hay ventas seleccionadas para generar QR', 'warning');
+      return;
+    }
+
+    setLoadingVentas(true);
+    try {
+      const ventasParaQR = ventasAMostrar.filter(v => ventasSeleccionadas.includes(v.id));
+
+      if (ventasParaQR.length === 0) {
+        mostrarNotificacion('⚠️ No se encontraron las ventas seleccionadas', 'warning');
+        return;
+      }
+
+      const usuarioActual = await authService.getCurrentUser();
+      const nombreUsuario = usuarioActual?.nombre || 'MI CAJA';
+      const usuarioId = await authService.getCurrentUserId();
+
+      const ventasAgrupadas = {};
+      ventasParaQR.forEach(venta => {
+        const fecha = venta.fecha_cl || venta.fecha;
+        const tipoPago = venta.tipo_pago;
+        const clave = venta.transaction_id || `${fecha}_${tipoPago}`;
+        if (!ventasAgrupadas[clave]) {
+          ventasAgrupadas[clave] = {
+            fecha,
+            tipo_pago: tipoPago,
+            created_at: venta.created_at,
+            transaction_id: venta.transaction_id || null,
+            productos: []
+          };
+        }
+        ventasAgrupadas[clave].productos.push({
+          producto: venta.producto,
+          cantidad: venta.cantidad,
+          unidad: venta.unidad,
+          precio_unitario: venta.precio_unitario,
+          subtotal: venta.total_venta
+        });
+      });
+
+      const grupos = Object.values(ventasAgrupadas).map(grupo => {
+        const total = grupo.productos.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
+        return { ...grupo, total };
+      });
+
+      const resultados = [];
+
+      for (const grupo of grupos) {
+        const datosRecibo = {
+          nombreUsuario,
+          fecha: grupo.fecha,
+          tipo_pago: grupo.tipo_pago,
+          created_at: grupo.created_at,
+          productos: grupo.productos,
+          total: grupo.total
+        };
+
+        // Buscar registro existente: por transaction_id (datos nuevos) o fecha+tipo_pago (datos viejos)
+        let existente = null;
+        if (grupo.transaction_id) {
+          const { data } = await supabase
+            .from('notas_venta_publicas')
+            .select('token')
+            .eq('usuario_id', usuarioId)
+            .eq('transaction_id', grupo.transaction_id)
+            .maybeSingle();
+          existente = data;
+        } else {
+          const { data } = await supabase
+            .from('notas_venta_publicas')
+            .select('token')
+            .eq('usuario_id', usuarioId)
+            .eq('datos_recibo->>fecha', grupo.fecha)
+            .eq('datos_recibo->>tipo_pago', grupo.tipo_pago)
+            .maybeSingle();
+          existente = data;
+        }
+
+        let token;
+        if (existente) {
+          const { error } = await supabase
+            .from('notas_venta_publicas')
+            .update({ datos_recibo: datosRecibo })
+            .eq('token', existente.token);
+          if (error) throw error;
+          token = existente.token;
+        } else {
+          const { data, error } = await supabase
+            .from('notas_venta_publicas')
+            .insert([{
+              datos_recibo: datosRecibo,
+              usuario_id: usuarioId,
+              transaction_id: grupo.transaction_id || null
+            }])
+            .select('token')
+            .single();
+          if (error) throw error;
+          token = data.token;
+        }
+
+        const url = `${window.location.origin}/ver-nota/${token}`;
+        const qrDataUrl = await QRCode.toDataURL(url, { width: 220, margin: 1 });
+
+        resultados.push({
+          label: `${grupo.fecha} · ${grupo.tipo_pago}`,
+          qrDataUrl,
+          url
+        });
+      }
+
+      setModalQR(resultados);
+
+    } catch (error) {
+      console.error('❌ Error al generar QR:', error);
+      mostrarNotificacion(`❌ Error al generar QR: ${error.message}`, 'error');
+    } finally {
+      setLoadingVentas(false);
     }
   };
 
@@ -2357,6 +2494,40 @@ export default function RegistroVenta() {
       )}
 
       {/* Confirmaciones personalizadas para pantalla completa */}
+      {/* Modal QR */}
+      {modalQR && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800 text-base">📲 Código QR del recibo</h3>
+              <button
+                onClick={() => setModalQR(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-6">
+              {modalQR.map((item, i) => (
+                <div key={i} className="flex flex-col items-center gap-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">{item.label}</p>
+                  <img src={item.qrDataUrl} alt="QR recibo" className="w-48 h-48" />
+                  <p className="text-xs text-gray-400 text-center break-all">{item.url}</p>
+                </div>
+              ))}
+            </div>
+            <div className="px-5 pb-5">
+              <button
+                onClick={() => setModalQR(null)}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmacionPersonalizada && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-gray-800/95 backdrop-blur-md text-white p-6 rounded-xl shadow-2xl border border-gray-600/30 max-w-md w-full mx-4">
@@ -3186,6 +3357,14 @@ export default function RegistroVenta() {
                       style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                     >
                       📄 Descargar PDF ({ventasSeleccionadas.length})
+                    </button>
+                    <button
+                      onClick={generarQRVentasSeleccionadas}
+                      disabled={loadingVentas}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
+                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    >
+                      📲 Generar QR ({ventasSeleccionadas.length})
                     </button>
                     <button
                       onClick={eliminarVentasSeleccionadas}

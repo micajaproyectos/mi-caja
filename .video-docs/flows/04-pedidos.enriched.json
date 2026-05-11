@@ -1,0 +1,89 @@
+{
+  "project": "Mi Caja",
+  "title": "Módulo de Pedidos",
+  "category": "Operaciones",
+  "description": "Gestiona pedidos por mesa, para llevar o delivery de forma digital y sin papel.",
+  "steps_summary": [
+    "Acceder al módulo de Pedidos",
+    "Explorar la gestión de mesas y pedidos activos"
+  ],
+  "output_name": "04-pedidos",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "use_setup_login": false,
+  "show_cursor": true,
+  "setup": [
+    {
+      "action": "navigate",
+      "value": "http://localhost:5173/login"
+    },
+    {
+      "action": "click",
+      "selector": "nav button.px-5"
+    },
+    {
+      "action": "wait_ms",
+      "value": "1000"
+    },
+    {
+      "action": "fill",
+      "selector": "#email",
+      "value": "millapinda92@gmail.com"
+    },
+    {
+      "action": "fill",
+      "selector": "#password",
+      "value": "millapinda92"
+    },
+    {
+      "action": "click",
+      "selector": ".z-40 button[type=submit]"
+    },
+    {
+      "action": "wait_ms",
+      "value": "2500"
+    }
+  ],
+  "steps": [
+    {
+      "id": "home",
+      "action": "navigate",
+      "value": "http://localhost:5173/",
+      "narration": "Desde el panel principal, accedemos al módulo de Pedidos.",
+      "action_ms": 2000,
+      "wait_for": ".grid",
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\04-pedidos\\audio\\home.mp3",
+      "audio_duration_ms": 3623,
+      "audio_start_ms": 2000
+    },
+    {
+      "id": "click_pedidos",
+      "action": "click",
+      "selector": ".grid.gap-6 button:nth-child(3)",
+      "action_ms": 500,
+      "wait_for_url": "/pedidos",
+      "audio_start_ms": 6623
+    },
+    {
+      "id": "show_pedidos",
+      "action": "wait",
+      "narration": "Este es el módulo de Pedidos. Podés tomar pedidos por mesa, para llevar o delivery. Cada pedido queda registrado digitalmente y se envía automáticamente a la cocina, sin papel ni confusiones.",
+      "action_ms": 4000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\04-pedidos\\audio\\show_pedidos.mp3",
+      "audio_duration_ms": 12864,
+      "audio_start_ms": 10623
+    },
+    {
+      "id": "scroll_pedidos",
+      "action": "scroll",
+      "value": "down",
+      "narration": "Desde aquí podés ver el estado de todos los pedidos activos, filtrar por fecha y gestionar cada mesa en tiempo real. El sistema se actualiza automáticamente cuando la cocina avanza con los pedidos.",
+      "action_ms": 4000,
+      "audio_file": "D:\\mi-caja\\.video-docs\\output\\04-pedidos\\audio\\scroll_pedidos.mp3",
+      "audio_duration_ms": 11843,
+      "audio_start_ms": 27987
+    }
+  ]
+}

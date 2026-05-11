@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# video-docs-builder generated media (heavy files)
+.video-docs/output/
