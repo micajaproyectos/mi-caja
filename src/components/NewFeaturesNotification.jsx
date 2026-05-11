@@ -108,6 +108,15 @@ const NewFeaturesNotification = ({ onClose, show = false }) => {
           
           <div className="text-left space-y-3">
             <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-xl">📲</span>
+              <div>
+                <h4 className="text-green-300 font-semibold text-base mb-1">Generar QR — Nota de Venta digital</h4>
+                <p className="text-gray-300 text-xs leading-relaxed">
+                  Selecciona una venta con el checkbox y presiona <strong className="text-green-300">Generar QR</strong>. Tu cliente escanea el código con su teléfono y accede a la nota de venta, pudiendo descargarla como PDF sin necesidad de papel.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
               <span className="text-xl">📄</span>
               <div>
                 <h4 className="text-green-300 font-semibold text-base mb-1">Descargar PDF — Registro de Venta</h4>

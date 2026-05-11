@@ -1114,7 +1114,7 @@ const NavBar = () => {
                         <div>
                           <p className="text-white text-xs font-medium">✨ Nueva Actualización</p>
                           <p className="text-gray-300 text-xs mt-1">
-                            📄 Descargar PDF en Registro de Venta
+                            📲 Generar QR · 📄 Descargar PDF
                           </p>
                         </div>
                       </div>
