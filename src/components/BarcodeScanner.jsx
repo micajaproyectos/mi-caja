@@ -20,6 +20,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
   const [permisosOtorgados, setPermisosOtorgados] = useState(false);
   const scannerRef = useRef(null);
   const html5QrcodeRef = useRef(null);
+  const isStartingRef = useRef(false);
 
   // Iniciar el escáner cuando el modal se abre
   useEffect(() => {
@@ -116,6 +117,18 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
   };
 
   const startScanner = async () => {
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
+
+    // Limpiar instancia anterior para evitar conflictos de estado
+    if (html5QrcodeRef.current) {
+      try {
+        if (html5QrcodeRef.current.isScanning) await html5QrcodeRef.current.stop();
+        html5QrcodeRef.current.clear();
+      } catch (_) {}
+      html5QrcodeRef.current = null;
+    }
+
     try {
       setError(null);
       setIsScanning(true);
@@ -166,7 +179,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
       }
 
       // Crear instancia del escáner
-      const html5Qrcode = new Html5Qrcode('barcode-scanner-region');
+      let html5Qrcode = new Html5Qrcode('barcode-scanner-region');
       html5QrcodeRef.current = html5Qrcode;
 
       const config = getScannerConfig();
@@ -276,6 +289,9 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
         // Fallback 1: intentar con facingMode ideal (más permisivo)
         try {
           console.log('📷 Fallback 1: facingMode ideal environment...');
+          try { html5Qrcode.clear(); } catch (_) {}
+          html5Qrcode = new Html5Qrcode('barcode-scanner-region');
+          html5QrcodeRef.current = html5Qrcode;
           await html5Qrcode.start(
             { 
               facingMode: { ideal: 'environment' },
@@ -293,6 +309,9 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
           // Fallback 2: intentar con cámara frontal (user)
           try {
             console.log('📷 Fallback 2: facingMode ideal user...');
+            try { html5Qrcode.clear(); } catch (_) {}
+            html5Qrcode = new Html5Qrcode('barcode-scanner-region');
+            html5QrcodeRef.current = html5Qrcode;
             await html5Qrcode.start(
               { 
                 facingMode: { ideal: 'user' },
@@ -310,6 +329,9 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
             // Fallback 3: intentar sin especificar facingMode (usar default)
             try {
               console.log('📷 Fallback 3: sin especificar facingMode...');
+              try { html5Qrcode.clear(); } catch (_) {}
+              html5Qrcode = new Html5Qrcode('barcode-scanner-region');
+              html5QrcodeRef.current = html5Qrcode;
               await html5Qrcode.start(
                 { facingMode: 'user' }, // Sintaxis más simple como último recurso
                 config,
@@ -349,17 +371,22 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
       
       setError(errorMsg);
       setIsScanning(false);
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
   const stopScanner = async () => {
     try {
-      if (html5QrcodeRef.current && html5QrcodeRef.current.isScanning) {
-        await html5QrcodeRef.current.stop();
-        html5QrcodeRef.current.clear();
+      if (html5QrcodeRef.current) {
+        if (html5QrcodeRef.current.isScanning) {
+          await html5QrcodeRef.current.stop();
+        }
+        try { html5QrcodeRef.current.clear(); } catch (_) {}
       }
     } catch (err) {
       console.error('Error al detener escáner:', err);
+      try { html5QrcodeRef.current?.clear(); } catch (_) {}
     } finally {
       html5QrcodeRef.current = null;
       setIsScanning(false);

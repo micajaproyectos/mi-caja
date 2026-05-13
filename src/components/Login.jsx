@@ -148,17 +148,20 @@ function Login() {
       <nav
         className="fixed top-0 left-0 right-0 z-30"
         style={{
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)'
+          backgroundColor: '#16a34a',
+          borderBottom: '1px solid #15803d',
+          boxShadow: '0 1px 8px rgba(0,0,0,0.15)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
 
             {/* Logo */}
-            <div className="flex-shrink-0">
-              <img src={logoNavbar} alt="Mi Caja" className="h-8 object-contain" />
+            <div className="flex-shrink-0 flex items-center gap-3">
+              <div className="flex flex-col leading-tight">
+                <span className="text-white font-extrabold text-base tracking-wide">MI CAJA</span>
+                <span className="text-white/80 text-xs font-medium">Tu negocio en un solo lugar</span>
+              </div>
             </div>
 
             {/* Links desktop */}
@@ -171,9 +174,9 @@ function Login() {
                   key={href}
                   href={href}
                   className="text-sm font-medium transition-colors duration-200"
-                  style={{ color: '#16a34a' }}
-                  onMouseEnter={e => e.target.style.color = '#15803d'}
-                  onMouseLeave={e => e.target.style.color = '#16a34a'}
+                  style={{ color: '#ffffff' }}
+                  onMouseEnter={e => e.target.style.color = '#d1fae5'}
+                  onMouseLeave={e => e.target.style.color = '#ffffff'}
                 >
                   {label}
                 </a>
@@ -186,8 +189,9 @@ function Login() {
                 onClick={() => setMostrarLogin(true)}
                 className="px-5 py-2 rounded-lg font-bold text-white text-sm transition-all duration-200 transform hover:scale-105 active:scale-95"
                 style={{
-                  backgroundColor: '#16a34a',
-                  boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                  backgroundColor: '#f97316',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 8px rgba(249,115,22,0.35)',
                 }}
               >
                 Cliente Mi Caja
@@ -196,7 +200,7 @@ function Login() {
               <button
                 onClick={() => setMenuAbierto(!menuAbierto)}
                 className="md:hidden transition-colors duration-200 p-1"
-                style={{ color: '#16a34a' }}
+                style={{ color: '#ffffff' }}
                 aria-label="Abrir menú"
               >
                 {menuAbierto ? (
@@ -218,8 +222,8 @@ function Login() {
           <div
             className="md:hidden px-4 pt-2 pb-4 flex flex-col gap-1"
             style={{
-              backgroundColor: '#ffffff',
-              borderTop: '1px solid #e5e7eb'
+              backgroundColor: '#16a34a',
+              borderTop: '1px solid #15803d'
             }}
           >
             {[
@@ -231,7 +235,7 @@ function Login() {
                 href={href}
                 onClick={() => setMenuAbierto(false)}
                 className="text-sm font-medium py-3 border-b transition-colors duration-200"
-                style={{ color: '#16a34a', borderColor: '#f3f4f6' }}
+                style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}
               >
                 {label}
               </a>
