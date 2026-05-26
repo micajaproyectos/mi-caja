@@ -490,27 +490,12 @@ export default function Home() {
         <div className="text-center relative z-10">
           {/* Título con efecto de gradiente animado */}
           <div className="relative inline-block mb-6">
-            <h1 
-              className="text-6xl md:text-7xl font-bold text-center drop-shadow-2xl mb-4"
-              style={{ 
-                fontFamily: 'Inter, system-ui, sans-serif',
-                background: 'linear-gradient(135deg, #ffffff 0%, #22c55e 50%, #ffffff 100%)',
-                backgroundSize: '200% 200%',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                animation: 'gradientShift 4s ease infinite',
-              }}
+            <h1
+              className="text-6xl md:text-7xl font-bold text-center text-white mb-4"
+              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
             >
-              Inicio
+              Mi Caja Empresa
             </h1>
-            {/* Efecto de brillo estático detrás del título */}
-            <div
-              className="absolute inset-0 -z-10 opacity-40"
-              style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.5) 0%, rgba(34, 197, 94, 0.2) 100%)',
-              }}
-            />
           </div>
 
           {/* Mensaje motivador año nuevo con efecto especial */}
