@@ -663,7 +663,7 @@ useEffect(() => {
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Botón de regreso */}
           <div className="mb-4 md:mb-6">
             <button
@@ -688,6 +688,9 @@ useEffect(() => {
               Registra tus ventas diarias de forma simple y rápida
             </p>
           </div>
+
+          {/* Layout dos columnas: formulario | tabla */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6 items-start">
 
           {/* Formulario de Venta Rápida */}
           <div className="bg-white/10 rounded-2xl shadow-2xl p-3 md:p-4 border border-white/20">
@@ -933,8 +936,11 @@ useEffect(() => {
             </form>
           </div>
 
+          {/* Columna tabla: scroll interno en desktop */}
+          <div className="lg:overflow-y-auto lg:max-h-[calc(100vh-220px)]">
+
           {/* Tabla de Ventas Rápidas Registradas */}
-          <div className="mt-8 bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <h2 className="text-xl md:text-2xl font-semibold text-yellow-400 mb-4 md:mb-6 text-center">
               Ventas Rápidas Registradas
             </h2>
@@ -1301,9 +1307,11 @@ useEffect(() => {
               </>
             )}
           </div>
+          </div> {/* cierra columna tabla */}
+          </div> {/* cierra grid dos columnas */}
         </div>
       </div>
-      
+
       {/* Footer */}
       <Footer />
     </div>
