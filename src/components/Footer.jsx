@@ -284,7 +284,7 @@ export default function Footer() {
         />
 
         {/* Efecto de vidrio esmerilado para el footer */}
-        <div className="absolute inset-0 backdrop-blur-sm bg-black/10"></div>
+        <div className="absolute inset-0 bg-black/10"></div>
 
         {/* Contenido del footer */}
         <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-8 text-center">

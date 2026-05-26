@@ -2333,7 +2333,7 @@ const aplicarAInventario = useCallback(async () => {
           )}
 
           {/* Paso A: Subir documento */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">📄 Cargar Documento</h2>
             
             {/* Configuración global */}
@@ -2346,7 +2346,7 @@ const aplicarAInventario = useCallback(async () => {
                   type="date"
                   value={fechaIngreso}
                   onChange={(e) => setFechaIngreso(e.target.value)}
-                  className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                 />
               </div>
               <div>
@@ -2361,7 +2361,7 @@ const aplicarAInventario = useCallback(async () => {
                   min="0"
                   max="100"
                   step="0.1"
-                  className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                   title="Ganancia global aplicada a todos los ítems que no tengan ganancia específica"
                 />
               </div>
@@ -2370,7 +2370,7 @@ const aplicarAInventario = useCallback(async () => {
                   IVA
                   <span className="ml-2 text-xs text-gray-300">(no editable)</span>
                 </label>
-                <div className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-300 backdrop-blur-sm">
+                <div className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-300">
                   19% (fijo)
                 </div>
                 <p className="text-xs text-gray-400 mt-2">Aplicado automáticamente al precio de venta</p>
@@ -2397,7 +2397,7 @@ const aplicarAInventario = useCallback(async () => {
               </div>
               
               {showSchemaHints && (
-                                  <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 space-y-4 md:space-y-6 border border-white/10">
+                                  <div className="bg-white/5 rounded-xl p-4 md:p-6 space-y-4 md:space-y-6 border border-white/10">
                     {/* Producto */}
                     <div>
                       <label className="block text-sm font-medium text-white mb-2 md:mb-3">
@@ -2408,7 +2408,7 @@ const aplicarAInventario = useCallback(async () => {
                         value={schemaHints.producto}
                         onChange={(e) => setSchemaHints(prev => ({ ...prev, producto: e.target.value }))}
                         placeholder="detalle, descripción, producto, concepto"
-                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                       />
                       <p className="text-xs text-gray-400 mt-2">Lista separada por comas</p>
                     </div>
@@ -2423,7 +2423,7 @@ const aplicarAInventario = useCallback(async () => {
                       value={schemaHints.cantidad}
                       onChange={(e) => setSchemaHints(prev => ({ ...prev, cantidad: e.target.value }))}
                       placeholder="cantidad, cant, qty"
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                     />
                     <p className="text-xs text-gray-400 mt-2">Lista separada por comas</p>
                   </div>
@@ -2438,7 +2438,7 @@ const aplicarAInventario = useCallback(async () => {
                       value={schemaHints.unidad}
                       onChange={(e) => setSchemaHints(prev => ({ ...prev, unidad: e.target.value }))}
                       placeholder="unidad, unid, u, c/u"
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                     />
                     <p className="text-xs text-gray-400 mt-2">Lista separada por comas</p>
                   </div>
@@ -2453,7 +2453,7 @@ const aplicarAInventario = useCallback(async () => {
                       value={schemaHints.total ?? ''}
                       onChange={(e) => setSchemaHints(prev => ({ ...prev, total: e.target.value }))}
                       placeholder="total, importe, monto, precio total"
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                     />
                     <p className="text-xs text-gray-400 mt-2">Lista separada por comas</p>
                   </div>
@@ -2482,7 +2482,7 @@ const aplicarAInventario = useCallback(async () => {
             {/* Dropzone */}
             <div className="mb-8">
               <div
-                className="border-2 border-dashed border-white/30 rounded-2xl p-8 md:p-12 text-center hover:border-green-400/50 transition-all duration-300 bg-white/5 backdrop-blur-sm"
+                className="border-2 border-dashed border-white/30 rounded-2xl p-8 md:p-12 text-center hover:border-green-400/50 transition-all duration-300 bg-white/5"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
               >
@@ -2507,7 +2507,7 @@ const aplicarAInventario = useCallback(async () => {
 
             {/* Archivo seleccionado */}
             {selectedFile && (
-              <div className="mb-8 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+              <div className="mb-8 p-6 bg-white/10 rounded-2xl border border-white/20">
                 <div className="text-center">
                   <h3 className="text-lg font-bold text-white mb-2">📄 Documento Seleccionado</h3>
                   <p className="text-sm text-gray-300 mb-4">{selectedFile.name}</p>
@@ -2615,7 +2615,7 @@ const aplicarAInventario = useCallback(async () => {
 
             {/* Previsualización con encuadre */}
             {showPreview && previewUrl && (
-              <div className="mb-8 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+              <div className="mb-8 p-6 bg-white/10 rounded-2xl border border-white/20">
                 <h3 className="text-lg font-bold text-white mb-4 text-center">🔍 Previsualización y Encuadre</h3>
                 <p className="text-sm text-gray-300 mb-4 text-center">
                   Selecciona el área del documento que contiene los productos a procesar
@@ -3276,13 +3276,13 @@ const aplicarAInventario = useCallback(async () => {
 
           {/* Mensaje cuando no hay items en el draft */}
           {haProcesado && draft.items.length === 0 && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 mb-6 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-6 md:p-8 mb-6 border border-white/20">
               <div className="text-center">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">❌ No se detectó draft válido</h2>
                 <p className="text-gray-300 mb-6 text-lg">El documento no pudo generar un borrador con ítems válidos. Revisa la consola para más detalles.</p>
                 
                 {/* Información de debug visible */}
-                <div className="mb-6 p-4 bg-yellow-500/10 backdrop-blur-sm border border-yellow-400/30 rounded-xl text-left">
+                <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl text-left">
                   <h4 className="text-lg font-bold text-yellow-300 mb-3">🔍 Información del documento:</h4>
                   <div className="text-sm text-yellow-200 space-y-2">
                     <p>• <strong>Archivo:</strong> {selectedFile?.name || 'N/A'}</p>
@@ -3293,7 +3293,7 @@ const aplicarAInventario = useCallback(async () => {
                 </div>
 
                 {/* Sugerencias para mejorar */}
-                <div className="mb-6 p-4 bg-blue-500/10 backdrop-blur-sm border border-blue-400/30 rounded-xl text-left">
+                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl text-left">
                   <h4 className="text-lg font-bold text-blue-300 mb-3">💡 Sugerencias para mejorar la extracción:</h4>
                   <div className="text-sm text-blue-200 space-y-2">
                     <ul className="space-y-1">
@@ -3336,7 +3336,7 @@ const aplicarAInventario = useCallback(async () => {
 
           {/* Paso B: Previsualización */}
           {draft.items.length > 0 && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 mb-6 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-6 md:p-8 mb-6 border border-white/20">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 sm:mb-0">📋 Borrador IA</h2>
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -3380,7 +3380,7 @@ const aplicarAInventario = useCallback(async () => {
               {/* Tabla editable */}
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-white/20 table-auto rounded-2xl overflow-hidden">
-                  <thead className="bg-white/10 backdrop-blur-sm">
+                  <thead className="bg-white/10">
                     <tr>
                       <th className="border border-white/20 px-4 py-3 text-left text-sm font-bold text-white">Producto</th>
                       <th className="border border-white/20 px-4 py-3 text-center text-sm font-bold text-white w-[150px]" style={{ minWidth: '150px', width: '150px' }}>Cantidad</th>
@@ -3593,7 +3593,7 @@ const aplicarAInventario = useCallback(async () => {
 
               {/* Errores de validación */}
               {!draftValidation.isValid && (
-                <div className="mt-6 p-6 bg-red-500/10 backdrop-blur-sm border border-red-400/30 rounded-2xl">
+                <div className="mt-6 p-6 bg-red-500/10 border border-red-400/30 rounded-2xl">
                   <h4 className="text-lg font-bold text-red-300 mb-4">⚠️ Errores de validación:</h4>
                   <ul className="text-sm text-red-200 space-y-2">
                     {draft.items.map((item, i) => (

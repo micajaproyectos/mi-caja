@@ -68,7 +68,7 @@ const AlertaStockBajo = ({ alerta, insumosCriticos = [], onClose, onAplazar }) =
     >
       {/* Fondo oscuro con blur */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+        className="absolute inset-0 bg-black/60"
         onClick={procesando ? undefined : handleClose}
       />
       

@@ -30,7 +30,7 @@ const FormularioProveedores = () => {
   const [busquedaProveedor, setBusquedaProveedor] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroMes, setFiltroMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0')); // Mes actual por defecto
-  const [filtroAnio, setFiltroAnio] = useState(2025); // Año 2025 por defecto
+  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear());
   const [filtroEstado, setFiltroEstado] = useState('');
   
   // Estado para años disponibles
@@ -88,16 +88,15 @@ const FormularioProveedores = () => {
   const calcularAniosDisponibles = () => {
     const anios = new Set();
     
-    // Solo incluir el año 2025 por defecto
-    anios.add(2025);
-    
-    // Solo agregar años FUTUROS (posteriores a 2025) si hay proveedores en esos años
+    const anioActual = new Date().getFullYear();
+    anios.add(anioActual);
+
+    // Agregar todos los años presentes en los registros
     proveedoresRegistrados.forEach(proveedor => {
       if (proveedor.fecha_cl || proveedor.fecha) {
         const fecha = proveedor.fecha_cl || proveedor.fecha;
         const anio = new Date(fecha).getFullYear();
-        // Solo agregar si es un año futuro (mayor a 2025)
-        if (!isNaN(anio) && anio > 2025) {
+        if (!isNaN(anio)) {
           anios.add(anio);
         }
       }
@@ -415,8 +414,8 @@ const FormularioProveedores = () => {
   const limpiarFiltros = () => {
     setBusquedaProveedor('');
     setFiltroFecha('');
-    setFiltroMes(String(new Date().getMonth() + 1).padStart(2, '0')); // Volver al mes actual
-    setFiltroAnio(2025); // Volver al año 2025
+    setFiltroMes(String(new Date().getMonth() + 1).padStart(2, '0'));
+    setFiltroAnio(new Date().getFullYear());
     setFiltroEstado('');
   };
 
@@ -464,20 +463,10 @@ const FormularioProveedores = () => {
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -503,7 +492,7 @@ const FormularioProveedores = () => {
 
           <div className="grid grid-cols-1 gap-6 md:gap-8">
             {/* Formulario de registro - Horizontal */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-6 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Registrar Proveedor
               </h2>
@@ -519,7 +508,7 @@ const FormularioProveedores = () => {
                     name="nombre_proveedor"
                     value={proveedor.nombre_proveedor}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                     placeholder="Ingresa el nombre del proveedor"
                     required
                   />
@@ -537,7 +526,7 @@ const FormularioProveedores = () => {
                     onChange={handleChange}
                     min="0"
                     step="1"
-                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                     placeholder="Ingresa el monto"
                     required
                   />
@@ -552,7 +541,7 @@ const FormularioProveedores = () => {
                     name="estado"
                     value={proveedor.estado}
                     onChange={handleChange}
-                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-200 text-sm md:text-base font-medium"
                   >
                     {opcionesEstado.map(opcion => (
                       <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
@@ -580,7 +569,7 @@ const FormularioProveedores = () => {
             </div>
 
             {/* Lista de proveedores - Completa */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               {/* Header con título y exportar */}
               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4">
                 <h2 className="text-2xl md:text-3xl font-bold text-white text-center sm:text-left" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -597,7 +586,7 @@ const FormularioProveedores = () => {
               </div>
 
               {/* Sección de filtros */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6 mb-6">
                 <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   Filtros y Búsqueda
                 </h3>
@@ -611,7 +600,7 @@ const FormularioProveedores = () => {
                       type="text"
                       value={busquedaProveedor}
                       onChange={(e) => setBusquedaProveedor(e.target.value)}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                       placeholder="Buscar por nombre..."
                     />
                   </div>
@@ -624,7 +613,7 @@ const FormularioProveedores = () => {
                       type="date"
                       value={filtroFecha}
                       onChange={(e) => setFiltroFecha(e.target.value)}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     />
                   </div>
                   
@@ -635,7 +624,7 @@ const FormularioProveedores = () => {
                     <select
                       value={filtroMes}
                       onChange={(e) => setFiltroMes(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     >
                       {opcionesMeses.map(opcion => (
                         <option key={opcion.value} value={opcion.value} className="bg-gray-800 text-white">
@@ -652,7 +641,7 @@ const FormularioProveedores = () => {
                     <select
                       value={filtroAnio}
                       onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
-                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     >
                       {aniosDisponibles.map(anio => (
                         <option key={anio} value={anio} className="bg-gray-800 text-white">
@@ -669,7 +658,7 @@ const FormularioProveedores = () => {
                     <select
                       value={filtroEstado}
                       onChange={(e) => setFiltroEstado(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                      className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     >
                       <option value="" className="bg-gray-800 text-white">Todos los estados</option>
                       {opcionesEstado.map(opcion => (
@@ -720,7 +709,7 @@ const FormularioProveedores = () => {
                       {/* Tabla real con estructura HTML table */}
                       <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                          <thead className="sticky top-0 bg-gradient-to-r from-green-600/30 to-green-700/30 backdrop-blur-md border-2 border-green-400/40 rounded-xl z-10">
+                          <thead className="sticky top-0 bg-gradient-to-r from-green-600/30 to-green-700/30 border-2 border-green-400/40 rounded-xl z-10">
                             <tr>
                               <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center">Fecha</th>
                               <th className="text-white font-semibold p-2 md:p-3 text-xs md:text-sm text-center">Proveedor</th>
@@ -772,10 +761,7 @@ const FormularioProveedores = () => {
                                       } disabled:from-gray-600 disabled:to-gray-700 disabled:text-gray-400 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed border-2 border-white/30 hover:border-white/50 min-w-[55px] max-w-[65px] relative overflow-hidden`}
                                       title={prov.estado === 'Pendiente' ? 'Marcar como Pagado' : 'Marcar como Pendiente'}
                                     >
-                                     {prov.estado === 'Pendiente' && (
-                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
-                                     )}
-                                     <div className="flex items-center justify-center gap-0.5 relative z-10">
+                                     <div className="flex items-center justify-center gap-0.5">
                                        <span className="text-xs">{prov.estado === 'Pendiente' ? 'Pagado' : 'Pendiente'}</span>
                                      </div>
                                    </button>
@@ -805,7 +791,7 @@ const FormularioProveedores = () => {
           </div>
 
           {/* Estadísticas */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Estadísticas Generales
             </h2>
@@ -815,7 +801,7 @@ const FormularioProveedores = () => {
               {/* COLUMNA IZQUIERDA - SOLO CANTIDADES */}
               <div className="space-y-3 md:space-y-4">
                   {/* Total Registros */}
-                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                  <div className="bg-white/10 border border-white/20 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-2xl md:text-3xl font-bold text-white mb-1">
                       {estadisticas.total}
                     </div>
@@ -823,7 +809,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Pendientes */}
-                  <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                  <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-2xl md:text-3xl font-bold text-yellow-400 mb-1">
                       {estadisticas.pendientes}
                     </div>
@@ -831,7 +817,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Pagados */}
-                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                  <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-2xl md:text-3xl font-bold text-green-400 mb-1">
                       {estadisticas.pagados}
                     </div>
@@ -842,7 +828,7 @@ const FormularioProveedores = () => {
               {/* COLUMNA DERECHA - SOLO MONTOS */}
               <div className="space-y-3 md:space-y-4">
                   {/* Monto Total */}
-                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                  <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-lg md:text-xl font-bold text-blue-400 mb-1">
                       ${formatearNumero(estadisticas.montoTotal)}
                     </div>
@@ -850,7 +836,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Por Pagar */}
-                  <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                  <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-lg md:text-xl font-bold text-red-400 mb-1">
                       ${formatearNumero(estadisticas.montoPendiente)}
                     </div>
@@ -858,7 +844,7 @@ const FormularioProveedores = () => {
                   </div>
                   
                   {/* Pagado */}
-                  <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
+                  <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-3 md:p-4 text-center h-20 md:h-24 flex flex-col justify-center">
                     <div className="text-lg md:text-xl font-bold text-green-400 mb-1">
                       ${formatearNumero(estadisticas.montoPagado)}
                     </div>

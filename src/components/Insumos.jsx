@@ -341,7 +341,7 @@ function Insumos() {
 
             {/* Contenido según vista actual */}
             {vistaActual === 'stock' ? (
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+              <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-green-400 mb-2">
                     📦 Stock de Ingredientes
@@ -647,8 +647,8 @@ function Insumos() {
                 
                 {/* Modal para ingresar compras */}
                 {modalCompraAbierto && (
-                  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl max-w-3xl w-full p-6" style={{ backgroundColor: 'rgba(31, 74, 31, 0.95)' }}>
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/95 rounded-xl shadow-2xl max-w-3xl w-full p-6" style={{ backgroundColor: 'rgba(31, 74, 31, 0.95)' }}>
                       <h3 className="text-xl font-bold text-white mb-4">
                         🛒 Registrar Compra de Insumos
                       </h3>
@@ -846,7 +846,7 @@ function Insumos() {
                 )}
               </div>
             ) : (
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+              <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                 <h2 className="text-xl font-bold text-green-400 mb-4">
                   📝 Recetas de Productos
                 </h2>

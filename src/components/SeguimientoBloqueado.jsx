@@ -68,7 +68,7 @@ const SeguimientoBloqueado = ({ onClaveValidada }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
       <div className="rounded-2xl shadow-2xl p-8 max-w-md w-full border border-white/20" style={{ backgroundColor: '#1a3d1a' }} onClick={(e) => e.stopPropagation()}>
         <div className="text-center mb-6">
           <div className="text-6xl mb-4">🔒</div>

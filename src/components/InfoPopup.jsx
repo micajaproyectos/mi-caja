@@ -44,7 +44,7 @@ const InfoPopup = ({ item, onClose }) => {
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-150 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* Fondo con blur */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
       
       {/* Contenedor del popup */}
       <div className={`relative z-10 w-11/12 max-w-md p-6 rounded-2xl shadow-lg transform transition-all duration-150 ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}

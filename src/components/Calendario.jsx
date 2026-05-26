@@ -212,7 +212,7 @@ function Calendario() {
 
           {/* Indicador de carga */}
           {isLoading && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 mb-6">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-8 border border-white/20 mb-6">
               <div className="flex items-center justify-center gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
                 <span className="text-white text-lg">Cargando recordatorios...</span>
@@ -223,7 +223,7 @@ function Calendario() {
           {/* Calendario */}
           {!isLoading && (
             <>
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
+              <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
             {/* Header del calendario */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
               <h2 className="text-2xl md:text-3xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -312,7 +312,7 @@ function Calendario() {
           </div>
 
           {/* Lista de recordatorios */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
             <div className="flex items-center justify-between mb-4">
               <div 
                 className="flex items-center gap-2 cursor-pointer"
@@ -436,9 +436,9 @@ function Calendario() {
 
       {/* Modal para agregar recordatorio */}
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div 
-            className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20 w-full max-w-md"
+            className="bg-white/10 rounded-2xl shadow-2xl p-6 border border-white/20 w-full max-w-md"
             style={{ backgroundColor: 'rgba(31, 74, 31, 0.95)' }}
           >
             <div className="flex items-center justify-between mb-6">
@@ -554,9 +554,9 @@ function Calendario() {
 
       {/* Modal para editar recordatorio */}
       {modalEdicionAbierto && recordatorioEditando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div 
-            className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20 w-full max-w-md"
+            className="bg-white/10 rounded-2xl shadow-2xl p-6 border border-white/20 w-full max-w-md"
             style={{ backgroundColor: 'rgba(31, 74, 31, 0.95)' }}
           >
             <div className="flex items-center justify-between mb-6">

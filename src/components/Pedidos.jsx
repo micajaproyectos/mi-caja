@@ -2839,7 +2839,7 @@ export default function Pedidos() {
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Notificaciones tipo banda de pedidos terminados desde cocina */}
       {notificacionesPedidosTerminados.length > 0 && (
-        <div className="fixed top-0 left-0 right-0 z-[70] bg-green-600/95 backdrop-blur-md border-b-2 border-green-400/50 animate-slide-down py-1.5">
+        <div className="fixed top-0 left-0 right-0 z-[70] bg-green-600/95 border-b-2 border-green-400/50 animate-slide-down py-1.5">
           <div 
             className="overflow-x-auto"
             style={{
@@ -2884,21 +2884,10 @@ export default function Pedidos() {
         </div>
       )}
       
-      {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 74, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-3 sm:p-4 md:p-8">
@@ -2987,7 +2976,7 @@ export default function Pedidos() {
                   {mostrarDropdown && productosFiltrados.length > 0 && (
                     <div
                       data-dropdown-productos
-                      className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
+                      className="absolute left-0 right-0 mt-2 bg-gray-900/95 border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
                     >
                       {productosFiltrados.map((producto, index) => (
                         <div
@@ -3078,7 +3067,7 @@ export default function Pedidos() {
 
           {/* Sección de Gestión de Mesas y Productos */}
           <section className="relative z-10">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 sm:p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-3 sm:p-4 md:p-8 border border-white/20">
             
             {/* Gestión de Mesas */}
             <>
@@ -3366,7 +3355,7 @@ export default function Pedidos() {
                     {/* Controles de selección para cocina y pago - Layout horizontal */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                       {/* Tarjeta Cocina - Izquierda */}
-                      <div className="bg-orange-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-orange-400/30">
+                      <div className="bg-orange-500/10 rounded-lg p-2 md:p-3 border border-orange-400/30">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-orange-300 text-xs sm:text-sm font-medium">🍳 <span className="hidden xs:inline">Seleccionar para </span>Cocina:</span>
@@ -3412,7 +3401,7 @@ export default function Pedidos() {
                       </div>
 
                       {/* Tarjeta Pago - Derecha */}
-                      <div className="bg-green-500/10 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-green-400/30">
+                      <div className="bg-green-500/10 rounded-lg p-2 md:p-3 border border-green-400/30">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-green-300 text-xs sm:text-sm font-medium">💰 Dividir Pago:</span>
@@ -3434,7 +3423,7 @@ export default function Pedidos() {
                     </div>
                     
                     {/* Resumen de la mesa */}
-                    <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/30">
+                    <div className="bg-black/40 rounded-lg p-3 md:p-4 border border-white/30">
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-1">
                         <div className="text-white text-xs sm:text-sm">
                           <span className="font-medium">
@@ -3502,7 +3491,7 @@ export default function Pedidos() {
                       
                       {/* Calculadora de Vuelto (solo para Efectivo) */}
                       {pedido.tipo_pago === 'efectivo' && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && calcularTotalConPropina(mesaSeleccionada) > 0 && (
-                        <div className="mt-4 mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
+                        <div className="mt-4 mb-4 bg-blue-500/20 rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
                           <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <span className="text-xl">🧮</span>
@@ -3567,7 +3556,7 @@ export default function Pedidos() {
                                   placeholder="Ej: 20000"
                                   step="100"
                                   min="0"
-                                  className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                                  className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm md:text-base"
                                 />
                                 {cajaDiariaId && (
                                   <button type="button" onClick={eliminarCajaDiariaDB} className="mt-1 text-xs text-red-400 hover:text-red-300 transition-colors duration-150">
@@ -3592,7 +3581,7 @@ export default function Pedidos() {
                                   placeholder="Ingresa el monto recibido"
                                   step="100"
                                   min="0"
-                                  className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                                  className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm md:text-base"
                                 />
                               </div>
                             </div>
@@ -3755,7 +3744,7 @@ export default function Pedidos() {
           </section>
 
            {/* Tabla de Pedidos Registrados */}
-           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mt-6">
+           <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mt-6">
                            <div className="mb-6">
                <h2 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   Pedidos Registrados
@@ -4317,13 +4306,13 @@ export default function Pedidos() {
 
              {/* Sección de Estadísticas de Pedidos */}
              {pedidosFiltrados.length > 0 && (
-               <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+               <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 rounded-xl border border-white/10">
                  <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">{obtenerTituloResumenPedidos()}</h4>
                  
                  {/* Listado de estadísticas */}
                  <div className="space-y-2 md:space-y-3">
                    {/* Total */}
-                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
                        <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
                        <div>
@@ -4339,7 +4328,7 @@ export default function Pedidos() {
                    </div>
                    
                    {/* Efectivo */}
-                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
                        <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
                        <div>
@@ -4355,7 +4344,7 @@ export default function Pedidos() {
                    </div>
                    
                    {/* Débito */}
-                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
                        <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
                        <div>
@@ -4371,7 +4360,7 @@ export default function Pedidos() {
                    </div>
                    
                    {/* Transferencia */}
-                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
                        <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
                        <div>
@@ -4387,7 +4376,7 @@ export default function Pedidos() {
                    </div>
                    
                    {/* Propinas */}
-                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
                        <span className="text-yellow-400 text-lg md:text-xl mr-3">💡</span>
                        <div>
@@ -4407,7 +4396,7 @@ export default function Pedidos() {
                      const montoCaja = filtroFecha ? (cajaInicialHistorica ?? 0) : (parseFloat(cajaInicial) || 0);
                      const tieneCaja = montoCaja > 0;
                      return (
-                       <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                       <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                          <div className="flex items-center">
                            <span className="text-yellow-400 text-lg md:text-xl mr-3">💵</span>
                            <div>
@@ -4427,7 +4416,7 @@ export default function Pedidos() {
                    })()}
 
                    {/* Total en Caja */}
-                   <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                   <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                      <div className="flex items-center">
                        <span className="text-blue-400 text-lg md:text-xl mr-3">💰</span>
                        <div>

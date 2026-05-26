@@ -1740,7 +1740,7 @@ export default function RegistroAsistencia() {
       />
 
       {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -1763,7 +1763,7 @@ export default function RegistroAsistencia() {
           </h1>
 
           {/* 1. SECCIÓN SUPERIOR: Reloj y fecha actual (formato 24hrs) */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <div className="text-center">
               <div className="text-2xl md:text-4xl font-bold text-white mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 {horaActual}
@@ -1781,7 +1781,7 @@ export default function RegistroAsistencia() {
           </div>
 
           {/* 2. SECCIÓN MEDIA: Nueva UI de tarjetas de empleados */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
               <h2 className="text-xl md:text-2xl font-bold text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 👥 Empleados
@@ -2132,7 +2132,7 @@ export default function RegistroAsistencia() {
 
               {/* Entradas de Empleados Activos — mantenido para compatibilidad interna */}
               {empleadosActivos.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6">
                   <h3 className="text-lg md:text-xl font-bold text-white text-center mb-4" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                     Entradas de Empleados Activos ({empleadosActivos.length})
                   </h3>
@@ -2143,13 +2143,13 @@ export default function RegistroAsistencia() {
           </div>
 
           {/* 3. LISTA DE REGISTROS GENERADOS DE ASISTENCIA */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Registros de Asistencia Generados
             </h2>
 
             {/* Sección de filtros */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6 mb-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6 mb-6">
               <h3 className="text-lg md:text-xl font-bold text-white mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Filtros y Controles
               </h3>
@@ -2163,7 +2163,7 @@ export default function RegistroAsistencia() {
                     type="date"
                     value={filtroFecha}
                     onChange={(e) => setFiltroFecha(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     placeholder="Seleccionar fecha"
                   />
                 </div>
@@ -2175,7 +2175,7 @@ export default function RegistroAsistencia() {
                     type="text"
                     value={filtroEmpleado}
                     onChange={(e) => setFiltroEmpleado(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                     placeholder="Buscar por nombre del empleado"
                   />
                 </div>
@@ -2186,7 +2186,7 @@ export default function RegistroAsistencia() {
                   <select
                     value={filtroMes}
                     onChange={(e) => setFiltroMes(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                   >
                     <option value="">Todos los meses</option>
                     <option value="01">Enero</option>
@@ -2210,7 +2210,7 @@ export default function RegistroAsistencia() {
                   <select
                     value={filtroAno}
                     onChange={(e) => setFiltroAno(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
+                    className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm md:text-base"
                   >
                     <option value="">Todos los años</option>
                     {anosDisponibles.map(ano => (
@@ -2248,7 +2248,7 @@ export default function RegistroAsistencia() {
 
 
             {/* Lista general de todas las asistencias */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
                 <h3 className="text-lg md:text-xl font-bold text-white text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   Todos los Registros de Asistencia
@@ -2280,7 +2280,7 @@ export default function RegistroAsistencia() {
                     {asistenciasFiltradas.map((asistencia) => (
                       <div
                         key={asistencia.id}
-                        className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 md:p-4"
+                        className="bg-white/10 border border-white/20 rounded-lg p-3 md:p-4"
                       >
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                           <div className="flex-1 min-w-0">
@@ -2331,7 +2331,7 @@ export default function RegistroAsistencia() {
           </div>
 
           {/* 4. SECCIÓN FINAL: Total de horas trabajadas por empleado */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               Total de Horas Trabajadas por Empleado
             </h2>
@@ -2345,7 +2345,7 @@ export default function RegistroAsistencia() {
                 {horasPorEmpleado.map((empleado, index) => (
                   <div
                     key={`${empleado.nombre}_${index}`}
-                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 md:p-4 transform hover:scale-105 transition-all duration-200"
+                    className="bg-white/10 border border-white/20 rounded-xl p-3 md:p-4 transform hover:scale-105 transition-all duration-200"
                   >
                     <div className="text-center">
                       <div className="text-lg md:text-xl font-bold text-white mb-1 truncate" title={empleado.nombre}>

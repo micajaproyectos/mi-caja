@@ -284,7 +284,7 @@ function Login() {
       />
 
       {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Hero Section */}
       <section id="hero" className="relative z-10 min-h-screen flex items-center" style={{ backgroundColor: '#ffffff' }}>
@@ -638,7 +638,7 @@ function Login() {
       {/* Modal de Login */}
       {mostrarLogin && (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/70"
           onClick={() => setMostrarLogin(false)}
         >
           <div
@@ -1064,7 +1064,7 @@ function Login() {
 
       {/* Modal de Términos y Condiciones */}
       {mostrarTerminos && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
           <div 
             className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             style={{

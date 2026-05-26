@@ -638,7 +638,7 @@ useEffect(() => {
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Notificaciones personalizadas */}
       {notificacionPersonalizada && (
-        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border max-w-sm text-center animate-fade-in ${
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] text-white px-4 py-3 rounded-lg shadow-lg border max-w-sm text-center animate-fade-in ${
           notificacionPersonalizada.tipo === 'success' ? 'bg-green-600/95 border-green-400/30' :
           notificacionPersonalizada.tipo === 'error' ? 'bg-red-600/95 border-red-400/30' :
           'bg-blue-600/95 border-blue-400/30'
@@ -656,20 +656,10 @@ useEffect(() => {
       )}
 
       {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -700,7 +690,7 @@ useEffect(() => {
           </div>
 
           {/* Formulario de Venta Rápida */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-4 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-3 md:p-4 border border-white/20">
             <div className="flex justify-end mb-1">
               <button
                 type="button"
@@ -723,7 +713,7 @@ useEffect(() => {
                     name="fecha"
                     value={venta.fecha}
                     onChange={handleChange}
-                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm"
+                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm"
                     required
                   />
                 </div>
@@ -741,7 +731,7 @@ useEffect(() => {
                     placeholder="Ingresa el monto"
                     step="1"
                     min="0"
-                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm"
+                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm"
                     required
                   />
                 </div>
@@ -833,7 +823,7 @@ useEffect(() => {
 
               {/* Calculadora de Vuelto (solo para Efectivo) - Aparece primero */}
               {venta.tipo_pago === 'efectivo' && venta.monto && parseFloat(venta.monto) > 0 && (
-                <div className="bg-blue-500/20 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-blue-400/30">
+                <div className="bg-blue-500/20 rounded-lg p-2 md:p-3 border border-blue-400/30">
                   <h4 className="text-blue-200 font-semibold mb-2 text-xs md:text-sm flex items-center gap-1.5">
                     <span className="text-base">🧮</span>
                     Calculadora de Vuelto
@@ -868,7 +858,7 @@ useEffect(() => {
                         placeholder="Ingresa el monto recibido"
                         step="100"
                         min="0"
-                        className="w-full p-2 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm h-[42px]"
+                        className="w-full p-2 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm h-[42px]"
                       />
                     </div>
 
@@ -905,7 +895,7 @@ useEffect(() => {
                   <label className="block text-xs font-semibold text-white">
                     Monto a Registrar
                   </label>
-                  <div className="bg-yellow-500/20 backdrop-blur-sm rounded-lg p-2 border border-yellow-400/30 flex items-center justify-center h-[42px]">
+                  <div className="bg-yellow-500/20 rounded-lg p-2 border border-yellow-400/30 flex items-center justify-center h-[42px]">
                     <p className="text-base md:text-lg font-bold text-yellow-300">
                       {venta.monto && parseFloat(venta.monto) > 0 
                         ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
@@ -944,13 +934,13 @@ useEffect(() => {
           </div>
 
           {/* Tabla de Ventas Rápidas Registradas */}
-          <div className="mt-8 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="mt-8 bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <h2 className="text-xl md:text-2xl font-semibold text-yellow-400 mb-4 md:mb-6 text-center">
               Ventas Rápidas Registradas
             </h2>
 
             {/* Filtros de fecha y tipo de pago */}
-            <div className="mb-4 md:mb-6 bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-white/10">
+            <div className="mb-4 md:mb-6 bg-white/5 rounded-xl p-4 md:p-6 border border-white/10">
               <h3 className="text-base md:text-lg font-semibold text-yellow-300 mb-3 md:mb-4 text-center">
                 Filtros
               </h3>
@@ -1095,7 +1085,7 @@ useEffect(() => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs md:text-sm">
                     <thead>
-                      <tr className="bg-white/10 backdrop-blur-sm">
+                      <tr className="bg-white/10">
                         <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
                         <th className="text-white font-semibold p-2 md:p-4 text-left">Monto</th>
                         <th className="text-white font-semibold p-2 md:p-4 text-left">Tipo de Pago</th>
@@ -1221,14 +1211,14 @@ useEffect(() => {
                 </div>
 
                 {/* Sumatorias por Tipo de Pago */}
-                <div id="resumen-tipo-pago" className="mt-6 bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-white/10">
+                <div id="resumen-tipo-pago" className="mt-6 bg-white/5 rounded-xl p-4 md:p-6 border border-white/10">
                   <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">
                     Resumen por Tipo de Pago
                   </h4>
                   
                   <div className="space-y-2 md:space-y-3">
                     {/* Total */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
                         <div>
@@ -1244,7 +1234,7 @@ useEffect(() => {
                     </div>
                     
                     {/* Efectivo */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
                         <div>
@@ -1260,7 +1250,7 @@ useEffect(() => {
                     </div>
                     
                     {/* Débito */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
                         <div>
@@ -1276,7 +1266,7 @@ useEffect(() => {
                     </div>
                     
                     {/* Crédito */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
                         <div>
@@ -1292,7 +1282,7 @@ useEffect(() => {
                     </div>
                     
                     {/* Transferencia */}
-                    <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
                         <div>

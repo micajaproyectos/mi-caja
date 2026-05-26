@@ -2482,7 +2482,7 @@ export default function RegistroVenta() {
     <div className={`${pantallaCompleta ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompleta ? '#000000' : '#1a3d1a' }}>
       {/* Notificación para dispositivos táctiles */}
       {notificacionTactil && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
           <div className="flex items-center gap-2">
             <span>📱</span>
             <div className="text-sm">
@@ -2496,7 +2496,7 @@ export default function RegistroVenta() {
       {/* Confirmaciones personalizadas para pantalla completa */}
       {/* Modal QR */}
       {modalQR && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-800 text-base">📲 Código QR del recibo</h3>
@@ -2529,8 +2529,8 @@ export default function RegistroVenta() {
       )}
 
       {confirmacionPersonalizada && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-gray-800/95 backdrop-blur-md text-white p-6 rounded-xl shadow-2xl border border-gray-600/30 max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50">
+          <div className="bg-gray-800/95 text-white p-6 rounded-xl shadow-2xl border border-gray-600/30 max-w-md w-full mx-4">
             <div className="text-center mb-6">
               <div className="text-yellow-400 text-3xl mb-3">⚠️</div>
               <div className="text-lg font-medium leading-relaxed">
@@ -2555,20 +2555,10 @@ export default function RegistroVenta() {
         </div>
       )}
       {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className={`${pantallaCompleta ? 'h-full overflow-y-auto' : 'relative z-10 p-4 md:p-8'}`}>
@@ -2599,7 +2589,7 @@ export default function RegistroVenta() {
               <div className="flex-1 flex justify-end">
                 <button
                   onClick={togglePantallaCompleta}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  className="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
                   title={pantallaCompleta ? 
                     (esDispositivoTactil() ? `Salir de pantalla completa (puede cerrarse automáticamente en ${obtenerInfoDispositivo().navegador})` : "Salir de pantalla completa (ESC)") : 
                     (esDispositivoTactil() ? `Pantalla completa - ${obtenerInfoDispositivo().navegador} puede cerrarla automáticamente` : "Pantalla completa")
@@ -2622,7 +2612,7 @@ export default function RegistroVenta() {
           </div>
           
           {/* Nuevo diseño del formulario de venta */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20 mb-4 md:mb-6">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20 mb-4 md:mb-6">
             <div className="flex justify-end mb-1">
               <button
                 type="button"
@@ -2664,7 +2654,7 @@ export default function RegistroVenta() {
                   <div
                     ref={dropdownRef}
                     data-dropdown-productos
-                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
+                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-[200px] sm:max-h-80 overflow-y-auto z-50 w-full"
                   >
                     {/* Hint de navegación por teclado */}
                     <div className="bg-blue-600/20 px-4 py-2 border-b border-blue-400/30">
@@ -2722,7 +2712,7 @@ export default function RegistroVenta() {
                 {mostrarDropdown && productosFiltrados.length === 0 && busquedaProducto.trim() && (
                   <div
                     data-dropdown-productos
-                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 z-50 w-full"
+                    className="absolute left-0 right-0 mt-2 bg-gray-900/95 border-2 border-blue-400/60 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 z-50 w-full"
                   >
                     <div className="text-center mb-4">
                       <div className="text-gray-300 text-sm sm:text-lg mb-2">
@@ -2913,19 +2903,19 @@ export default function RegistroVenta() {
                 
                 {/* Cuadro del total - ocupa 1/3 del espacio */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-green-800 to-green-950 backdrop-blur-md rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
+                  <div className="bg-gradient-to-br from-green-800 to-green-950 rounded-xl p-3 md:p-4 border-2 border-green-500/30 shadow-xl h-full">
                     <div className="text-center mb-3">
                       <div className="text-green-300 text-lg md:text-xl font-bold mb-1">💰 Total de la Venta</div>
                       <div className="text-green-100 text-sm">Resumen de productos</div>
                     </div>
                     
                     <div className="space-y-2">
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                      <div className="bg-white/10 rounded-lg p-2 border border-white/20">
                         <div className="text-green-200 text-sm font-medium mb-1">Cantidad de Items</div>
                         <div className="text-white text-xl font-bold">{productosVenta.length}</div>
                       </div>
                       
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                      <div className="bg-white/10 rounded-lg p-2 border border-white/20">
                         <div className="text-green-200 text-sm font-medium mb-1">Total a Pagar</div>
                         <div className="text-white text-2xl font-bold">${calcularTotalVenta().toLocaleString()}</div>
                       </div>
@@ -3082,7 +3072,7 @@ export default function RegistroVenta() {
 
             {/* Calculadora de Vuelto (solo para Efectivo) */}
             {venta.tipo_pago === 'efectivo' && productosVenta.length > 0 && calcularTotalVenta() > 0 && (
-              <div className="mb-3 md:mb-4 bg-blue-500/20 backdrop-blur-sm rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
+              <div className="mb-3 md:mb-4 bg-blue-500/20 rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
                 <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🧮</span>
@@ -3146,7 +3136,7 @@ export default function RegistroVenta() {
                         placeholder="Ej: 20000"
                         step="100"
                         min="0"
-                        className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                        className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm md:text-base"
                       />
                       {cajaDiariaId && (
                         <button
@@ -3174,7 +3164,7 @@ export default function RegistroVenta() {
                         placeholder="Ingresa el monto recibido"
                         step="100"
                         min="0"
-                        className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                        className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm md:text-base"
                       />
                     </div>
                   </div>
@@ -3245,7 +3235,7 @@ export default function RegistroVenta() {
             </h2>
             
             {/* Filtros de fecha */}
-            <div className="mb-3 md:mb-4 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
+            <div className="mb-3 md:mb-4 bg-white/10 rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
               <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-3 md:mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Filtros de Fecha
               </h3>
@@ -3379,7 +3369,7 @@ export default function RegistroVenta() {
               </div>
 
               {/* Información de filtros activos */}
-              <div className="mt-3 md:mt-4 p-3 md:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+              <div className="mt-3 md:mt-4 p-3 md:p-4 bg-white/5 rounded-lg border border-white/10">
                 <p className="text-blue-200 text-xs md:text-sm text-center">
                   {!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago ? (
                     <strong>Mostrando ventas del día actual</strong>
@@ -3408,7 +3398,7 @@ export default function RegistroVenta() {
             
 
             
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
               {loadingVentas ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-white"></div>
@@ -3430,7 +3420,7 @@ export default function RegistroVenta() {
                   {/* Tabla única para todos los dispositivos */}
                   <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
                     <table className="w-full text-left">
-                      <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                      <thead className="sticky top-0 bg-gray-900/95 z-10">
                         <tr className="border-b border-white/20">
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">
                             <input
@@ -3684,7 +3674,7 @@ export default function RegistroVenta() {
                   
                                                        {/* Controles para mostrar todas las ventas */}
                    {ventasFiltradas.length > ventasMostradas && (
-                    <div className="mt-4 p-4 bg-yellow-600/20 backdrop-blur-sm rounded-lg border border-yellow-500/30">
+                    <div className="mt-4 p-4 bg-yellow-600/20 rounded-lg border border-yellow-500/30">
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                         <div className="text-center sm:text-left">
                           <p className="text-yellow-200 text-sm font-medium">
@@ -3714,7 +3704,7 @@ export default function RegistroVenta() {
                   
                                      {/* Información cuando se muestran todas las ventas */}
                    {ventasFiltradas.length > 0 && ventasMostradas >= ventasFiltradas.length && (
-                     <div className="mt-4 p-3 bg-green-600/20 backdrop-blur-sm rounded-lg border border-green-500/30">
+                     <div className="mt-4 p-3 bg-green-600/20 rounded-lg border border-green-500/30">
                        <p className="text-green-200 text-sm text-center">
                          ✅ Mostrando todos los {ventasFiltradas.length} registros
                        </p>
@@ -3722,13 +3712,13 @@ export default function RegistroVenta() {
                    )}
                   
                   {/* Resumen de Ventas dinámico según filtros */}
-                  <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                  <div className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 rounded-xl border border-white/10">
                     <h4 className="text-blue-300 font-bold text-base md:text-lg mb-3 md:mb-4 text-center">{obtenerTituloResumen()}</h4>
                     
                     {/* Listado de estadísticas */}
                     <div className="space-y-2 md:space-y-3">
                       {/* Total */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-blue-400 text-lg md:text-xl mr-3">📊</span>
                           <div>
@@ -3744,7 +3734,7 @@ export default function RegistroVenta() {
                       </div>
                       
                       {/* Efectivo */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-green-400 text-lg md:text-xl mr-3">💵</span>
                           <div>
@@ -3760,7 +3750,7 @@ export default function RegistroVenta() {
                       </div>
                       
                       {/* Débito */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-purple-400 text-lg md:text-xl mr-3">💳</span>
                           <div>
@@ -3776,7 +3766,7 @@ export default function RegistroVenta() {
                       </div>
                       
                       {/* Crédito */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-orange-400 text-lg md:text-xl mr-3">💳</span>
                           <div>
@@ -3792,7 +3782,7 @@ export default function RegistroVenta() {
                       </div>
                       
                       {/* Transferencia */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-indigo-400 text-lg md:text-xl mr-3">📱</span>
                           <div>
@@ -3814,7 +3804,7 @@ export default function RegistroVenta() {
                           : (parseFloat(cajaInicial) || 0);
                         const tieneCaja = montoCaja > 0;
                         return (
-                          <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                          <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                             <div className="flex items-center">
                               <span className="text-yellow-400 text-lg md:text-xl mr-3">💵</span>
                               <div>
@@ -3838,7 +3828,7 @@ export default function RegistroVenta() {
                       })()}
 
                       {/* Total en Caja */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
                         <div className="flex items-center">
                           <span className="text-blue-400 text-lg md:text-xl mr-3">💰</span>
                           <div>
@@ -3858,7 +3848,7 @@ export default function RegistroVenta() {
               )}
 
               {/* Sección de Cierre de Jornada */}
-              <div id="resumen-tipo-pago" className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+              <div id="resumen-tipo-pago" className="mt-4 md:mt-6 p-4 md:p-6 bg-white/5 rounded-xl border border-white/10">
                 <h4 className="text-orange-300 font-bold text-base md:text-lg mb-4 md:mb-5 flex items-center justify-between">
                   <span>📅 Cierre de Jornada</span>
                   <button
@@ -3921,7 +3911,7 @@ export default function RegistroVenta() {
                   </div>
 
                   {/* Resumen de Cierre con Comparación */}
-                  <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 md:p-5 border border-white/10">
+                  <div className="bg-white/5 rounded-lg p-4 md:p-5 border border-white/10">
                     <h5 className="text-green-300 font-semibold text-sm md:text-base mb-3 md:mb-4">
                       Verificación Física - Comparación con Resumen de Ventas
                     </h5>
@@ -4168,7 +4158,7 @@ export default function RegistroVenta() {
                       </div>
                       <div className="space-y-2 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                         {cierresProcesados.map((cierre) => (
-                          <div key={cierre.id} className="bg-white/5 backdrop-blur-sm rounded px-2 py-1.5 border border-white/5">
+                          <div key={cierre.id} className="bg-white/5 rounded px-2 py-1.5 border border-white/5">
                             {/* Header: Fecha y Jornada */}
                             <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-white/5">
                               <div className="flex items-center gap-1.5">

@@ -647,7 +647,7 @@ export default function Home() {
 
       {/* Modal OBLIGATORIO de Términos y Condiciones */}
       {mostrarTerminosObligatorio && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80">
           <div 
             className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden"
             style={{

@@ -460,7 +460,7 @@ export default function Transporte() {
 
       {/* Popup de confirmación de entrega */}
       {mostrarPopupEntrega && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl border border-white/20 shadow-2xl max-w-md w-full p-4 sm:p-6">
             <div className="space-y-4">
               {/* Título */}
@@ -549,7 +549,7 @@ export default function Transporte() {
           </p>
 
           {/* Formulario de Entrega */}
-          <div className="bg-white/10 backdrop-blur-md rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20 shadow-2xl mb-4 sm:mb-6">
+          <div className="bg-white/10 rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20 shadow-2xl mb-4 sm:mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2">
                 <span>📦</span>
                 <span>Registrar Entrega</span>
@@ -707,7 +707,7 @@ export default function Transporte() {
             </div>
 
           {/* Registros */}
-          <div className="bg-white/10 backdrop-blur-md rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20 shadow-2xl">
+          <div className="bg-white/10 rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20 shadow-2xl">
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3 sm:mb-4 md:mb-6 flex items-center gap-2">
                 <span>📦</span>
                 <span>Registros de Entregas</span>
@@ -720,7 +720,7 @@ export default function Transporte() {
 
               {/* Filtros */}
               {registros.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-3 md:p-4 mb-4 md:mb-6">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 md:p-4 mb-4 md:mb-6">
                   <h3 className="text-base md:text-lg font-bold text-white mb-3 flex items-center gap-2">
                     <span>🔍</span>
                     <span>Filtros de Búsqueda</span>
@@ -879,7 +879,7 @@ export default function Transporte() {
                   {registrosFiltrados.map((registro) => (
                     <div
                       key={registro.id}
-                      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-md p-2 sm:p-2.5 hover:bg-white/15 transition-all duration-200"
+                      className="bg-white/10 border border-white/20 rounded-md p-2 sm:p-2.5 hover:bg-white/15 transition-all duration-200"
                     >
                       {/* Header: Destino, Fecha y Acciones */}
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-1">
@@ -987,7 +987,7 @@ export default function Transporte() {
                 <div className="mt-4 md:mt-6">
                   <div className="grid grid-cols-2 gap-2 md:gap-3">
                     {/* En Tránsito */}
-                    <div className="bg-gradient-to-br from-blue-600/30 to-blue-800/30 backdrop-blur-sm border border-blue-500/40 rounded-lg p-3 md:p-4">
+                    <div className="bg-gradient-to-br from-blue-600/30 to-blue-800/30 border border-blue-500/40 rounded-lg p-3 md:p-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xl md:text-2xl">🚛</span>
                         <div className="text-blue-200 text-xs font-semibold uppercase">
@@ -1000,7 +1000,7 @@ export default function Transporte() {
                     </div>
 
                     {/* Entregados */}
-                    <div className="bg-gradient-to-br from-green-600/30 to-green-800/30 backdrop-blur-sm border border-green-500/40 rounded-lg p-3 md:p-4">
+                    <div className="bg-gradient-to-br from-green-600/30 to-green-800/30 border border-green-500/40 rounded-lg p-3 md:p-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xl md:text-2xl">✅</span>
                         <div className="text-green-200 text-xs font-semibold uppercase">

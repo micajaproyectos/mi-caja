@@ -37,7 +37,7 @@ const Dashboard = () => {
       />
 
       {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-6">

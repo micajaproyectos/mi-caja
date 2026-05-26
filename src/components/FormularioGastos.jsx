@@ -584,7 +584,7 @@ const FormularioGastos = () => {
       />
 
       {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -606,7 +606,7 @@ const FormularioGastos = () => {
           </h1>
 
           {/* Formulario de registro */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-semibold text-green-400 mb-4 md:mb-6 text-center">
               Registrar Nuevo Gasto
             </h2>
@@ -629,7 +629,7 @@ const FormularioGastos = () => {
                     name="fecha"
                     value={gasto.fecha}
                     onChange={handleChange}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-xs md:text-sm"
                     required
                   />
                 </div>
@@ -643,7 +643,7 @@ const FormularioGastos = () => {
                     name="tipo_gasto"
                     value={gasto.tipo_gasto}
                     onChange={handleChange}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                     required
                   >
                     <option value="">Seleccionar tipo</option>
@@ -664,7 +664,7 @@ const FormularioGastos = () => {
                     name="forma_pago"
                     value={gasto.forma_pago}
                     onChange={handleChange}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                     required
                   >
                     <option value="">Seleccionar método</option>
@@ -690,7 +690,7 @@ const FormularioGastos = () => {
                     value={gasto.detalle}
                     onChange={handleChange}
                     placeholder="Descripción del gasto..."
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                     required
                   />
                 </div>
@@ -708,7 +708,7 @@ const FormularioGastos = () => {
                     placeholder="0"
                     min="0"
                     step="1"
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                     required
                   />
                 </div>
@@ -730,7 +730,7 @@ const FormularioGastos = () => {
 
           {/* Filtros */}
           {gastosRegistrados.length > 0 && !(tieneClaveInterna && !claveInternaValidada) && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
               <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 text-center">
                 Filtros de Búsqueda
               </h3>
@@ -746,7 +746,7 @@ const FormularioGastos = () => {
                     value={busquedaDetalle}
                     onChange={(e) => setBusquedaDetalle(e.target.value)}
                     placeholder="Buscar en detalles..."
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-xs md:text-sm"
                   />
                 </div>
 
@@ -759,7 +759,7 @@ const FormularioGastos = () => {
                     type="date"
                     value={filtroFecha}
                     onChange={(e) => setFiltroFecha(e.target.value)}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                   />
                 </div>
 
@@ -771,7 +771,7 @@ const FormularioGastos = () => {
                   <select
                     value={filtroMes}
                     onChange={(e) => setFiltroMes(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los meses</option>
                     {obtenerMesesUnicos().map(mes => (
@@ -790,7 +790,7 @@ const FormularioGastos = () => {
                   <select
                     value={filtroAnio}
                     onChange={(e) => setFiltroAnio(e.target.value)}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los años</option>
                     {obtenerAniosUnicosLocal().map(anio => (
@@ -809,7 +809,7 @@ const FormularioGastos = () => {
                   <select
                     value={filtroTipoGasto}
                     onChange={(e) => setFiltroTipoGasto(e.target.value)}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los tipos</option>
                     {opcionesTipoGasto.map(opcion => (
@@ -828,7 +828,7 @@ const FormularioGastos = () => {
                   <select
                     value={filtroFormaPago}
                     onChange={(e) => setFiltroFormaPago(e.target.value)}
-                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-xs md:text-sm"
+                    className="w-full px-2 md:px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-xs md:text-sm"
                   >
                     <option value="">Todos los métodos</option>
                     {opcionesFormaPago.map(opcion => (
@@ -899,7 +899,7 @@ const FormularioGastos = () => {
           )}
 
           {/* Tabla de gastos registrados */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 relative">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 relative">
             <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 md:mb-6 text-center">
               Gastos Registrados
             </h3>
@@ -940,7 +940,7 @@ const FormularioGastos = () => {
                 {/* Información de filtros aplicados */}
                 {(busquedaDetalle || filtroFecha || filtroTipoGasto || filtroFormaPago || 
                   filtroMes !== new Date().getMonth() + 1 || filtroAnio !== 2025) && (
-                  <div className="mb-4 p-3 bg-blue-600/20 backdrop-blur-sm rounded-lg border border-blue-500/30">
+                  <div className="mb-4 p-3 bg-blue-600/20 rounded-lg border border-blue-500/30">
                     <p className="text-blue-200 text-sm text-center">
                       <strong>Filtros aplicados:</strong> 
                       {busquedaDetalle && ` Búsqueda: "${busquedaDetalle}"`}
@@ -956,7 +956,7 @@ const FormularioGastos = () => {
 
                 {/* Estadísticas */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 md:gap-6 mb-6">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="bg-white/10 rounded-xl p-4 border border-white/20">
                     <div className="text-center">
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Total Gastos</p>
                       <p className="text-white text-lg md:text-xl font-bold">
@@ -964,7 +964,7 @@ const FormularioGastos = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="bg-white/10 rounded-xl p-4 border border-white/20">
                     <div className="text-center">
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Gastos Fijos</p>
                       <p className="text-blue-300 text-lg md:text-xl font-bold">
@@ -972,7 +972,7 @@ const FormularioGastos = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="bg-white/10 rounded-xl p-4 border border-white/20">
                     <div className="text-center">
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Gastos Variables</p>
                       <p className="text-green-300 text-lg md:text-xl font-bold">
@@ -980,7 +980,7 @@ const FormularioGastos = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="bg-white/10 rounded-xl p-4 border border-white/20">
                     <div className="text-center">
                       <p className="text-gray-300 text-xs md:text-sm font-medium">Registros</p>
                       <p className="text-green-300 text-lg md:text-xl font-bold">
@@ -1004,7 +1004,7 @@ const FormularioGastos = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs md:text-sm">
                       <thead>
-                        <tr className="bg-white/10 backdrop-blur-sm">
+                        <tr className="bg-white/10">
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Tipo</th>
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Detalle</th>

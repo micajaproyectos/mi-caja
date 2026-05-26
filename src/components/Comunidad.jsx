@@ -31,7 +31,7 @@ function Comunidad() {
           </div>
 
           {/* Contenido principal */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-6 md:p-8 border border-white/20">
             <div className="text-center py-12">
               <div className="text-6xl mb-6">🚧</div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">

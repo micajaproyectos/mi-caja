@@ -1234,7 +1234,7 @@ export default function Clientes() {
       />
 
       {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -1256,7 +1256,7 @@ export default function Clientes() {
            </h1>
 
           {/* Formulario de Pedido */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-6 text-center">
               Nuevo Pedido
             </h2>
@@ -1273,7 +1273,7 @@ export default function Clientes() {
                     name="fecha_cl"
                     value={pedidoActual.fecha_cl}
                     onChange={handlePedidoChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                     required
                   />
                 </div>
@@ -1316,7 +1316,7 @@ export default function Clientes() {
                        name="nombre_empresa"
                        value={pedidoActual.nombre_empresa}
                      onChange={handlePedidoChange}
-                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                        placeholder="Nombre completo de la nueva empresa"
                        required
                      />
@@ -1327,7 +1327,7 @@ export default function Clientes() {
                          name="nombre_empresa"
                          value={pedidoActual.nombre_empresa}
                          onChange={handlePedidoChange}
-                         className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 pr-12"
+                         className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 pr-12"
                          required
                        >
                          <option value="" className="bg-gray-800 text-white">
@@ -1380,7 +1380,7 @@ export default function Clientes() {
                         name="producto"
                         value={productoActual.producto}
                         onChange={handleProductoChange}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                         placeholder="Nombre del producto"
                       />
                     </div>
@@ -1394,7 +1394,7 @@ export default function Clientes() {
                         name="cantidad"
                         value={productoActual.cantidad}
                         onChange={handleProductoChange}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                         placeholder="0"
                         min="1"
                         step="1"
@@ -1410,7 +1410,7 @@ export default function Clientes() {
                         name="precio_unitario"
                         value={productoActual.precio_unitario}
                         onChange={handleProductoChange}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                         placeholder="0.00"
                         min="0"
                         step="0.01"
@@ -1425,7 +1425,7 @@ export default function Clientes() {
                         type="text"
                         name="total"
                         value={productoActual.total}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white backdrop-blur-sm"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white"
                         placeholder="0"
                         readOnly
                         style={{ cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' }}
@@ -1492,7 +1492,7 @@ export default function Clientes() {
           </div>
 
           {/* Tabla de Registros con Filtros */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
                 Registros de Pedidos
@@ -1520,7 +1520,7 @@ export default function Clientes() {
                     value={filtros.producto}
                     onChange={handleFiltroChange}
                     placeholder="Buscar empresa..."
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                   />
                 </div>
 
@@ -1534,7 +1534,7 @@ export default function Clientes() {
                     name="fecha_especifica"
                     value={filtros.fecha_especifica}
                     onChange={handleFiltroChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200"
                   />
                 </div>
 
@@ -1547,7 +1547,7 @@ export default function Clientes() {
                     name="mes"
                     value={filtros.mes}
                     onChange={handleFiltroChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200"
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los meses</option>
                     <option value="1" className="bg-gray-800 text-white">Enero</option>
@@ -1574,7 +1574,7 @@ export default function Clientes() {
                     name="ano"
                     value={filtros.ano}
                     onChange={handleFiltroChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200"
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los años</option>
                     {aniosDisponiblesFiltro.map(anio => (
@@ -1632,7 +1632,7 @@ export default function Clientes() {
                   
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
                   <table className="w-full text-left">
-                    <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                    <thead className="sticky top-0 bg-gray-900/95 z-10">
                       <tr className="border-b border-white/20">
                           <th className="text-white font-semibold p-3 text-sm">Fecha</th>
                         <th className="text-white font-semibold p-3 text-sm">Empresa</th>
@@ -1826,7 +1826,7 @@ export default function Clientes() {
               </div>
 
           {/* Resumen de Totales por Cliente */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <div className="text-center mb-6">
                          <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
              Resumen de Totales por Empresa
@@ -1853,7 +1853,7 @@ export default function Clientes() {
                      value={filtrosResumen.nombre}
                      onChange={handleFiltroResumenChange}
                      placeholder="Buscar empresa..."
-                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200"
+                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200"
                    />
                  </div>
 
@@ -1865,7 +1865,7 @@ export default function Clientes() {
                     name="mes"
                     value={filtrosResumen.mes}
                     onChange={handleFiltroResumenChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200"
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los meses</option>
                     <option value="1" className="bg-gray-800 text-white">Enero</option>
@@ -1891,7 +1891,7 @@ export default function Clientes() {
                     name="ano"
                     value={filtrosResumen.ano}
                     onChange={handleFiltroResumenChange}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200"
                   >
                     <option value="" className="bg-gray-800 text-white">Todos los años</option>
                     <option value={new Date().getFullYear()} className="bg-gray-800 text-white">
@@ -1954,7 +1954,7 @@ export default function Clientes() {
                 
                 <div className="overflow-x-auto max-h-96 overflow-y-auto">
                   <table className="w-full">
-                                         <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                                         <thead className="sticky top-0 bg-gray-900/95 z-10">
                        <tr className="border-b border-white/20">
                                                   <th className="text-white font-semibold p-3 text-sm text-left">Nombre Empresa</th>
                          <th className="text-white font-semibold p-3 text-sm text-right">Monto Total</th>

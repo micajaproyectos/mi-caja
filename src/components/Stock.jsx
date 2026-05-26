@@ -396,20 +396,10 @@ export default function Stock() {
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
       {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -433,7 +423,7 @@ export default function Stock() {
           {/* Indicador de actualización automática */}
           {actualizandoAutomaticamente && (
             <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 bg-green-500/20 backdrop-blur-sm text-green-300 px-4 py-2 rounded-full border border-green-400/30 animate-pulse">
+              <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-300 px-4 py-2 rounded-full border border-green-400/30 animate-pulse">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
                 <span className="text-sm font-medium">Actualizando datos...</span>
               </div>
@@ -453,7 +443,7 @@ export default function Stock() {
            </div>
 
           {/* Contenido principal */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             {/* Indicador de carga */}
             {loading && (
               <div className="text-center py-6 md:py-8">
@@ -494,7 +484,7 @@ export default function Stock() {
                           value={busquedaProducto}
                           onChange={(e) => setBusquedaProducto(e.target.value)}
                           placeholder="Buscar producto por nombre..."
-                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                         />
                         {busquedaProducto && (
                           <button
@@ -514,7 +504,7 @@ export default function Stock() {
                         <select
                           value={filtroEstado}
                           onChange={(e) => setFiltroEstado(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base appearance-none cursor-pointer"
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-sm md:text-base appearance-none cursor-pointer"
                           style={{ 
                             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
                             backgroundRepeat: 'no-repeat',
@@ -560,7 +550,7 @@ export default function Stock() {
                   <div className="overflow-x-auto relative">
                     <table className="w-full text-xs md:text-sm">
                       <thead>
-                        <tr className="bg-white/10 backdrop-blur-sm">
+                        <tr className="bg-white/10">
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Total Ingresado</th>
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Total Vendido</th>
@@ -633,7 +623,7 @@ export default function Stock() {
                 Resumen de Stock
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+                <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                   <div className="flex items-center">
                     <span className="text-green-400 text-2xl md:text-3xl mr-3 md:mr-4">📦</span>
                     <div>
@@ -645,7 +635,7 @@ export default function Stock() {
                   </div>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+                <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                   <div className="flex items-center">
                     <span className="text-green-400 text-2xl md:text-3xl mr-3 md:mr-4">✅</span>
                     <div>
@@ -657,7 +647,7 @@ export default function Stock() {
                   </div>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+                <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                   <div className="flex items-center">
                     <span className="text-red-400 text-2xl md:text-3xl mr-3 md:mr-4">⚠️</span>
                     <div>
@@ -683,7 +673,7 @@ export default function Stock() {
               </h2>
             </div>
             
-            <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-yellow-400/30">
+            <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-2xl shadow-2xl p-4 md:p-8 border border-yellow-400/30">
               {loadingMasVendido ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-yellow-400"></div>
@@ -728,7 +718,7 @@ export default function Stock() {
                   </div>
                   
                   <div className="max-w-md mx-auto">
-                    <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-yellow-400/40 shadow-xl">
+                    <div className="bg-white/15 rounded-2xl p-6 md:p-8 border border-yellow-400/40 shadow-xl">
                       <div className="text-center">
                         <div className="text-yellow-400 text-4xl md:text-5xl mb-4">📦</div>
                         <p className="text-gray-300 text-sm md:text-base font-medium mb-2">Cantidad Vendida</p>
@@ -741,7 +731,7 @@ export default function Stock() {
                   </div>
                   
                   {productoMasVendido.ultima_venta && (
-                    <div className="mt-6 md:mt-8 p-4 md:p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                    <div className="mt-6 md:mt-8 p-4 md:p-6 bg-white/10 rounded-xl border border-white/20">
                       <p className="text-gray-300 text-sm md:text-base text-center">
                         <span className="text-yellow-400 font-medium">Última venta:</span> {' '}
                         {new Date(productoMasVendido.ultima_venta).toLocaleDateString('es-ES', {
@@ -774,7 +764,7 @@ export default function Stock() {
               </h2>
             </div>
             
-            <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-red-400/30">
+            <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-2xl shadow-2xl p-4 md:p-8 border border-red-400/30">
               {!consultaSinVentasIntentada ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="text-orange-400 text-4xl md:text-5xl mb-4">📊</div>
@@ -824,7 +814,7 @@ export default function Stock() {
                   <div className="overflow-x-auto relative">
                     <table className="w-full text-xs md:text-sm">
                       <thead>
-                        <tr className="bg-white/10 backdrop-blur-sm">
+                        <tr className="bg-white/10">
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha Ingreso</th>
                           <th className="text-white font-semibold p-2 md:p-4 text-left">Stock Disponible</th>
@@ -875,7 +865,7 @@ export default function Stock() {
                   </div>
                   
                   <div className="mt-4 text-center space-y-3">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <div className="bg-white/10 rounded-xl p-4 border border-white/20">
                       <p className="text-gray-300 text-sm">
                         <span className="text-red-400 font-medium">Total:</span> {productosSinVentas.length} productos sin ventas por más de 30 días
                       </p>

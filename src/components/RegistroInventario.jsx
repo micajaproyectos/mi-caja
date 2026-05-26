@@ -955,21 +955,10 @@ const RegistroInventario = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1a3d1a' }}>
-      {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -991,7 +980,7 @@ const RegistroInventario = () => {
           </h1>
 
           {/* Formulario de Registro */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-6 md:mb-8">
             <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
               Agregar Producto al Inventario
             </h2>
@@ -1008,7 +997,7 @@ const RegistroInventario = () => {
                     name="fecha_ingreso"
                     value={inventario.fecha_ingreso}
                     onChange={handleChange}
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -1024,7 +1013,7 @@ const RegistroInventario = () => {
                     value={inventario.producto}
                     onChange={handleChange}
                     placeholder="Nombre del producto"
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -1042,7 +1031,7 @@ const RegistroInventario = () => {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -1056,7 +1045,7 @@ const RegistroInventario = () => {
                     name="unidad"
                     value={inventario.unidad}
                     onChange={handleChange}
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-sm md:text-base"
                     style={{ colorScheme: 'dark' }}
                     required
                   >
@@ -1082,7 +1071,7 @@ const RegistroInventario = () => {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
@@ -1100,14 +1089,14 @@ const RegistroInventario = () => {
                     placeholder="0.30 (30%)"
                     step="0.001"
                     min="0"
-                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                    className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                     required
                   />
                 </div>
               </div>
 
               {/* Código de Barras (Opcional) */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 mt-4 border border-white/10">
+              <div className="bg-white/5 rounded-xl p-4 md:p-6 mt-4 border border-white/10">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xl">📷</span>
                   <h3 className="text-lg font-semibold text-blue-400">
@@ -1124,7 +1113,7 @@ const RegistroInventario = () => {
                       value={codigoInterno}
                       onChange={(e) => setCodigoInterno(e.target.value.replace(/\D/g, ''))}
                       placeholder="Escanea, genera o ingresa el código de barras"
-                      className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm transition-all duration-200 text-sm md:text-base font-mono"
+                      className="w-full p-3 md:p-4 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm md:text-base font-mono"
                       maxLength={13}
                     />
                   </div>
@@ -1194,7 +1183,7 @@ const RegistroInventario = () => {
               </div>
 
               {/* Cálculos Automáticos y Botón de Registro */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 md:p-6 mt-4 md:mt-6 border border-white/10">
+              <div className="bg-white/5 rounded-xl p-4 md:p-6 mt-4 md:mt-6 border border-white/10">
                 <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-yellow-400 text-center">
                   Cálculos Automáticos
                 </h3>
@@ -1241,7 +1230,7 @@ const RegistroInventario = () => {
           </div>
 
           {/* Tabla de Inventario */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-green-400 text-center">
               Inventario Registrado
             </h2>
@@ -1260,7 +1249,7 @@ const RegistroInventario = () => {
                       value={busquedaProducto}
                       onChange={(e) => setBusquedaProducto(e.target.value)}
                       placeholder="Buscar producto por nombre..."
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm md:text-base"
                     />
                     {busquedaProducto && (
                       <button
@@ -1282,7 +1271,7 @@ const RegistroInventario = () => {
                       value={filtroFecha}
                       onChange={(e) => setFiltroFecha(e.target.value)}
                       placeholder="Filtrar por día específico"
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-sm md:text-base"
                     />
                     {filtroFecha && (
                       <button
@@ -1303,7 +1292,7 @@ const RegistroInventario = () => {
                       type="month"
                       value={filtroMes}
                       onChange={(e) => setFiltroMes(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm transition-all duration-200 text-sm md:text-base"
+                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent text-white transition-all duration-200 text-sm md:text-base"
                     />
                     {filtroMes && (
                       <button
@@ -1459,10 +1448,10 @@ const RegistroInventario = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs md:text-sm">
                   <thead>
-                    <tr className="bg-white/10 backdrop-blur-sm">
+                    <tr className="bg-white/10">
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha de Ingreso</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Producto</th>
-                      <th className="text-white font-semibold p-2 md:p-4 text-left">Código de Barras</th>
+                      <th className="text-white font-semibold p-2 md:p-4 text-left">Cod. Barras</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Cantidad</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Unidad</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Costo Total</th>
@@ -1521,7 +1510,7 @@ const RegistroInventario = () => {
                           </td>
                           <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
                             {estaEditando ? (
-                              <div className="flex flex-col gap-2 min-w-[150px]">
+                              <div className="flex flex-col gap-2">
                                 {/* Input para el código */}
                                 <input
                                   type="text"
@@ -1537,21 +1526,19 @@ const RegistroInventario = () => {
                                   <button
                                     type="button"
                                     onClick={handleGenerarCodigoEdicion}
-                                    className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                                    className="text-xs text-purple-300 hover:text-white underline transition-colors"
                                     title="Generar código EAN-13 único"
                                   >
-                                    <span>⚡</span>
-                                    <span>Generar</span>
+                                    Generar
                                   </button>
                                   {/* Botón para escanear */}
                                   <button
                                     type="button"
                                     onClick={() => setMostrarScanner(true)}
-                                    className="flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                                    className="text-xs text-blue-300 hover:text-white underline transition-colors"
                                     title="Escanear código de barras"
                                   >
-                                    <span>📷</span>
-                                    <span>Escanear</span>
+                                    Escanear
                                   </button>
                                   {/* Botón para limpiar código */}
                                   {valoresEdicion.codigo_interno && (
@@ -1608,7 +1595,7 @@ const RegistroInventario = () => {
                                 type="number"
                                 value={valoresEdicion.cantidad}
                                 onChange={(e) => handleEdicionChange('cantidad', e.target.value)}
-                                className="w-20 md:w-24 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
                                 step="0.01"
                                 min="0"
                               />
@@ -1616,12 +1603,12 @@ const RegistroInventario = () => {
                               item.cantidad
                             )}
                           </td>
-                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm">
+                          <td className="text-gray-300 p-2 md:p-4 text-xs md:text-sm min-w-[80px]">
                             {estaEditando ? (
                               <select
                                 value={valoresEdicion.unidad}
                                 onChange={(e) => handleEdicionChange('unidad', e.target.value)}
-                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                className="w-full min-w-[90px] p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
                                 style={{ colorScheme: 'dark' }}
                               >
                                 <option value="unidad" className="bg-gray-800">unidad</option>
@@ -1638,7 +1625,7 @@ const RegistroInventario = () => {
                                 type="number"
                                 value={valoresEdicion.costo_total}
                                 onChange={(e) => handleEdicionChange('costo_total', e.target.value)}
-                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
                                 step="1"
                                 min="0"
                               />
@@ -1652,7 +1639,7 @@ const RegistroInventario = () => {
                                 type="number"
                                 value={valoresEdicion.precio_unitario}
                                 onChange={(e) => handleEdicionChange('precio_unitario', e.target.value)}
-                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
                                 step="1"
                                 min="0"
                               />
@@ -1666,7 +1653,7 @@ const RegistroInventario = () => {
                                 type="number"
                                 value={valoresEdicion.precio_venta}
                                 onChange={(e) => handleEdicionChange('precio_venta', e.target.value)}
-                                className="w-24 md:w-28 p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
+                                className="w-full p-1 md:p-2 bg-white/10 border border-blue-400 rounded text-white text-xs md:text-sm"
                                 step="10"
                                 min="0"
                               />

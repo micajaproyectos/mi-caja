@@ -1059,7 +1059,7 @@ function Autoservicio() {
     <div className={`${pantallaCompleta ? 'fixed inset-0 z-50' : 'min-h-screen'}`} style={{ backgroundColor: '#1a3d1a' }}>
       {/* Notificación para dispositivos táctiles */}
       {notificacionTactil && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
           <div className="flex items-center gap-2">
             <span>📱</span>
             <div className="text-sm">
@@ -1097,7 +1097,7 @@ function Autoservicio() {
               <div className="flex-1 flex justify-end">
                 <button
                   onClick={togglePantallaCompleta}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  className="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
                   title={pantallaCompleta ? "Salir de pantalla completa (ESC)" : "Pantalla completa"}
                 >
                   {pantallaCompleta ? (
@@ -1124,7 +1124,7 @@ function Autoservicio() {
           {/* Formulario de Autoservicio */}
           <form onSubmit={(e) => e.preventDefault()} className="space-y-4 md:space-y-6">
             {/* Sección de agregar producto */}
-            <div className={`bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 relative ${dropdownAbierto ? 'z-10' : ''}`}>
+            <div className={`bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 relative ${dropdownAbierto ? 'z-10' : ''}`}>
               <div className="flex items-center mb-4">
                 <span className="text-blue-400 text-lg md:text-xl mr-2">🛒</span>
                 <h3 className="text-blue-400 text-lg md:text-xl font-bold">Agregar Producto</h3>
@@ -1308,7 +1308,7 @@ function Autoservicio() {
                     ) : (
                       <div className="space-y-0.5">
                         {productosVenta.map((producto, index) => (
-                          <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 backdrop-blur-sm rounded p-0.5 md:p-1 border border-white/10 hover:bg-white/10 transition-colors gap-0.5 sm:gap-1">
+                          <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 rounded p-0.5 md:p-1 border border-white/10 hover:bg-white/10 transition-colors gap-0.5 sm:gap-1">
                             {/* Información del producto - Responsive */}
                             <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-0.5 min-w-0">
                               {/* Nombre del producto */}
@@ -1356,19 +1356,19 @@ function Autoservicio() {
                 
                 {/* Cuadro del total - ocupa 1/3 del espacio */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-md rounded-lg p-3 border border-green-500/30 shadow-lg h-full">
+                  <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 rounded-lg p-3 border border-green-500/30 shadow-lg h-full">
                     <div className="text-center mb-2">
                       <div className="text-green-300 text-base md:text-lg font-bold mb-1">💰 Total de la Venta</div>
                       <div className="text-green-100 text-xs md:text-sm">Resumen de productos</div>
                     </div>
                     
                     <div className="space-y-2">
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                      <div className="bg-white/10 rounded-lg p-2 border border-white/20">
                         <div className="text-green-200 text-xs font-medium mb-1">Cantidad de Items</div>
                         <div className="text-green-300 text-lg font-bold">{productosVenta.length}</div>
                       </div>
                       
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                      <div className="bg-white/10 rounded-lg p-2 border border-white/20">
                         <div className="text-green-200 text-xs font-medium mb-1">Total a Pagar</div>
                         <div className="text-green-300 text-xl font-bold">${calcularTotal().toLocaleString()}</div>
                       </div>
@@ -1444,7 +1444,7 @@ function Autoservicio() {
             </h2>
             
             {/* Filtros de fecha */}
-            <div className="mb-3 md:mb-4 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
+            <div className="mb-3 md:mb-4 bg-white/10 rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
               <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-3 md:mb-4 text-center" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Filtros de Fecha
               </h3>
@@ -1542,7 +1542,7 @@ function Autoservicio() {
               </div>
 
               {/* Información de filtros activos */}
-              <div className="mt-3 md:mt-4 p-3 md:p-4 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+              <div className="mt-3 md:mt-4 p-3 md:p-4 bg-white/5 rounded-lg border border-white/10">
                 <p className="text-blue-200 text-xs md:text-sm text-center">
                   {!filtroDia && !filtroMes && !filtroAnio && !filtroTipoPago ? (
                     <strong>Mostrando ventas de autoservicio del día actual</strong>
@@ -1563,7 +1563,7 @@ function Autoservicio() {
               </div>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-3 md:p-6 border border-white/20">
               {loading ? (
                 <div className="text-center py-6 md:py-8">
                   <div className="inline-block animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-white"></div>
@@ -1585,7 +1585,7 @@ function Autoservicio() {
                   {/* Tabla de ventas de autoservicio */}
                   <div className="max-h-96 overflow-y-auto border border-white/10 rounded-lg">
                     <table className="w-full text-left">
-                      <thead className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10">
+                      <thead className="sticky top-0 bg-gray-900/95 z-10">
                         <tr className="border-b border-white/20">
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Fecha</th>
                           <th className="text-gray-200 font-semibold p-2 md:p-3 text-xs md:text-sm">Producto</th>
@@ -1783,7 +1783,7 @@ function Autoservicio() {
                   
                   {/* Controles para mostrar todas las ventas */}
                   {ventasFiltradas.length > ventasMostradas && (
-                    <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+                    <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                         <p className="text-blue-200 text-sm">
                            Mostrando {Math.min(ventasMostradas, ventasFiltradas.length)} de {ventasFiltradas.length} registros totales
@@ -1800,7 +1800,7 @@ function Autoservicio() {
                   
                   {/* Información cuando se muestran todas las ventas */}
                   {ventasFiltradas.length > 0 && ventasMostradas >= ventasFiltradas.length && (
-                    <div className="mt-4 p-3 bg-green-600/20 backdrop-blur-sm rounded-lg border border-green-500/30">
+                    <div className="mt-4 p-3 bg-green-600/20 rounded-lg border border-green-500/30">
                       <p className="text-green-200 text-sm text-center">
                         ✅ Mostrando todos los {ventasFiltradas.length} registros de autoservicio
                       </p>
@@ -1832,7 +1832,7 @@ function Autoservicio() {
           {/* Resumen de Ventas de Autoservicio */}
           {ventasFiltradas.length > 0 && (
             <div className="mt-6 md:mt-8">
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+              <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                 <h3 className="text-xl md:text-2xl font-bold text-green-400 text-center mb-4 md:mb-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   📊 Resumen de Ventas de Autoservicio
                 </h3>
@@ -1842,7 +1842,7 @@ function Autoservicio() {
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                       {/* Total General */}
-                      <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 backdrop-blur-sm rounded-xl p-4 border border-green-500/30 shadow-lg">
+                      <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 rounded-xl p-4 border border-green-500/30 shadow-lg">
                         <div className="text-center">
                           <div className="text-green-300 text-sm md:text-base font-medium mb-1">💰 Total General</div>
                           <div className="text-green-100 text-xl md:text-2xl font-bold">
@@ -1855,7 +1855,7 @@ function Autoservicio() {
                       </div>
 
                       {/* Débito */}
-                      <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 backdrop-blur-sm rounded-xl p-4 border border-blue-500/30 shadow-lg">
+                      <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 rounded-xl p-4 border border-blue-500/30 shadow-lg">
                         <div className="text-center">
                           <div className="text-blue-300 text-sm md:text-base font-medium mb-1">
                             💳 Débito
@@ -1870,7 +1870,7 @@ function Autoservicio() {
                       </div>
 
                       {/* Transferencia */}
-                      <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 backdrop-blur-sm rounded-xl p-4 border border-yellow-500/30 shadow-lg">
+                      <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 rounded-xl p-4 border border-yellow-500/30 shadow-lg">
                         <div className="text-center">
                           <div className="text-yellow-300 text-sm md:text-base font-medium mb-1">
                             📱 Transferencia

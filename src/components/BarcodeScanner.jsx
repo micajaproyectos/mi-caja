@@ -418,7 +418,7 @@ const BarcodeScanner = ({ isOpen, onScan, onClose, title = 'Escanear Código de 
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Overlay oscuro */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80"
         onClick={handleClose}
       />
 

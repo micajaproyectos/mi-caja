@@ -385,7 +385,7 @@ const Auditoria = () => {
     <div className={`${pantallaCompletaTabla ? 'fixed inset-0 z-50 bg-black' : 'min-h-screen relative overflow-hidden'}`} style={{ backgroundColor: pantallaCompletaTabla ? '#000000' : '#1a3d1a' }}>
       {/* Notificación para dispositivos táctiles */}
       {notificacionTactil && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600/95 text-white px-4 py-3 rounded-lg shadow-lg border border-orange-400/30 max-w-sm text-center animate-bounce">
           <div className="flex items-center gap-2">
             <span>📱</span>
             <div className="text-sm">
@@ -409,7 +409,7 @@ const Auditoria = () => {
       />
 
       {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* Bloqueo por clave interna - mostrar solo si tiene clave y no está validada */}
       {tieneClaveInterna && !claveInternaValidada && (
@@ -450,7 +450,7 @@ const Auditoria = () => {
 
           {/* Filtros - ocultos en pantalla completa */}
           {!pantallaCompletaTabla && (
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 mb-6">
             <h3 className="text-lg md:text-xl font-semibold text-yellow-400 mb-4 text-center">
               Filtros
             </h3>
@@ -555,7 +555,7 @@ const Auditoria = () => {
           )}
 
           {/* Tabla de auditoría */}
-          <div className={`bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 ${pantallaCompletaTabla ? 'h-full flex flex-col' : ''}`}>
+          <div className={`bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20 ${pantallaCompletaTabla ? 'h-full flex flex-col' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl md:text-2xl font-semibold text-yellow-400">
                 Registros de Auditoría ({registrosFiltrados.length})
@@ -570,7 +570,7 @@ const Auditoria = () => {
                 </button>
                 <button
                   onClick={togglePantallaCompletaTabla}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                  className="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
                   title={pantallaCompletaTabla ? "Salir de pantalla completa (ESC)" : "Expandir tabla a pantalla completa"}
                 >
                   {pantallaCompletaTabla ? (
@@ -608,7 +608,7 @@ const Auditoria = () => {
                 <div className={`${pantallaCompletaTabla ? 'h-full overflow-y-auto border border-white/10 rounded-lg' : ''}`}>
                   <table className="w-full text-xs md:text-sm">
                   <thead>
-                    <tr className="bg-white/10 backdrop-blur-sm">
+                    <tr className="bg-white/10">
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Fecha</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Hora</th>
                       <th className="text-white font-semibold p-2 md:p-4 text-left">Tabla</th>

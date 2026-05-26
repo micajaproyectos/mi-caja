@@ -761,7 +761,7 @@ export default function GestionCocina() {
             </h2>
             
             {/* Filtros integrados a la tabla */}
-            <div className="mb-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+            <div className="mb-6 bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
               <h3 className="text-lg md:text-xl font-semibold text-green-400 mb-4 text-center">
                 Filtros de Búsqueda
               </h3>
@@ -849,7 +849,7 @@ export default function GestionCocina() {
               </div>
 
               {/* Información de filtros activos */}
-              <div className="mt-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+              <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
                 <p className="text-blue-200 text-xs md:text-sm text-center">
                   {!filtroDia && !filtroMes && !filtroAnio && !filtroEstado ? (
                     <strong>Mostrando pedidos del día actual</strong>
@@ -877,10 +877,10 @@ export default function GestionCocina() {
                 </p>
               </div>
             ) : (
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
+              <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-6 border border-white/20">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-900/95 backdrop-blur-sm">
+                    <thead className="bg-gray-900/95">
                       <tr className="border-b border-white/20">
                         <th className="text-gray-200 font-semibold p-3 text-sm">Fecha</th>
                         <th className="text-gray-200 font-semibold p-3 text-sm">Mesa</th>

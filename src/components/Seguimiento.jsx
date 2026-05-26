@@ -1068,21 +1068,10 @@ export default function Seguimiento() {
         <SeguimientoBloqueado onClaveValidada={handleClaveValidada} />
       )}
 
-      {/* Fondo degradado moderno */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          background: `
-            linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%),
-            radial-gradient(circle at 20% 80%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(31, 74, 31, 0.2) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `
-        }}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(135deg, #1a3d1a 0%, #0a1e0a 100%)' }}
       />
-
-      {/* Efecto de vidrio esmerilado adicional */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-black/5"></div>
 
       {/* Contenido principal */}
       <div className="relative z-10 p-4 md:p-8">
@@ -1163,7 +1152,7 @@ export default function Seguimiento() {
           {/* 8 Tarjetas tipo Power BI */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-8">
             {/* Tarjeta 1: Ventas */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">🤝</span>
@@ -1183,7 +1172,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 2: Gastos */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">💰</span>
@@ -1203,7 +1192,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 3: Inventario */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">📦</span>
@@ -1223,7 +1212,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 4: Proveedores */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">🚚</span>
@@ -1243,7 +1232,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 5: Clientes */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">👥</span>
@@ -1263,7 +1252,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 6: Pedidos */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">📋</span>
@@ -1283,7 +1272,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 7: Propinas */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">💡</span>
@@ -1303,7 +1292,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Tarjeta 8: Ventas Rápidas */}
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl shadow-2xl p-4 md:p-6 border border-green-400/30 hover:border-green-400/50 transition-all duration-300 group">
               <div className="text-center">
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <span className="text-2xl md:text-3xl">⚡</span>
@@ -1336,7 +1325,7 @@ export default function Seguimiento() {
           </div>
 
           {/* Gráfico de Ventas Diarias del Mes Actual */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
             <div className="text-center mb-6">
               <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
                 Ventas Diarias - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
@@ -1418,7 +1407,7 @@ export default function Seguimiento() {
           {/* Gráficos de Ventas - Separados pero en la misma línea */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             {/* Gráfico de Ventas Mensuales */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                 <h3 className="text-xl md:text-2xl font-bold text-white">
@@ -1578,7 +1567,7 @@ export default function Seguimiento() {
           </div>
 
             {/* Gráfico Circular de Tipos de Pago de Ventas */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
             <div className="text-center mb-6">
                 <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
                   Ventas por Tipo de Pago
@@ -1747,7 +1736,7 @@ export default function Seguimiento() {
           </div>
 
           {/* Gráfico de Pedidos Diarios del Mes Actual */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
             <div className="text-center mb-6">
               <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
                 Pedidos Diarios - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
@@ -1829,7 +1818,7 @@ export default function Seguimiento() {
           {/* Gráficos de Pedidos - Separados pero en la misma línea */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             {/* Gráfico de Pedidos Mensuales */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <div className="text-center mb-6">
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                   <h3 className="text-xl md:text-2xl font-bold text-white">
@@ -1987,7 +1976,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Gráfico Circular de Tipos de Pago de Pedidos */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <div className="text-center mb-6">
                 <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
                   Pedidos por Tipo de Pago
@@ -2156,7 +2145,7 @@ export default function Seguimiento() {
           </div>
 
           {/* Gráfico de Ventas Rápidas Diarias del Mes Actual */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
+          <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20 mb-8">
             <div className="text-center mb-6">
               <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
                 ⚡ Ventas Rápidas Diarias - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
@@ -2238,7 +2227,7 @@ export default function Seguimiento() {
           {/* Gráficos de Ventas Rápidas - Separados pero en la misma línea */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
             {/* Gráfico de Ventas Rápidas Mensuales */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <div className="text-center mb-6">
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
                   <h3 className="text-xl md:text-2xl font-bold text-white">
@@ -2396,7 +2385,7 @@ export default function Seguimiento() {
             </div>
 
             {/* Gráfico Circular de Tipos de Pago de Ventas Rápidas */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
+            <div className="bg-white/10 rounded-2xl shadow-2xl p-4 md:p-8 border border-white/20">
               <div className="text-center mb-6">
                 <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
                   Ventas Rápidas por Tipo de Pago
@@ -2568,7 +2557,7 @@ export default function Seguimiento() {
           {/* Mensaje de error */}
           {error && (
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 bg-red-500/20 backdrop-blur-sm text-red-300 px-4 py-2 rounded-full border border-red-400/30">
+              <div className="inline-flex items-center gap-2 bg-red-500/20 text-red-300 px-4 py-2 rounded-full border border-red-400/30">
                 <span className="text-lg">❌</span>
                 <span className="text-sm font-medium">{error}</span>
               </div>
