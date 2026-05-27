@@ -60,11 +60,78 @@ const VentaRapida = () => {
   // Estado para notificaciones personalizadas
   const [notificacionPersonalizada, setNotificacionPersonalizada] = useState(null);
 
+  // Estados para caja inicial
+  const [cajaInicial, setCajaInicial] = useState(() => {
+    const fechaActual = obtenerFechaHoyChile();
+    const cajaGuardada = localStorage.getItem('cajaInicialVentaRapida');
+    const fechaGuardada = localStorage.getItem('cajaInicialVentaRapidaFecha');
+    if (cajaGuardada && fechaGuardada === fechaActual) return cajaGuardada;
+    localStorage.removeItem('cajaInicialVentaRapida');
+    localStorage.removeItem('cajaInicialVentaRapidaFecha');
+    return '';
+  });
+  const [cajaDiariaId, setCajaDiariaId] = useState(null);
+  const [cajaInicialHistorica, setCajaInicialHistorica] = useState(null);
+
   // Estado para prevenir doble clic en registro de venta rápida
   const [registrando, setRegistrando] = useState(false);
   
   // Ref para verificación síncrona inmediata (previene doble ejecución)
   const registrandoRef = useRef(false);
+
+  // Funciones para caja inicial (caja_diaria con fuente = 'ventarapida')
+  const guardarCajaDiariaDB = useCallback(async (monto, fecha) => {
+    const usuarioId = await authService.getCurrentUserId();
+    if (!usuarioId) return;
+    const { data: usuarioData } = await supabase.from('usuarios').select('cliente_id').eq('usuario_id', usuarioId).single();
+    const { data, error } = await supabase.from('caja_diaria')
+      .upsert(
+        { usuario_id: usuarioId, cliente_id: usuarioData?.cliente_id || null, fecha, monto: parseFloat(monto) || 0, fuente: 'ventarapida' },
+        { onConflict: 'usuario_id,fecha,fuente' }
+      )
+      .select('id').single();
+    if (!error) setCajaDiariaId(data?.id || null);
+  }, []);
+
+  const cargarCajaDiaria = useCallback(async (fecha) => {
+    const usuarioId = await authService.getCurrentUserId();
+    if (!usuarioId) return;
+    const { data, error } = await supabase.from('caja_diaria')
+      .select('id, monto')
+      .eq('usuario_id', usuarioId)
+      .eq('fecha', fecha)
+      .eq('fuente', 'ventarapida')
+      .maybeSingle();
+    if (error) return;
+    const fechaActual = obtenerFechaHoyChile();
+    if (fecha === fechaActual) {
+      if (data) {
+        setCajaDiariaId(data.id);
+        const montoStr = String(Math.round(parseFloat(data.monto) || 0));
+        setCajaInicial(montoStr);
+        localStorage.setItem('cajaInicialVentaRapida', montoStr);
+        localStorage.setItem('cajaInicialVentaRapidaFecha', fechaActual);
+      } else {
+        const cajaLocal = localStorage.getItem('cajaInicialVentaRapida');
+        const fechaLocal = localStorage.getItem('cajaInicialVentaRapidaFecha');
+        if (cajaLocal && fechaLocal === fechaActual) await guardarCajaDiariaDB(cajaLocal, fechaActual);
+      }
+    } else {
+      // Fecha histórica: guardar en cajaInicialHistorica sin tocar la caja de hoy
+      setCajaInicialHistorica(data ? parseFloat(data.monto) : null);
+    }
+  }, [guardarCajaDiariaDB]);
+
+  const eliminarCajaDiariaDB = async () => {
+    if (!cajaDiariaId) return;
+    const { error } = await supabase.from('caja_diaria').delete().eq('id', cajaDiariaId);
+    if (error) { mostrarNotificacion('❌ Error al eliminar la caja inicial', 'error'); return; }
+    setCajaDiariaId(null);
+    setCajaInicial('');
+    localStorage.removeItem('cajaInicialVentaRapida');
+    localStorage.removeItem('cajaInicialVentaRapidaFecha');
+    mostrarNotificacion('✅ Caja inicial eliminada', 'success');
+  };
 
   // Función para mostrar notificaciones (inteligente según modo pantalla completa)
   const mostrarNotificacion = (mensaje, tipo = 'info') => {
@@ -117,6 +184,20 @@ const VentaRapida = () => {
 
   // Hook para gestionar cambios de sesión
   useSessionData(recargarDatos, 'VentaRapida');
+
+  // Cargar caja_diaria de hoy al montar
+  useEffect(() => {
+    cargarCajaDiaria(obtenerFechaHoyChile());
+  }, [cargarCajaDiaria]);
+
+  // Cargar caja histórica cuando cambia el filtro de día
+  useEffect(() => {
+    if (filtroDia) {
+      cargarCajaDiaria(filtroDia);
+    } else {
+      setCajaInicialHistorica(null);
+    }
+  }, [filtroDia, cargarCajaDiaria]);
 
   // Establecer fecha actual y cargar ventas al cargar el componente
   useEffect(() => {
@@ -429,6 +510,22 @@ useEffect(() => {
     return sumatorias;
   }, [ventasFiltradas]);
 
+  // Acumulado real de efectivo del día (o del día filtrado) (MEMOIZADO)
+  const acumuladoReal = useMemo(() => {
+    const fechaObjetivo = filtroDia || obtenerFechaHoyChile();
+    return ventasRegistradas
+      .filter(v => v.fecha_cl === fechaObjetivo && v.tipo_pago === 'efectivo')
+      .reduce((total, v) => total + (parseFloat(v.monto) || 0), 0);
+  }, [ventasRegistradas, filtroDia]);
+
+  // Total en caja: caja inicial del día + acumulado efectivo (MEMOIZADO)
+  const totalCaja = useMemo(() => {
+    const cajaInicialNum = filtroDia
+      ? (cajaInicialHistorica ?? (parseFloat(cajaInicial) || 0))
+      : (parseFloat(cajaInicial) || 0);
+    return cajaInicialNum + acumuladoReal;
+  }, [cajaInicial, cajaInicialHistorica, acumuladoReal, filtroDia]);
+
   // Función para obtener meses disponibles según el año seleccionado (MEMOIZADO)
   const mesesDisponibles = useMemo(() => {
     const nombresMeses = [
@@ -704,40 +801,22 @@ useEffect(() => {
               </button>
             </div>
             <form onSubmit={registrarVentaRapida} className="space-y-3">
-              {/* Primera fila: Fecha y Monto */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Fecha */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-white">
-                    Fecha
-                  </label>
-                  <input
-                    type="date"
-                    name="fecha"
-                    value={venta.fecha}
-                    onChange={handleChange}
-                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm"
-                    required
-                  />
-                </div>
-
-                {/* Monto */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-white">
-                    Monto
-                  </label>
-                  <input
-                    type="number"
-                    name="monto"
-                    value={venta.monto}
-                    onChange={handleChange}
-                    placeholder="Ingresa el monto"
-                    step="1"
-                    min="0"
-                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-sm"
-                    required
-                  />
-                </div>
+              {/* Monto */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-white">
+                  Monto
+                </label>
+                <input
+                  type="number"
+                  name="monto"
+                  value={venta.monto}
+                  onChange={handleChange}
+                  placeholder="Ingresa el monto"
+                  step="1"
+                  min="0"
+                  className="w-full px-4 py-4 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-5xl font-bold h-[96px] text-center"
+                  required
+                />
               </div>
 
               {/* Tipo de Pago - Botones */}
@@ -832,20 +911,8 @@ useEffect(() => {
                     Calculadora de Vuelto
                   </h4>
                   
-                  {/* Grid de 3 columnas: Monto de venta, Monto pagado y Vuelto */}
-                  <div className={`grid grid-cols-1 gap-2 ${mostrarVuelto && montoPagado ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-                    {/* Monto de la venta (solo lectura) */}
-                    <div>
-                      <label className="block text-blue-100 text-xs mb-1">
-                        Monto de la venta:
-                      </label>
-                      <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 text-center h-[42px] flex items-center justify-center">
-                        <p className="text-blue-300 text-base md:text-lg font-bold">
-                          ${parseFloat(venta.monto).toLocaleString('es-CL')}
-                        </p>
-                      </div>
-                    </div>
-
+                  {/* Monto pagado + Vuelto */}
+                  <div className={`grid grid-cols-1 gap-2 ${mostrarVuelto && montoPagado ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
                     {/* Monto pagado por el cliente */}
                     <div>
                       <label className="block text-blue-100 text-xs mb-1">
@@ -861,7 +928,7 @@ useEffect(() => {
                         placeholder="Ingresa el monto recibido"
                         step="100"
                         min="0"
-                        className="w-full p-2 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm h-[42px]"
+                        className="w-full px-4 py-2 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-3xl font-bold h-[70px] text-center"
                       />
                     </div>
 
@@ -871,67 +938,92 @@ useEffect(() => {
                         <label className="block text-blue-100 text-xs mb-1">
                           Vuelto a entregar:
                         </label>
-                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 text-center h-[42px] flex items-center justify-center flex-col`}>
-                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-base md:text-lg font-bold`}>
+                        <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 text-center h-[70px] flex items-center justify-center`}>
+                          <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-3xl font-bold`}>
                             {calcularVuelto() >= 0 ? (
                               `$${calcularVuelto().toLocaleString('es-CL')}`
                             ) : (
-                              `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                              `$${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
                             )}
                           </p>
-                          {calcularVuelto() < 0 && (
-                            <p className="text-red-200 text-[10px] mt-0.5">
-                              ⚠️ Insuficiente
-                            </p>
-                          )}
                         </div>
                       </div>
                     )}
                   </div>
+
                 </div>
               )}
 
-              {/* Segunda fila: Monto a Registrar y Botón de Registro - Aparecen después de la calculadora */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Monto a Registrar */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-white">
-                    Monto a Registrar
-                  </label>
-                  <div className="bg-yellow-500/20 rounded-lg p-2 border border-yellow-400/30 flex items-center justify-center h-[42px]">
-                    <p className="text-base md:text-lg font-bold text-yellow-300">
-                      {venta.monto && parseFloat(venta.monto) > 0 
-                        ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
-                        : '$0'
-                      }
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Botón de Registro */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-white opacity-0">
-                    Acción
-                  </label>
+              {/* Caja Inicial (solo visible cuando el tipo de pago es efectivo) */}
+              {venta.tipo_pago === 'efectivo' && <div className="space-y-1">
+                <label className="block text-xs font-semibold text-white">
+                  Caja Inicial
+                </label>
+                <input
+                  type="number"
+                  value={cajaInicial}
+                  onChange={(e) => {
+                    const valor = e.target.value;
+                    setCajaInicial(valor);
+                    const fechaActual = obtenerFechaHoyChile();
+                    localStorage.setItem('cajaInicialVentaRapida', valor);
+                    localStorage.setItem('cajaInicialVentaRapidaFecha', fechaActual);
+                  }}
+                  onBlur={(e) => {
+                    const valor = e.target.value;
+                    if (valor !== '') guardarCajaDiariaDB(valor, obtenerFechaHoyChile());
+                    else if (cajaDiariaId) eliminarCajaDiariaDB();
+                  }}
+                  onWheel={(e) => e.target.blur()}
+                  placeholder="Ej: 20000"
+                  step="100"
+                  min="0"
+                  className="w-full px-4 py-4 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-300 transition-all duration-200 text-2xl font-bold h-[70px] text-center"
+                />
+                {cajaDiariaId && (
                   <button
-                    type="submit"
-                    disabled={loading || registrando}
-                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm h-[42px]"
+                    type="button"
+                    onClick={eliminarCajaDiariaDB}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors duration-150"
                   >
-                    {loading || registrando ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Registrando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-xl">⚡</span>
-                        <span>Registrar Venta</span>
-                      </>
-                    )}
+                    🗑️ Eliminar caja del día
                   </button>
+                )}
+              </div>}
+
+              {/* Monto a Registrar */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-white">
+                  Monto a Registrar
+                </label>
+                <div className="bg-yellow-500/20 rounded-lg px-4 border border-yellow-400/30 flex items-center justify-center h-[80px]">
+                  <p className="text-4xl font-bold text-yellow-300">
+                    {venta.monto && parseFloat(venta.monto) > 0 
+                      ? `$${parseFloat(venta.monto).toLocaleString('es-CL')}`
+                      : '$0'
+                    }
+                  </p>
                 </div>
               </div>
+
+              {/* Botón de Registro */}
+              <button
+                type="submit"
+                disabled={loading || registrando}
+                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold p-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm h-[42px]"
+              >
+                {loading || registrando ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Registrando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xl">⚡</span>
+                    <span>Registrar Venta</span>
+                  </>
+                )}
+              </button>
 
             </form>
           </div>
@@ -1299,6 +1391,46 @@ useEffect(() => {
                       <div className="text-right">
                         <p className="text-indigo-300 font-bold text-lg md:text-xl">
                           ${sumatorias.transferencia.monto.toLocaleString('es-CL')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Separador */}
+                    <div className="border-t border-white/10 my-1" />
+
+                    {/* Caja Inicial */}
+                    <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-yellow-400 text-lg md:text-xl mr-3">💰</span>
+                        <div>
+                          <p className="text-yellow-200 text-sm md:text-base font-medium">Caja Inicial</p>
+                          <p className="text-yellow-300 text-xs md:text-sm">
+                            {filtroDia ? 'del día filtrado' : 'del día actual'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-yellow-300 font-bold text-lg md:text-xl">
+                          {filtroDia
+                            ? (cajaInicialHistorica !== null ? `$${cajaInicialHistorica.toLocaleString('es-CL')}` : 'Sin registro')
+                            : (cajaInicial ? `$${parseFloat(cajaInicial).toLocaleString('es-CL')}` : 'Sin registro')
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Total en Caja */}
+                    <div className="bg-yellow-500/10 rounded-lg p-3 md:p-4 border border-yellow-400/30 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="text-yellow-300 text-lg md:text-xl mr-3">🏦</span>
+                        <div>
+                          <p className="text-yellow-200 text-sm md:text-base font-bold">Total en Caja</p>
+                          <p className="text-yellow-300 text-xs md:text-sm">Caja inicial + efectivo acumulado</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-yellow-300 font-bold text-xl md:text-2xl">
+                          ${totalCaja.toLocaleString('es-CL')}
                         </p>
                       </div>
                     </div>

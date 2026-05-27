@@ -174,7 +174,6 @@ export default function Pedidos() {
   // Estados para el cálculo de vuelto (solo frontend)
   const [montoPagado, setMontoPagado] = useState('');
   const [mostrarVuelto, setMostrarVuelto] = useState(false);
-  const [calculadoraColapsada, setCalculadoraColapsada] = useState(false);
   
   // Estados para cuadrar caja (solo frontend)
   const [cajaInicial, setCajaInicial] = useState(() => {
@@ -3492,46 +3491,14 @@ export default function Pedidos() {
                       {/* Calculadora de Vuelto (solo para Efectivo) */}
                       {pedido.tipo_pago === 'efectivo' && productosPorMesa[mesaSeleccionada] && productosPorMesa[mesaSeleccionada].length > 0 && calcularTotalConPropina(mesaSeleccionada) > 0 && (
                         <div className="mt-4 mb-4 bg-blue-500/20 rounded-xl p-2 md:p-3 lg:p-4 border border-blue-400/30">
-                          <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">🧮</span>
-                              <span>Calculadora de Vuelto</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setCalculadoraColapsada(!calculadoraColapsada)}
-                              className="text-blue-300 hover:text-blue-100 transition-colors duration-200 p-1 rounded hover:bg-blue-400/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              title={calculadoraColapsada ? "Expandir calculadora" : "Colapsar calculadora"}
-                            >
-                              {calculadoraColapsada ? (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              ) : (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                              )}
-                            </button>
+                          <h4 className="text-blue-200 font-semibold mb-2 md:mb-3 text-sm md:text-base flex items-center gap-2">
+                            <span className="text-xl">🧮</span>
+                            <span>Calculadora de Vuelto</span>
                           </h4>
-                          
-                          <div className={`space-y-2 md:space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
-                            calculadoraColapsada ? 'max-h-0 opacity-0' : 'max-h-[1000px] opacity-100'
-                          }`}>
-                            {/* Primera fila: Total de la venta, Caja Inicial y Monto pagado */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-                              {/* Total de la venta (solo lectura) */}
-                              <div>
-                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
-                                  Total de la venta:
-                                </label>
-                                <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
-                                  <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
-                                    ${calcularTotalConPropina(mesaSeleccionada).toLocaleString('es-CL')}
-                                  </p>
-                                </div>
-                              </div>
 
+                          <div className="space-y-2 md:space-y-3">
+                            {/* Fila única: Caja Inicial + Monto pagado + Vuelto */}
+                            <div className={`grid gap-2 md:gap-3 ${mostrarVuelto && montoPagado ? 'grid-cols-3' : 'grid-cols-2'}`}>
                               {/* Caja Inicial */}
                               <div>
                                 <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
@@ -3584,33 +3551,6 @@ export default function Pedidos() {
                                   className="w-full p-2 md:p-3 bg-white/10 border border-blue-400/50 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200 text-sm md:text-base"
                                 />
                               </div>
-                            </div>
-
-                            {/* Segunda fila: Acumulado, Total en Caja y Vuelto */}
-                            <div className={`grid grid-cols-1 gap-2 md:gap-3 ${mostrarVuelto && montoPagado ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-                              {/* Acumulado del Día */}
-                              <div>
-                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
-                                  Acumulado del Día:
-                                </label>
-                                <div className="bg-white/10 border border-green-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
-                                  <p className="text-green-300 text-lg md:text-xl lg:text-2xl font-bold">
-                                    ${calcularAcumuladoReal().toLocaleString('es-CL')}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Total en Caja */}
-                              <div>
-                                <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
-                                  Total en Caja:
-                                </label>
-                                <div className="bg-white/10 border border-blue-400/50 rounded-lg p-2 md:p-3 text-center flex items-center justify-center">
-                                  <p className="text-blue-300 text-lg md:text-xl lg:text-2xl font-bold">
-                                    ${calcularTotalCaja().toLocaleString('es-CL')}
-                                  </p>
-                                </div>
-                              </div>
 
                               {/* Vuelto a entregar (solo si hay monto pagado) */}
                               {mostrarVuelto && montoPagado && (
@@ -3618,19 +3558,13 @@ export default function Pedidos() {
                                   <label className="block text-blue-100 text-xs md:text-sm mb-1.5">
                                     Vuelto a entregar:
                                   </label>
-                                  <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 md:p-3 text-center flex items-center justify-center flex-col`}>
+                                  <div className={`${calcularVuelto() >= 0 ? 'bg-green-500/20 border-green-400/50' : 'bg-red-500/20 border-red-400/50'} border rounded-lg p-2 md:p-3 text-center flex items-center justify-center`}>
                                     <p className={`${calcularVuelto() >= 0 ? 'text-green-300' : 'text-red-300'} text-lg md:text-xl lg:text-2xl font-bold`}>
-                                      {calcularVuelto() >= 0 ? (
-                                        `$${calcularVuelto().toLocaleString('es-CL')}`
-                                      ) : (
-                                        `Falta: $${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
-                                      )}
+                                      {calcularVuelto() >= 0
+                                        ? `$${calcularVuelto().toLocaleString('es-CL')}`
+                                        : `$${Math.abs(calcularVuelto()).toLocaleString('es-CL')}`
+                                      }
                                     </p>
-                                    {calcularVuelto() < 0 && (
-                                      <p className="text-red-200 text-xs mt-1">
-                                        ⚠️ Insuficiente
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
                               )}
