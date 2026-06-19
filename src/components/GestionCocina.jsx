@@ -350,22 +350,20 @@ export default function GestionCocina() {
   // Función para calcular tiempo transcurrido
   const calcularTiempoTranscurrido = (horaInicio) => {
     if (!horaInicio) return '0s';
-    
-    // La hora guardada es Santiago marcada como UTC
-    // Obtenemos hora actual de Santiago
-    const ahora = new Date();
-    const ahoraEnSantiago = new Date(ahora.toLocaleString("en-US", {timeZone: "America/Santiago"}));
-    
-    // El timestamp guardado tiene hora de Santiago pero está marcado como UTC
-    // Lo parseamos directamente como está
+
+    // La hora guardada es el reloj de pared de Santiago "marcado como UTC":
+    // new Date(horaInicio) tiene un valor UTC igual a la hora de pared de inicio.
     const inicio = new Date(horaInicio);
-    
-    // Ajustamos sumando 3 horas al inicio para compensar el offset
-    const inicioAjustado = new Date(inicio.getTime() + (3 * 60 * 60 * 1000));
-    
-    // Ahora calculamos la diferencia
-    const diff = Math.floor((ahoraEnSantiago - inicioAjustado) / 1000);
-    
+
+    // Obtenemos el "ahora" también como reloj de pared de Santiago interpretado
+    // como UTC, para comparar manzanas con manzanas. Esto es independiente de la
+    // zona horaria del navegador y del cambio de horario (DST).
+    const ahoraWallSantiago = new Date(
+      new Date().toLocaleString('sv-SE', { timeZone: 'America/Santiago' }).replace(' ', 'T') + 'Z'
+    );
+
+    const diff = Math.floor((ahoraWallSantiago - inicio) / 1000);
+
     if (diff < 0) return '0s'; // Por si acaso
     
     const horas = Math.floor(diff / 3600);
