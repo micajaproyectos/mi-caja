@@ -883,18 +883,22 @@ const RegistroInventario = () => {
         return;
       }
 
-      if (!valoresEdicion.costo_total || valoresEdicion.costo_total <= 0) {
-        alert('El costo total debe ser mayor a 0');
+      // Edición flexible: se permite 0 en los montos, pero no vacíos, negativos ni no numéricos.
+      const costoTotalNum = parseFloat(valoresEdicion.costo_total);
+      if (valoresEdicion.costo_total === '' || isNaN(costoTotalNum) || costoTotalNum < 0) {
+        alert('El costo total no puede estar vacío ni ser negativo');
         return;
       }
 
-      if (!valoresEdicion.precio_unitario || valoresEdicion.precio_unitario <= 0) {
-        alert('El precio unitario debe ser mayor a 0');
+      const precioUnitarioNum = parseFloat(valoresEdicion.precio_unitario);
+      if (valoresEdicion.precio_unitario === '' || isNaN(precioUnitarioNum) || precioUnitarioNum < 0) {
+        alert('El precio unitario no puede estar vacío ni ser negativo');
         return;
       }
 
-      if (!valoresEdicion.precio_venta || valoresEdicion.precio_venta <= 0) {
-        alert('El precio de venta debe ser mayor a 0');
+      const precioVentaNum = parseFloat(valoresEdicion.precio_venta);
+      if (valoresEdicion.precio_venta === '' || isNaN(precioVentaNum) || precioVentaNum < 0) {
+        alert('El precio de venta no puede estar vacío ni ser negativo');
         return;
       }
 
@@ -904,9 +908,9 @@ const RegistroInventario = () => {
           producto: valoresEdicion.producto.trim(),
           cantidad: parseFloat(valoresEdicion.cantidad),
           unidad: valoresEdicion.unidad,
-          costo_total: parseFloat(valoresEdicion.costo_total),
-          precio_unitario: parseFloat(valoresEdicion.precio_unitario),
-          precio_venta: parseFloat(valoresEdicion.precio_venta),
+          costo_total: costoTotalNum,
+          precio_unitario: precioUnitarioNum,
+          precio_venta: precioVentaNum,
           imagen: valoresEdicion.imagen.trim() || null,
           codigo_interno: valoresEdicion.codigo_interno || null
         })
